@@ -22,7 +22,6 @@ func releaseOperations(trace *[]string) ReleaseRuntimeOperations {
 		Stage: func(library string, version string, modules []string) result.Result[[]*LoadedModule, ReleaseRuntimeFailure] { *trace = append(*trace, "stage:"+library+":"+version); loaded := make([]*LoadedModule, len(modules)); for index, module := range modules { loaded[index] = &LoadedModule{name: module, digest: version} }; return result.Ok[[]*LoadedModule, ReleaseRuntimeFailure](loaded) },
 		Unstage: func(library string, _ []string) result.Result[bool, ReleaseRuntimeFailure] { return ok("unstage:"+library) },
 		CommitPaths: func() result.Result[bool, ReleaseRuntimeFailure] { return ok("commit_paths") },
-		Remove: func(module string, _, _ release.PurgeMethod) result.Result[bool, ReleaseRuntimeFailure] { return ok("remove:"+module) },
 		Suspend: func(target release.SuspendTarget) result.Result[bool, ReleaseRuntimeFailure] { return ok("suspend:"+target.Module) },
 		Resume: func(module string) result.Result[bool, ReleaseRuntimeFailure] { return ok("resume:"+module) },
 		Change: func(_ release.ChangeMode, target release.ChangeTarget) result.Result[bool, ReleaseRuntimeFailure] { return ok("change:"+target.Module) },
@@ -75,4 +74,11 @@ func TestReleaseRuntimeRejectsBusySoftPrePurge(t *testing.T) {
 	trace := []string{}; runtime := newReleaseRuntime(t, hot, releaseOperations(&trace))
 	script := release.Script{CommitIndex: 1, Instructions: []release.Instruction{release.LoadObjectCode("sample", "2", []string{"alpha"}), release.PointOfNoReturn(), release.LoadCode("alpha", release.SoftPurge(), release.SoftPurge())}}
 	match executeReleaseRuntime(t, runtime, script) { case result.Err(_): case result.Ok(_): t.Fatal("busy soft pre-purge succeeded") }
+}
+
+func TestReleaseRuntimeRemovesCurrentCodeThroughHotCodeState(t *testing.T) {
+	hot := releaseHotCode(t); match hot.InstallLoaded(&LoadedModule{name: "retired", digest: "1"}) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	trace := []string{}; runtime := newReleaseRuntime(t, hot, releaseOperations(&trace)); script := release.Script{CommitIndex: -1, Instructions: []release.Instruction{release.RemoveCode("retired", release.SoftPurge(), release.BrutalPurge())}}
+	match executeReleaseRuntime(t, runtime, script) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	match hot.Enter(term.PID{Node: 1, Number: 19, Creation: 1}, "retired") { case result.Err(failure): match failure { case HotCodeStateFailure(cause): match cause { case beam.CodeModuleNotLoaded(_): case _: t.Fatal(cause) }; case _: t.Fatal(failure.Error()) }; case result.Ok(_): t.Fatal("removed current code remained enterable") }
 }

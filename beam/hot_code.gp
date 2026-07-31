@@ -18,6 +18,12 @@ type CodePurgeState enum {
 	OldCodeVersionPurged(InvalidatedReferences int)
 }
 
+type CodeRemovalState enum {
+	NoCodeModule()
+	CurrentCodeBusy(References int)
+	CurrentCodeRemoved(InvalidatedReferences int)
+}
+
 type HotCodeFailure enum {
 	InvalidCodeModule(Detail string)
 	OldCodeNotPurged(Module string)
@@ -63,6 +69,8 @@ type CodePurgeTransition struct {
 	Store CodeStore
 	State CodePurgeState
 }
+
+type CodeRemovalTransition struct { Store CodeStore; State CodeRemovalState; Removed option.Option[CodeHandle] }
 
 type codeGeneration struct {
 	generation uint64
@@ -142,6 +150,16 @@ func (store CodeStore) SoftPurge(module string) CodePurgeTransition {
 
 func (store CodeStore) Purge(module string) CodePurgeTransition {
 	return store.purgeOld(module, true)
+}
+
+func (store CodeStore) Remove(module string, force bool) result.Result[CodeRemovalTransition, HotCodeFailure] {
+	slot, loaded := store.slots[module]
+	if !loaded { return result.Ok[CodeRemovalTransition, HotCodeFailure](CodeRemovalTransition{Store: store.clone(), State: NoCodeModule(), Removed: option.None[CodeHandle]()}) }
+	if slot.old != nil { return result.Err[CodeRemovalTransition, HotCodeFailure](OldCodeNotPurged(module)) }
+	count := store.references[slot.current.generation]
+	if count > 0 && !force { return result.Ok[CodeRemovalTransition, HotCodeFailure](CodeRemovalTransition{Store: store.clone(), State: CurrentCodeBusy(count), Removed: option.None[CodeHandle]()}) }
+	next := store.clone(); delete(next.references, slot.current.generation); delete(next.slots, module)
+	return result.Ok[CodeRemovalTransition, HotCodeFailure](CodeRemovalTransition{Store: next, State: CurrentCodeRemoved(count), Removed: option.Some(slot.current.handle())})
 }
 
 func (store CodeStore) purgeOld(module string, force bool) CodePurgeTransition {

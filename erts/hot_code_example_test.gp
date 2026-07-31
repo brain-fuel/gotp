@@ -92,3 +92,12 @@ func TestHotCodePurgeReclaimsLiteralGenerationAfterLease(t *testing.T) {
 	match runtime.Leave(owner, reference) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
 	purged := runtime.SoftPurge("sample"); if purged.ReclaimedLiterals != 1 || !literals.Stats().Closed { t.Fatalf("purge = %d/%v", purged.ReclaimedLiterals, literals.Stats().Closed) }; match purged.ReleaseFailure { case option.None: case option.Some(failure): t.Fatal(failure) }
 }
+
+func TestHotCodeCurrentRemovalHonorsLeaseAndForce(t *testing.T) {
+	var runtime *HotCodeRuntime; match NewHotCodeRuntime(HotCodeExitWith(func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered() })) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(created): runtime = created }
+	literals := requireLiteralArena(t); match literals.Store(0, []byte("current")) { case result.Err(failure): t.Fatal(failure); case result.Ok(_): }
+	match runtime.InstallLoaded(&LoadedModule{name: "remove_me", digest: "v1", literalArena: literals}) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	owner := term.PID{Node: 1, Number: 18, Creation: 1}; match runtime.Enter(owner, "remove_me") { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	match runtime.Remove("remove_me", false) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(report): match report.State { case beam.CurrentCodeBusy(references): if references != 1 { t.Fatalf("references = %d", references) }; case _: t.Fatal("soft removal ignored lease") }; if literals.Stats().Closed { t.Fatal("soft removal reclaimed busy generation") } }
+	match runtime.Remove("remove_me", true) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(report): match report.State { case beam.CurrentCodeRemoved(references): if references != 1 { t.Fatalf("invalidated = %d", references) }; case _: t.Fatal("forced removal did not remove current") }; if report.ReclaimedLiterals != 1 || !literals.Stats().Closed { t.Fatal("forced removal retained literal arena") } }
+}

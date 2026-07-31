@@ -312,3 +312,85 @@ func TestHotCodePurgeReclaimsLiteralGenerationAfterLease(t *testing.T) {
 		panic("goplus: impossible enum value in match")
 	}
 }
+
+func TestHotCodeCurrentRemovalHonorsLeaseAndForce(t *testing.T) {
+	var runtime *HotCodeRuntime
+	switch __gp_m27 := any(NewHotCodeRuntime(HotCodeExitWith{Exit: func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered{} }})).(type) {
+	case result.Err[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		failure := __gp_m27.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		created := __gp_m27.Value
+		runtime = created
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	literals := requireLiteralArena(t)
+	switch __gp_m28 := any(literals.Store(0, []byte("current"))).(type) {
+	case result.Err[memory.Handle, LiteralArenaFailure]:
+		failure := __gp_m28.Err
+		t.Fatal(failure)
+	case result.Ok[memory.Handle, LiteralArenaFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m29 := any(runtime.InstallLoaded(&LoadedModule{name: "remove_me", digest: "v1", literalArena: literals})).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m29.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	owner := term.PID{Node: 1, Number: 18, Creation: 1}
+	switch __gp_m30 := any(runtime.Enter(owner, "remove_me")).(type) {
+	case result.Err[HotCodeEntry, HotCodeRuntimeFailure]:
+		failure := __gp_m30.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[HotCodeEntry, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m31 := any(runtime.Remove("remove_me", false)).(type) {
+	case result.Err[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		failure := __gp_m31.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		report := __gp_m31.Value
+		switch __gp_m32 := any(report.State).(type) {
+		case beam.CurrentCodeBusy:
+			references := __gp_m32.References
+			if references != 1 {
+				t.Fatalf("references = %d", references)
+			}
+		default:
+			t.Fatal("soft removal ignored lease")
+		}
+		if literals.Stats().Closed {
+			t.Fatal("soft removal reclaimed busy generation")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m33 := any(runtime.Remove("remove_me", true)).(type) {
+	case result.Err[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		failure := __gp_m33.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		report := __gp_m33.Value
+		switch __gp_m34 := any(report.State).(type) {
+		case beam.CurrentCodeRemoved:
+			references := __gp_m34.InvalidatedReferences
+			if references != 1 {
+				t.Fatalf("invalidated = %d", references)
+			}
+		default:
+			t.Fatal("forced removal did not remove current")
+		}
+		if report.ReclaimedLiterals != 1 || !literals.Stats().Closed {
+			t.Fatal("forced removal retained literal arena")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}

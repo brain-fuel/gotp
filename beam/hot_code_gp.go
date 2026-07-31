@@ -193,6 +193,112 @@ func CodePurgeStateEqual(a, b CodePurgeState) bool {
 	return CodePurgeStateEqualWith(a, b, CodePurgeStateEqOverrides{})
 }
 
+//goplus:enum CodeRemovalState
+type CodeRemovalState interface{ isCodeRemovalState() }
+
+//goplus:variant (CodeRemovalState) NoCodeModule()
+type NoCodeModule struct{}
+
+func (NoCodeModule) isCodeRemovalState() {}
+
+//goplus:variant (CodeRemovalState) CurrentCodeBusy(References int)
+type CurrentCodeBusy struct {
+	References int
+}
+
+func (CurrentCodeBusy) isCodeRemovalState() {}
+
+//goplus:variant (CodeRemovalState) CurrentCodeRemoved(InvalidatedReferences int)
+type CurrentCodeRemoved struct {
+	InvalidatedReferences int
+}
+
+func (CurrentCodeRemoved) isCodeRemovalState() {}
+
+// CodeRemovalStateCases selects one handler per CodeRemovalState variant for CodeRemovalStateFold.
+type CodeRemovalStateCases[R any] struct {
+	NoCodeModule       func() R
+	CurrentCodeBusy    func(References int) R
+	CurrentCodeRemoved func(InvalidatedReferences int) R
+}
+
+// CodeRemovalStateFold reduces CodeRemovalState by one-level case analysis.
+func CodeRemovalStateFold[R any](v CodeRemovalState, cs CodeRemovalStateCases[R]) R {
+	switch m := any(v).(type) {
+	case NoCodeModule:
+		return cs.NoCodeModule()
+	case CurrentCodeBusy:
+		return cs.CurrentCodeBusy(m.References)
+	case CurrentCodeRemoved:
+		return cs.CurrentCodeRemoved(m.InvalidatedReferences)
+	default:
+		panic("goplus: impossible enum value in CodeRemovalStateFold")
+	}
+}
+
+// CodeRemovalStateEqOverrides carries optional per-variant hooks for CodeRemovalStateEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type CodeRemovalStateEqOverrides struct {
+	NoCodeModule       func(x, y NoCodeModule) (eq, handled bool)
+	CurrentCodeBusy    func(x, y CurrentCodeBusy) (eq, handled bool)
+	CurrentCodeRemoved func(x, y CurrentCodeRemoved) (eq, handled bool)
+}
+
+// CodeRemovalStateEqualWith reports structural equality of a and b under ov.
+func CodeRemovalStateEqualWith(a, b CodeRemovalState, ov CodeRemovalStateEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case NoCodeModule:
+		y, ok := any(b).(NoCodeModule)
+		if !ok {
+			return false
+		}
+		if ov.NoCodeModule != nil {
+			if eq, handled := ov.NoCodeModule(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case CurrentCodeBusy:
+		y, ok := any(b).(CurrentCodeBusy)
+		if !ok {
+			return false
+		}
+		if ov.CurrentCodeBusy != nil {
+			if eq, handled := ov.CurrentCodeBusy(x, y); handled {
+				return eq
+			}
+		}
+		if x.References != y.References {
+			return false
+		}
+		return true
+	case CurrentCodeRemoved:
+		y, ok := any(b).(CurrentCodeRemoved)
+		if !ok {
+			return false
+		}
+		if ov.CurrentCodeRemoved != nil {
+			if eq, handled := ov.CurrentCodeRemoved(x, y); handled {
+				return eq
+			}
+		}
+		if x.InvalidatedReferences != y.InvalidatedReferences {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// CodeRemovalStateEqual reports structural equality of a and b.
+func CodeRemovalStateEqual(a, b CodeRemovalState) bool {
+	return CodeRemovalStateEqualWith(a, b, CodeRemovalStateEqOverrides{})
+}
+
 //goplus:enum HotCodeFailure
 type HotCodeFailure interface{ isHotCodeFailure() }
 
@@ -378,6 +484,12 @@ type CodePurgeTransition struct {
 	State CodePurgeState
 }
 
+type CodeRemovalTransition struct {
+	Store   CodeStore
+	State   CodeRemovalState
+	Removed option.Option[CodeHandle]
+}
+
 type codeGeneration struct {
 	generation uint64
 	image      *Module
@@ -480,6 +592,24 @@ func (store CodeStore) SoftPurge(module string) CodePurgeTransition {
 
 func (store CodeStore) Purge(module string) CodePurgeTransition {
 	return store.purgeOld(module, true)
+}
+
+func (store CodeStore) Remove(module string, force bool) result.Result[CodeRemovalTransition, HotCodeFailure] {
+	slot, loaded := store.slots[module]
+	if !loaded {
+		return result.Ok[CodeRemovalTransition, HotCodeFailure]{Value: CodeRemovalTransition{Store: store.clone(), State: NoCodeModule{}, Removed: option.None[CodeHandle]{}}}
+	}
+	if slot.old != nil {
+		return result.Err[CodeRemovalTransition, HotCodeFailure]{Err: OldCodeNotPurged{Module: module}}
+	}
+	count := store.references[slot.current.generation]
+	if count > 0 && !force {
+		return result.Ok[CodeRemovalTransition, HotCodeFailure]{Value: CodeRemovalTransition{Store: store.clone(), State: CurrentCodeBusy{References: count}, Removed: option.None[CodeHandle]{}}}
+	}
+	next := store.clone()
+	delete(next.references, slot.current.generation)
+	delete(next.slots, module)
+	return result.Ok[CodeRemovalTransition, HotCodeFailure]{Value: CodeRemovalTransition{Store: next, State: CurrentCodeRemoved{InvalidatedReferences: count}, Removed: option.Some[CodeHandle]{Value: slot.current.handle()}}}
 }
 
 func (store CodeStore) purgeOld(module string, force bool) CodePurgeTransition {

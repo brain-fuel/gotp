@@ -102,3 +102,6 @@ This document is not a release and does not authorize a tag or publication.
   made.
 - Connected BEAM `LitT` ownership to loaded modules and generation-aware
   hot-code purge; leased old code retains literals until soft purge succeeds.
+- Added typed current-code removal with lease-aware soft rejection and forced
+  owner termination and literal-generation reclamation; release `remove` now
+  uses this state transition directly.

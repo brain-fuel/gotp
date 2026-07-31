@@ -46,6 +46,8 @@ type HotCodePurgeReport struct {
 	ReleaseFailure option.Option[LiteralArenaFailure]
 }
 
+type HotCodeRemoveReport struct { State beam.CodeRemovalState; Exited int; ReclaimedLiterals int; ReleaseFailure option.Option[LiteralArenaFailure] }
+
 type HotCodeRuntime struct {
 	store beam.CodeStore
 	owners map[uint64]map[term.PID]int
@@ -160,6 +162,21 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 		reclaimed, releaseFailure = runtime.releaseLiterals(handle.Generation)
 	}
 	return HotCodePurgeReport{State: transition.State, Exited: exited, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure}
+}
+
+func (runtime *HotCodeRuntime) Remove(module string, force bool) result.Result[HotCodeRemoveReport, HotCodeRuntimeFailure] {
+	match runtime.store.Remove(module, force) {
+	case result.Err(cause): return result.Err[HotCodeRemoveReport, HotCodeRuntimeFailure](HotCodeStateFailure(cause))
+	case result.Ok(transition):
+		runtime.store = transition.Store; exited := 0; reclaimed := 0; var releaseFailure option.Option[LiteralArenaFailure] = option.None[LiteralArenaFailure]()
+		match transition.Removed {
+		case option.None:
+		case option.Some(handle):
+			if force { owners := runtime.owners[handle.Generation]; match runtime.exits { case HotCodeExitWith(exit): for owner := range owners { exit(owner, term.MustAtom("killed")); exited++ } } }
+			delete(runtime.owners, handle.Generation); delete(runtime.images, handle.Generation); reclaimed, releaseFailure = runtime.releaseLiterals(handle.Generation)
+		}
+		return result.Ok[HotCodeRemoveReport, HotCodeRuntimeFailure](HotCodeRemoveReport{State: transition.State, Exited: exited, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure})
+	}
 }
 
 func (runtime *HotCodeRuntime) releaseLiterals(generation uint64) (int, option.Option[LiteralArenaFailure]) { literals, present := runtime.literals[generation]; if !present { return 0, option.None[LiteralArenaFailure]() }; count := literals.Len(); match literals.Close() { case result.Err(failure): return 0, option.Some(failure); case result.Ok(_): delete(runtime.literals, generation); return count, option.None[LiteralArenaFailure]() } }

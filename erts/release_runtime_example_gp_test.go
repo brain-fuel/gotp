@@ -48,9 +48,6 @@ func releaseOperations(trace *[]string) ReleaseRuntimeOperations {
 			return ok("unstage:" + library)
 		},
 		CommitPaths: func() result.Result[bool, ReleaseRuntimeFailure] { return ok("commit_paths") },
-		Remove: func(module string, _, _ release.PurgeMethod) result.Result[bool, ReleaseRuntimeFailure] {
-			return ok("remove:" + module)
-		},
 		Suspend: func(target release.SuspendTarget) result.Result[bool, ReleaseRuntimeFailure] {
 			return ok("suspend:" + target.Module)
 		},
@@ -203,6 +200,48 @@ func TestReleaseRuntimeRejectsBusySoftPrePurge(t *testing.T) {
 	case result.Err[release.ExecutionReport, release.ExecutionFailure]:
 	case result.Ok[release.ExecutionReport, release.ExecutionFailure]:
 		t.Fatal("busy soft pre-purge succeeded")
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestReleaseRuntimeRemovesCurrentCodeThroughHotCodeState(t *testing.T) {
+	hot := releaseHotCode(t)
+	switch __gp_m12 := any(hot.InstallLoaded(&LoadedModule{name: "retired", digest: "1"})).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m12.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	trace := []string{}
+	runtime := newReleaseRuntime(t, hot, releaseOperations(&trace))
+	script := release.Script{CommitIndex: -1, Instructions: []release.Instruction{release.RemoveCode{Module: "retired", PrePurge: release.SoftPurge{}, PostPurge: release.BrutalPurge{}}}}
+	switch __gp_m13 := any(executeReleaseRuntime(t, runtime, script)).(type) {
+	case result.Err[release.ExecutionReport, release.ExecutionFailure]:
+		failure := __gp_m13.Err
+		t.Fatal(release.ExecutionFailureError(failure))
+	case result.Ok[release.ExecutionReport, release.ExecutionFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m14 := any(hot.Enter(term.PID{Node: 1, Number: 19, Creation: 1}, "retired")).(type) {
+	case result.Err[HotCodeEntry, HotCodeRuntimeFailure]:
+		failure := __gp_m14.Err
+		switch __gp_m15 := any(failure).(type) {
+		case HotCodeStateFailure:
+			cause := __gp_m15.Cause
+			switch any(cause).(type) {
+			case beam.CodeModuleNotLoaded:
+			default:
+				t.Fatal(cause)
+			}
+		default:
+			t.Fatal(HotCodeRuntimeFailureError(failure))
+		}
+	case result.Ok[HotCodeEntry, HotCodeRuntimeFailure]:
+		t.Fatal("removed current code remained enterable")
 	default:
 		panic("goplus: impossible enum value in match")
 	}

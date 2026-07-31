@@ -48,3 +48,8 @@ cannot acquire ambient authority.
 The adapter preserves `release_handler`'s transaction boundary: staged object
 code can be rolled back before `point_of_no_return`; failures after that point
 are reported without pretending that committed VM effects were reversed.
+
+Current-code removal is a typed hot-code store transition. Soft removal rejects
+active references without mutation; brutal removal invalidates references,
+terminates owners, removes the VM image, and reclaims generation-owned literal
+memory. It is not delegated through an application callback.

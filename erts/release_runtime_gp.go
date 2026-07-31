@@ -4,6 +4,7 @@
 package erts
 
 import (
+	"fmt"
 	"sort"
 
 	"goforge.dev/goplus/std/result"
@@ -15,7 +16,6 @@ import (
 type StageReleaseEffect func(Library string, Version string, Modules []string) result.Result[[]*LoadedModule, ReleaseRuntimeFailure]
 type UnstageReleaseEffect func(Library string, Modules []string) result.Result[bool, ReleaseRuntimeFailure]
 type CommitPathsEffect func() result.Result[bool, ReleaseRuntimeFailure]
-type RemoveReleaseEffect func(Module string, Pre release.PurgeMethod, Post release.PurgeMethod) result.Result[bool, ReleaseRuntimeFailure]
 type SuspendReleaseEffect func(Target release.SuspendTarget) result.Result[bool, ReleaseRuntimeFailure]
 type ModuleReleaseEffect func(Module string) result.Result[bool, ReleaseRuntimeFailure]
 type ChangeReleaseEffect func(Mode release.ChangeMode, Target release.ChangeTarget) result.Result[bool, ReleaseRuntimeFailure]
@@ -27,7 +27,6 @@ type ReleaseRuntimeOperations struct {
 	Stage       StageReleaseEffect
 	Unstage     UnstageReleaseEffect
 	CommitPaths CommitPathsEffect
-	Remove      RemoveReleaseEffect
 	Suspend     SuspendReleaseEffect
 	Resume      ModuleReleaseEffect
 	Change      ChangeReleaseEffect
@@ -270,7 +269,7 @@ func NewReleaseRuntime(hotCode *HotCodeRuntime, operations ReleaseRuntimeOperati
 		name    string
 		present bool
 	}{
-		{"stage", operations.Stage != nil}, {"unstage", operations.Unstage != nil}, {"commit_paths", operations.CommitPaths != nil}, {"remove", operations.Remove != nil},
+		{"stage", operations.Stage != nil}, {"unstage", operations.Unstage != nil}, {"commit_paths", operations.CommitPaths != nil},
 		{"suspend", operations.Suspend != nil}, {"resume", operations.Resume != nil}, {"change", operations.Change != nil}, {"stop", operations.Stop != nil}, {"start", operations.Start != nil},
 		{"sync_list", operations.SyncList != nil}, {"sync_apply", operations.SyncApply != nil}, {"apply", operations.Apply != nil},
 	}
@@ -312,8 +311,7 @@ func (runtime *ReleaseRuntime) execute(instruction release.Instruction) release.
 	case release.RemoveCode:
 		module := __gp_m1.Module
 		pre := __gp_m1.PrePurge
-		post := __gp_m1.PostPurge
-		return releaseEffect(runtime.operations.Remove(module, pre, post))
+		return runtime.remove(module, pre)
 	case release.PurgeCode:
 		modules := __gp_m1.Modules
 		for _, module := range modules {
@@ -499,11 +497,40 @@ func (runtime *ReleaseRuntime) prePurge(module string, method release.PurgeMetho
 	}
 }
 
+func (runtime *ReleaseRuntime) remove(module string, method release.PurgeMethod) release.EffectOutcome {
+	force := false
+	switch any(method).(type) {
+	case release.SoftPurge:
+	case release.BrutalPurge:
+		force = true
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m13 := any(runtime.hotCode.Remove(module, force)).(type) {
+	case result.Err[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		failure := __gp_m13.Err
+		return release.EffectRejected{Detail: HotCodeRuntimeFailureError(failure)}
+	case result.Ok[HotCodeRemoveReport, HotCodeRuntimeFailure]:
+		report := __gp_m13.Value
+		switch __gp_m14 := any(report.State).(type) {
+		case beam.CurrentCodeBusy:
+			references := __gp_m14.References
+			return release.EffectRejected{Detail: "current code is active for " + module + ": " + fmt.Sprint(references)}
+		case beam.NoCodeModule, beam.CurrentCodeRemoved:
+			return release.EffectApplied{}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (runtime *ReleaseRuntime) modules(name string, modules []string, effect ModuleReleaseEffect) release.EffectOutcome {
 	for _, module := range modules {
-		switch __gp_m12 := any(effect(module)).(type) {
+		switch __gp_m15 := any(effect(module)).(type) {
 		case result.Err[bool, ReleaseRuntimeFailure]:
-			failure := __gp_m12.Err
+			failure := __gp_m15.Err
 			return release.EffectRejected{Detail: name + ": " + ReleaseRuntimeFailureError(failure)}
 		case result.Ok[bool, ReleaseRuntimeFailure]:
 		default:
@@ -513,9 +540,9 @@ func (runtime *ReleaseRuntime) modules(name string, modules []string, effect Mod
 	return release.EffectApplied{}
 }
 func releaseEffect(outcome result.Result[bool, ReleaseRuntimeFailure]) release.EffectOutcome {
-	switch __gp_m13 := any(outcome).(type) {
+	switch __gp_m16 := any(outcome).(type) {
 	case result.Err[bool, ReleaseRuntimeFailure]:
-		failure := __gp_m13.Err
+		failure := __gp_m16.Err
 		return release.EffectRejected{Detail: ReleaseRuntimeFailureError(failure)}
 	case result.Ok[bool, ReleaseRuntimeFailure]:
 		return release.EffectApplied{}

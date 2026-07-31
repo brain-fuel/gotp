@@ -224,6 +224,13 @@ type HotCodePurgeReport struct {
 	ReleaseFailure    option.Option[LiteralArenaFailure]
 }
 
+type HotCodeRemoveReport struct {
+	State             beam.CodeRemovalState
+	Exited            int
+	ReclaimedLiterals int
+	ReleaseFailure    option.Option[LiteralArenaFailure]
+}
+
 type HotCodeRuntime struct {
 	store    beam.CodeStore
 	owners   map[uint64]map[term.PID]int
@@ -430,15 +437,58 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 	return HotCodePurgeReport{State: transition.State, Exited: exited, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure}
 }
 
+func (runtime *HotCodeRuntime) Remove(module string, force bool) result.Result[HotCodeRemoveReport, HotCodeRuntimeFailure] {
+	switch __gp_m12 := any(runtime.store.Remove(module, force)).(type) {
+	case result.Err[beam.CodeRemovalTransition, beam.HotCodeFailure]:
+		cause := __gp_m12.Err
+		return result.Err[HotCodeRemoveReport, HotCodeRuntimeFailure]{Err: HotCodeStateFailure{Cause: cause}}
+	case result.Ok[beam.CodeRemovalTransition, beam.HotCodeFailure]:
+		transition := __gp_m12.Value
+
+		runtime.store = transition.Store
+		exited := 0
+		reclaimed := 0
+		var releaseFailure option.Option[LiteralArenaFailure] = option.None[LiteralArenaFailure]{}
+		switch __gp_m13 := any(transition.Removed).(type) {
+		case option.None[beam.CodeHandle]:
+
+		case option.Some[beam.CodeHandle]:
+			handle := __gp_m13.Value
+
+			if force {
+				owners := runtime.owners[handle.Generation]
+				switch __gp_m14 := any(runtime.exits).(type) {
+				case HotCodeExitWith:
+					exit := __gp_m14.Exit
+					for owner := range owners {
+						exit(owner, term.MustAtom("killed"))
+						exited++
+					}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+			delete(runtime.owners, handle.Generation)
+			delete(runtime.images, handle.Generation)
+			reclaimed, releaseFailure = runtime.releaseLiterals(handle.Generation)
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		return result.Ok[HotCodeRemoveReport, HotCodeRuntimeFailure]{Value: HotCodeRemoveReport{State: transition.State, Exited: exited, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (runtime *HotCodeRuntime) releaseLiterals(generation uint64) (int, option.Option[LiteralArenaFailure]) {
 	literals, present := runtime.literals[generation]
 	if !present {
 		return 0, option.None[LiteralArenaFailure]{}
 	}
 	count := literals.Len()
-	switch __gp_m12 := any(literals.Close()).(type) {
+	switch __gp_m15 := any(literals.Close()).(type) {
 	case result.Err[memory.Mutation, LiteralArenaFailure]:
-		failure := __gp_m12.Err
+		failure := __gp_m15.Err
 		return 0, option.Some[LiteralArenaFailure]{Value: failure}
 	case result.Ok[memory.Mutation, LiteralArenaFailure]:
 		delete(runtime.literals, generation)

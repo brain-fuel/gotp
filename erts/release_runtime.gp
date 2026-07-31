@@ -1,6 +1,7 @@
 package erts
 
 import (
+	"fmt"
 	"sort"
 
 	"goforge.dev/goplus/std/result"
@@ -12,7 +13,6 @@ import (
 type StageReleaseEffect func(Library string, Version string, Modules []string) result.Result[[]*LoadedModule, ReleaseRuntimeFailure]
 type UnstageReleaseEffect func(Library string, Modules []string) result.Result[bool, ReleaseRuntimeFailure]
 type CommitPathsEffect func() result.Result[bool, ReleaseRuntimeFailure]
-type RemoveReleaseEffect func(Module string, Pre release.PurgeMethod, Post release.PurgeMethod) result.Result[bool, ReleaseRuntimeFailure]
 type SuspendReleaseEffect func(Target release.SuspendTarget) result.Result[bool, ReleaseRuntimeFailure]
 type ModuleReleaseEffect func(Module string) result.Result[bool, ReleaseRuntimeFailure]
 type ChangeReleaseEffect func(Mode release.ChangeMode, Target release.ChangeTarget) result.Result[bool, ReleaseRuntimeFailure]
@@ -24,7 +24,6 @@ type ReleaseRuntimeOperations struct {
 	Stage StageReleaseEffect
 	Unstage UnstageReleaseEffect
 	CommitPaths CommitPathsEffect
-	Remove RemoveReleaseEffect
 	Suspend SuspendReleaseEffect
 	Resume ModuleReleaseEffect
 	Change ChangeReleaseEffect
@@ -68,7 +67,7 @@ type ReleaseRuntime struct {
 func NewReleaseRuntime(hotCode *HotCodeRuntime, operations ReleaseRuntimeOperations) result.Result[*ReleaseRuntime, ReleaseRuntimeFailure] {
 	if hotCode == nil { return result.Err[*ReleaseRuntime, ReleaseRuntimeFailure](NilReleaseHotCode()) }
 	checks := []struct { name string; present bool }{
-		{"stage", operations.Stage != nil}, {"unstage", operations.Unstage != nil}, {"commit_paths", operations.CommitPaths != nil}, {"remove", operations.Remove != nil},
+		{"stage", operations.Stage != nil}, {"unstage", operations.Unstage != nil}, {"commit_paths", operations.CommitPaths != nil},
 		{"suspend", operations.Suspend != nil}, {"resume", operations.Resume != nil}, {"change", operations.Change != nil}, {"stop", operations.Stop != nil}, {"start", operations.Start != nil},
 		{"sync_list", operations.SyncList != nil}, {"sync_apply", operations.SyncApply != nil}, {"apply", operations.Apply != nil},
 	}
@@ -89,7 +88,7 @@ func (runtime *ReleaseRuntime) execute(instruction release.Instruction) release.
 	case release.LoadObjectCode(library, version, modules): return runtime.stage(library, version, modules)
 	case release.PointOfNoReturn: return releaseEffect(runtime.operations.CommitPaths())
 	case release.LoadCode(module, pre, post): return runtime.load(module, pre, post)
-	case release.RemoveCode(module, pre, post): return releaseEffect(runtime.operations.Remove(module, pre, post))
+	case release.RemoveCode(module, pre, _): return runtime.remove(module, pre)
 	case release.PurgeCode(modules): for _, module := range modules { runtime.hotCode.Purge(module); delete(runtime.unpurged, module) }; return release.EffectApplied()
 	case release.SuspendCode(targets): for _, target := range targets { match runtime.operations.Suspend(target) { case result.Err(failure): return release.EffectRejected(failure.Error()); case result.Ok(_): } }; return release.EffectApplied()
 	case release.ResumeCode(modules): return runtime.modules("resume", modules, runtime.operations.Resume)
@@ -151,6 +150,14 @@ func (runtime *ReleaseRuntime) prePurge(module string, method release.PurgeMetho
 		transition := runtime.hotCode.SoftPurge(module)
 		match transition.State { case beam.OldCodeVersionBusy(_): return result.Err[bool, ReleaseRuntimeFailure](ReleaseOperationRejected("soft_purge", "old code is active for " + module)); case _: return result.Ok[bool, ReleaseRuntimeFailure](true) }
 	case release.BrutalPurge: runtime.hotCode.Purge(module); return result.Ok[bool, ReleaseRuntimeFailure](true)
+	}
+}
+
+func (runtime *ReleaseRuntime) remove(module string, method release.PurgeMethod) release.EffectOutcome {
+	force := false; match method { case release.SoftPurge: case release.BrutalPurge: force = true }
+	match runtime.hotCode.Remove(module, force) {
+	case result.Err(failure): return release.EffectRejected(failure.Error())
+	case result.Ok(report): match report.State { case beam.CurrentCodeBusy(references): return release.EffectRejected("current code is active for " + module + ": " + fmt.Sprint(references)); case beam.NoCodeModule, beam.CurrentCodeRemoved(_): return release.EffectApplied() }
 	}
 }
 
