@@ -569,7 +569,7 @@ func ScriptFailureEqual(a, b ScriptFailure) bool {
 }
 
 //goplus:method (ScriptFailure) Error
-func Error(failure ScriptFailure) string {
+func ScriptFailureError(failure ScriptFailure) string {
 	switch __gp_m0 := any(failure).(type) {
 	case ExpectedInstructionList:
 		found := __gp_m0.Found

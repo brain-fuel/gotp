@@ -60,3 +60,5 @@ This document is not a release and does not authorize a tag or publication.
   using deterministic `std/clock` timestamps and property-tested retention.
 - Added a total typed parser and transaction validator for the pinned low-level
   relup instruction vocabulary and `point_of_no_return` ordering.
+- Added a capability-neutral release executor with reverse preflight rollback,
+  irreversible commit failures, and explicit emulator-restart outcomes.

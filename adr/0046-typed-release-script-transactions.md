@@ -20,7 +20,9 @@ entire post-commit instruction stream before any effect executes.
 ## Consequences
 
 Malformed or reordered scripts become typed failures rather than release-time
-panics. Execution effects, old-process checks, rollback before commit,
+panics. A capability-neutral executor validates before effects, rolls successful
+preflight operations back in reverse order, forbids rollback after commit, and
+returns restart requests as typed outcomes. Concrete old-process checks,
 distributed synchronization, appup translation, and restart orchestration
 remain separate implementation phases.
 
@@ -29,3 +31,7 @@ remain separate implementation phases.
 `test:gotp.otp.release-script-laws` covers the pinned instruction vocabulary,
 transaction split, mode/timeout/MFA preservation, staging invariants, malformed
 ordering, and parser totality over arbitrary bytes.
+
+`test:gotp.otp.release-executor-laws` proves validate-before-effect ordering,
+reverse preflight rollback, no post-commit rollback, rollback-failure evidence,
+and explicit restart outcomes.

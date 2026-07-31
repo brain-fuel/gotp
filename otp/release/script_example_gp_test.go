@@ -38,7 +38,7 @@ func TestPinnedReleaseScriptVocabularyAndTransactionSplit(t *testing.T) {
 	switch __gp_m0 := any(ParseScript(encoded)).(type) {
 	case result.Err[Script, ScriptFailure]:
 		failure := __gp_m0.Err
-		t.Fatal(Error(failure))
+		t.Fatal(ScriptFailureError(failure))
 	case result.Ok[Script, ScriptFailure]:
 		script := __gp_m0.Value
 
