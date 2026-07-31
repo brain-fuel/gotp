@@ -62,3 +62,13 @@ This document is not a release and does not authorize a tag or publication.
   relup instruction vocabulary and `point_of_no_return` ordering.
 - Added a capability-neutral release executor with reverse preflight rollback,
   irreversible commit failures, and explicit emulator-restart outcomes.
+
+### ERTS release execution
+
+- Added `gotp.erts.release-runtime`, which connects typed release scripts to
+  two-version module loading and purge semantics through explicit effect
+  capabilities.
+- Added laws for commit ordering, deferred post-load purge, and rejection of a
+  busy soft pre-purge.
+- This is an unreleased compatibility slice. It does not establish OTP feature
+  parity, and the compatibility inventory remains incomplete.

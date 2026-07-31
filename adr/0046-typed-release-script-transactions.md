@@ -35,3 +35,16 @@ ordering, and parser totality over arbitrary bytes.
 `test:gotp.otp.release-executor-laws` proves validate-before-effect ordering,
 reverse preflight rollback, no post-commit rollback, rollback-failure evidence,
 and explicit restart outcomes.
+
+## ERTS execution boundary
+
+Artifact `gotp.erts.release-runtime` adapts validated release instructions to
+the two-version hot-code runtime. Object-code staging, loading, and purging are
+owned by that adapter. Process suspension and code change, application
+stop/start, distribution synchronization, arbitrary MFA application, and
+emulator restart remain explicit injected capabilities so release execution
+cannot acquire ambient authority.
+
+The adapter preserves `release_handler`'s transaction boundary: staged object
+code can be rolled back before `point_of_no_return`; failures after that point
+are reported without pretending that committed VM effects were reversed.
