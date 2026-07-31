@@ -4,6 +4,8 @@
 package erts
 
 import (
+	"time"
+
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -17,14 +19,227 @@ func (process *VMProcess) contextualCall(
 	target vm.ExternalFunction,
 	arguments []term.Term,
 ) vm.ExternalCallOutcome {
+	if target.Module == "erlang" && target.Function == "self" && target.Arity == 0 {
+		return vm.ExternalCallReturned{Value: term.PIDValue(context.Self())}
+	}
+	if target.Module == "erlang" && target.Function == "make_ref" && target.Arity == 0 {
+		return vm.ExternalCallReturned{Value: term.ReferenceValue(context.MakeReference())}
+	}
+	if target.Module == "erlang" && target.Function == "monotonic_time" && (target.Arity == 0 || target.Arity == 1) {
+		return process.otpMonotonicTime(arguments)
+	}
+	if target.Module == "erlang" && target.Function == "node" && target.Arity == 0 {
+		return vm.ExternalCallReturned{Value: term.MustAtom(context.NodeName())}
+	}
+	if target.Module == "erlang" && target.Function == "node" && target.Arity == 1 {
+		switch __gp_m0 := any(term.TermPIDValue(arguments[0])).(type) {
+		case option.Some[term.PID]:
+			pid := __gp_m0.Value
+			if pid.Node == context.NodeID() {
+				return vm.ExternalCallReturned{Value: term.MustAtom(context.NodeName())}
+			}
+			return vm.ExternalCallReturned{Value: term.MustAtom(context.NodeName())}
+		case option.None[term.PID]:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m1 := any(term.TermReferenceValue(arguments[0])).(type) {
+		case option.Some[term.Reference]:
+			reference := __gp_m1.Value
+			if reference.Node == context.NodeID() {
+				return vm.ExternalCallReturned{Value: term.MustAtom(context.NodeName())}
+			}
+			return vm.ExternalCallReturned{Value: term.MustAtom(context.NodeName())}
+		case option.None[term.Reference]:
+			return otpBadarg()
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "send" && (target.Arity == 2 || target.Arity == 3) {
+		return otpContextSend(context, arguments, target.Arity == 3)
+	}
+	if target.Module == "erlang" && target.Function == "spawn_opt" && target.Arity == 4 {
+		return process.otpContextSpawn(context, arguments)
+	}
+	if target.Module == "erlang" && target.Function == "monitor" && (target.Arity == 2 || target.Arity == 3) {
+		return otpContextMonitor(context, arguments)
+	}
+	if target.Module == "erlang" && target.Function == "demonitor" && (target.Arity == 1 || target.Arity == 2) {
+		return otpContextDemonitor(context, arguments)
+	}
+	if target.Module == "erlang" && target.Function == "link" && target.Arity == 1 {
+		switch __gp_m2 := any(term.TermPIDValue(arguments[0])).(type) {
+		case option.None[term.PID]:
+			return otpBadarg()
+		case option.Some[term.PID]:
+			pid := __gp_m2.Value
+			switch __gp_m3 := any(context.Link(pid)).(type) {
+			case result.Err[kernel.KernelMutation, kernel.Failure]:
+				failure := __gp_m3.Err
+				return vm.ExternalCallRejected{Detail: kernel.FailureError(failure)}
+			case result.Ok[kernel.KernelMutation, kernel.Failure]:
+				return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "unlink" && target.Arity == 1 {
+		switch __gp_m4 := any(term.TermPIDValue(arguments[0])).(type) {
+		case option.None[term.PID]:
+			return otpBadarg()
+		case option.Some[term.PID]:
+			pid := __gp_m4.Value
+			context.Unlink(pid)
+			return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "process_flag" && target.Arity == 2 {
+		switch __gp_m5 := any(term.AtomName(arguments[0])).(type) {
+		case option.Some[string]:
+			flag := __gp_m5.Value
+			if flag != "trap_exit" {
+				return otpBadarg()
+			}
+			switch __gp_m6 := any(term.AtomName(arguments[1])).(type) {
+			case option.Some[string]:
+				value := __gp_m6.Value
+				switch value {
+				case "true":
+					context.SetTrapExit(true)
+					return vm.ExternalCallReturned{Value: term.MustAtom("false")}
+				case "false":
+					context.SetTrapExit(false)
+					return vm.ExternalCallReturned{Value: term.MustAtom("false")}
+				default:
+					return otpBadarg()
+				}
+			case option.None[string]:
+				return otpBadarg()
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		case option.None[string]:
+			return otpBadarg()
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "register" && target.Arity == 2 {
+		return otpContextRegister(context, arguments)
+	}
+	if target.Module == "erlang" && target.Function == "unregister" && target.Arity == 1 {
+		switch __gp_m7 := any(term.AtomName(arguments[0])).(type) {
+		case option.None[string]:
+			return otpBadarg()
+		case option.Some[string]:
+			name := __gp_m7.Value
+			switch any(context.Unregister(name)).(type) {
+			case result.Err[kernel.KernelMutation, kernel.Failure]:
+				return otpBadarg()
+			case result.Ok[kernel.KernelMutation, kernel.Failure]:
+				return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "whereis" && target.Arity == 1 {
+		switch __gp_m9 := any(term.AtomName(arguments[0])).(type) {
+		case option.None[string]:
+			return otpBadarg()
+		case option.Some[string]:
+			name := __gp_m9.Value
+			switch __gp_m10 := any(context.Whereis(name)).(type) {
+			case option.None[term.PID]:
+				return vm.ExternalCallReturned{Value: term.MustAtom("undefined")}
+			case option.Some[term.PID]:
+				pid := __gp_m10.Value
+				return vm.ExternalCallReturned{Value: term.PIDValue(pid)}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "process_info" && target.Arity == 2 {
+		var pid term.PID
+		switch __gp_m11 := any(term.TermPIDValue(arguments[0])).(type) {
+		case option.None[term.PID]:
+			return otpBadarg()
+		case option.Some[term.PID]:
+			value := __gp_m11.Value
+			pid = value
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m12 := any(term.AtomName(arguments[1])).(type) {
+		case option.None[string]:
+			return otpBadarg()
+		case option.Some[string]:
+			item := __gp_m12.Value
+			switch __gp_m13 := any(context.ProcessInfo(pid, item)).(type) {
+			case option.None[term.Term]:
+				return vm.ExternalCallReturned{Value: term.MustAtom("undefined")}
+			case option.Some[term.Term]:
+				value := __gp_m13.Value
+				return vm.ExternalCallReturned{Value: value}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "put" && target.Arity == 2 {
+		switch __gp_m14 := any(context.DictionaryPut(arguments[0], arguments[1])).(type) {
+		case option.None[term.Term]:
+			return vm.ExternalCallReturned{Value: term.MustAtom("undefined")}
+		case option.Some[term.Term]:
+			value := __gp_m14.Value
+			return vm.ExternalCallReturned{Value: value}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "get" && target.Arity == 1 {
+		switch __gp_m15 := any(context.DictionaryGet(arguments[0])).(type) {
+		case option.None[term.Term]:
+			return vm.ExternalCallReturned{Value: term.MustAtom("undefined")}
+		case option.Some[term.Term]:
+			value := __gp_m15.Value
+			return vm.ExternalCallReturned{Value: value}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	if target.Module == "erlang" && target.Function == "erase" && target.Arity == 1 {
+		switch __gp_m16 := any(context.DictionaryErase(arguments[0])).(type) {
+		case option.None[term.Term]:
+			return vm.ExternalCallReturned{Value: term.MustAtom("undefined")}
+		case option.Some[term.Term]:
+			value := __gp_m16.Value
+			return vm.ExternalCallReturned{Value: value}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
 	if target.Module == "erlang" && target.Function == "alias" && target.Arity == 0 {
-		switch __gp_m0 := any(context.Alias()).(type) {
+		switch __gp_m17 := any(context.Alias()).(type) {
 		case result.Err[term.Reference, kernel.Failure]:
-			failure := __gp_m0.Err
+			failure := __gp_m17.Err
 
 			return vm.ExternalCallRejected{Detail: kernel.FailureError(failure)}
 		case result.Ok[term.Reference, kernel.Failure]:
-			reference := __gp_m0.Value
+			reference := __gp_m17.Value
 
 			return vm.ExternalCallReturned{Value: term.ReferenceValue(reference)}
 		default:
@@ -32,12 +247,12 @@ func (process *VMProcess) contextualCall(
 		}
 	}
 	if target.Module == "erlang" && target.Function == "unalias" && target.Arity == 1 {
-		switch __gp_m1 := any(term.TermReferenceValue(arguments[0])).(type) {
+		switch __gp_m18 := any(term.TermReferenceValue(arguments[0])).(type) {
 		case option.None[term.Reference]:
 
 			return vm.ExternalCallRaised{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}
 		case option.Some[term.Reference]:
-			reference := __gp_m1.Value
+			reference := __gp_m18.Value
 
 			context.Unalias(reference)
 			return vm.ExternalCallReturned{Value: term.MustAtom("true")}
@@ -46,4 +261,247 @@ func (process *VMProcess) contextualCall(
 		}
 	}
 	return process.callRegistry.Call(target, arguments)
+}
+
+func (process *VMProcess) otpMonotonicTime(arguments []term.Term) vm.ExternalCallOutcome {
+	unit := "native"
+	if len(arguments) == 1 {
+		switch __gp_m19 := any(term.AtomName(arguments[0])).(type) {
+		case option.None[string]:
+			return otpBadarg()
+		case option.Some[string]:
+			found := __gp_m19.Value
+			unit = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	nanoseconds := process.clock.Now().UnixNano()
+	switch unit {
+	case "native", "nanosecond":
+		return vm.ExternalCallReturned{Value: term.Integer(nanoseconds)}
+	case "microsecond":
+		return vm.ExternalCallReturned{Value: term.Integer(nanoseconds / int64(time.Microsecond))}
+	case "millisecond":
+		return vm.ExternalCallReturned{Value: term.Integer(nanoseconds / int64(time.Millisecond))}
+	case "second":
+		return vm.ExternalCallReturned{Value: term.Integer(nanoseconds / int64(time.Second))}
+	default:
+		return otpBadarg()
+	}
+}
+
+func otpContextSend(context *kernel.Context, arguments []term.Term, options bool) vm.ExternalCallOutcome {
+	delivered := kernel.Delivery(kernel.NoProcess{})
+	switch __gp_m20 := any(term.TermPIDValue(arguments[0])).(type) {
+	case option.Some[term.PID]:
+		pid := __gp_m20.Value
+		delivered = context.Send(pid, arguments[1])
+	case option.None[term.PID]:
+		switch __gp_m21 := any(term.TermReferenceValue(arguments[0])).(type) {
+		case option.Some[term.Reference]:
+			reference := __gp_m21.Value
+			delivered = context.SendAlias(reference, arguments[1])
+		case option.None[term.Reference]:
+			switch __gp_m22 := any(term.AtomName(arguments[0])).(type) {
+			case option.Some[string]:
+				name := __gp_m22.Value
+				delivered = context.SendRegistered(name, arguments[1])
+			case option.None[string]:
+				return otpBadarg()
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch any(delivered).(type) {
+	case kernel.Delivered, kernel.NoProcess:
+		if options {
+			return vm.ExternalCallReturned{Value: term.MustAtom("ok")}
+		}
+		return vm.ExternalCallReturned{Value: term.Clone(arguments[1])}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (process *VMProcess) otpContextSpawn(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
+	if process.spawnMFA == nil {
+		return vm.ExternalCallRejected{Detail: "MFA spawning is unavailable"}
+	}
+	var module, function string
+	switch __gp_m24 := any(term.AtomName(arguments[0])).(type) {
+	case option.None[string]:
+		return otpBadarg()
+	case option.Some[string]:
+		value := __gp_m24.Value
+		module = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m25 := any(term.AtomName(arguments[1])).(type) {
+	case option.None[string]:
+		return otpBadarg()
+	case option.Some[string]:
+		value := __gp_m25.Value
+		function = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	var callArguments, options []term.Term
+	switch __gp_m26 := any(arguments[2]).(type) {
+	case term.ProperListTerm:
+		values := __gp_m26.Elements
+		callArguments = values
+	default:
+		return otpBadarg()
+	}
+	switch __gp_m27 := any(arguments[3]).(type) {
+	case term.ProperListTerm:
+		values := __gp_m27.Elements
+		options = values
+	default:
+		return otpBadarg()
+	}
+	link, monitor := false, false
+	for _, value := range options {
+		switch __gp_m28 := any(term.AtomName(value)).(type) {
+		case option.Some[string]:
+			name := __gp_m28.Value
+			switch name {
+			case "link":
+				link = true
+			case "monitor":
+				monitor = true
+			}
+		case option.None[string]:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	return process.spawnMFA(context, module, function, callArguments, link, monitor)
+}
+
+func otpContextMonitor(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m29 := any(term.AtomName(arguments[0])).(type) {
+	case option.Some[string]:
+		kind := __gp_m29.Value
+		if kind != "process" {
+			return otpBadarg()
+		}
+	case option.None[string]:
+		return otpBadarg()
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	aliasOnDemonitor := false
+	if len(arguments) == 3 {
+		var options []term.Term
+		switch __gp_m30 := any(arguments[2]).(type) {
+		case term.ProperListTerm:
+			values := __gp_m30.Elements
+			options = values
+		default:
+			return otpBadarg()
+		}
+		for _, value := range options {
+			switch __gp_m31 := any(value).(type) {
+			case term.TupleTerm:
+				elements := __gp_m31.Elements
+
+				if len(elements) != 2 {
+					return otpBadarg()
+				}
+				var name, mode string
+				switch __gp_m32 := any(term.AtomName(elements[0])).(type) {
+				case option.None[string]:
+					return otpBadarg()
+				case option.Some[string]:
+					found := __gp_m32.Value
+					name = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				switch __gp_m33 := any(term.AtomName(elements[1])).(type) {
+				case option.None[string]:
+					return otpBadarg()
+				case option.Some[string]:
+					found := __gp_m33.Value
+					mode = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				if name != "alias" || mode != "demonitor" {
+					return otpBadarg()
+				}
+				aliasOnDemonitor = true
+			default:
+				return otpBadarg()
+			}
+		}
+	}
+	switch __gp_m34 := any(term.TermPIDValue(arguments[1])).(type) {
+	case option.None[term.PID]:
+		return otpBadarg()
+	case option.Some[term.PID]:
+		pid := __gp_m34.Value
+		var monitored kernel.ContextMonitorResult
+		if aliasOnDemonitor {
+			monitored = context.MonitorAliasResult(pid)
+		} else {
+			monitored = context.MonitorResult(pid)
+		}
+		if !monitored.Accepted {
+			return vm.ExternalCallRejected{Detail: monitored.Detail}
+		}
+		return vm.ExternalCallReturned{Value: term.ReferenceValue(monitored.Reference)}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func otpContextDemonitor(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m35 := any(term.TermReferenceValue(arguments[0])).(type) {
+	case option.None[term.Reference]:
+		return otpBadarg()
+	case option.Some[term.Reference]:
+		reference := __gp_m35.Value
+		context.Demonitor(reference, true)
+		return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func otpContextRegister(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
+	var name string
+	switch __gp_m36 := any(term.AtomName(arguments[0])).(type) {
+	case option.None[string]:
+		return otpBadarg()
+	case option.Some[string]:
+		value := __gp_m36.Value
+		name = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m37 := any(term.TermPIDValue(arguments[1])).(type) {
+	case option.None[term.PID]:
+		return otpBadarg()
+	case option.Some[term.PID]:
+		pid := __gp_m37.Value
+		switch any(context.Register(name, pid)).(type) {
+		case result.Err[kernel.KernelMutation, kernel.Failure]:
+			return otpBadarg()
+		case result.Ok[kernel.KernelMutation, kernel.Failure]:
+			return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 }

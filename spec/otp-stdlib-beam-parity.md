@@ -81,6 +81,23 @@ well as the public behavior.
 
 The pinned `gen_server.beam` currently executes request-ID collection and
 introspection exports. ETF reference terms use an explicit static node resolver.
-This does not establish lifecycle parity: start, linking, monitor, request,
-reply, timeout, stop, and system-message paths still require end-to-end
-scheduler evidence.
+
+The pinned lifecycle callback additionally executes `start/3`, `call/2`,
+`cast/2`, `reply/2`, and `stop/1` through the ordinary scheduler. It exercises
+`init/1`, `handle_call/3`, `handle_cast/2`, and `terminate/2`, including
+monitor-backed aliases, selective receive markers, explicit delayed reply, a
+system terminate request, and exact `normal` process exit propagation.
+
+- Lifecycle corpus: `sha256:b1087a0833bea440f030f97a3732e81aed9c6aec32a3a0d33db8343971d137a0`
+- Callback module: `sha256:7e7ca0b5b92b17b872470ab53e8e047e1249dfa805d48c10b7bda0361bdf2ea5`
+- Lifecycle law: `gotp.erts.otp29-gen-server-lifecycle`
+- Monitor-alias law: `gotp.kernel.monitor-alias-lifecycle`
+- Receive-marker law: `gotp.erts.receive-marker-cursor`
+
+This is not lifecycle parity for the entire module. Timeout, named, linked,
+start-monitor, continuation, code-change, multi-call, distributed, and failure
+paths remain open, as do exhaustive declared-input-domain laws.
+
+## Gen-server decision
+
+See ADR `0052-pinned-gen-server-lifecycle`.

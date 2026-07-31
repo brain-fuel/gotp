@@ -168,4 +168,9 @@ This document is not a release and does not authorize a tag or publication.
 - Added arbitrary-precision `bsr` and `bsl` behavior used by tree balancing.
 - Pinned the unmodified OTP 29.0.4 `gen_server.beam` and its direct import
   closure, and executed request-ID collection/introspection entry points with
-  real ETF reference terms. Lifecycle parity remains open.
+  real ETF reference terms.
+- Executed a pinned `gen_server` lifecycle through start, call, cast, explicit
+  reply, system stop, callback termination, and monitored normal exit. Added
+  receive-marker host effects, monitor-backed aliases, callable closure arity,
+  monotonic time, loaded-function introspection, and exact exit-reason
+  propagation required by that path. Broader lifecycle parity remains open.

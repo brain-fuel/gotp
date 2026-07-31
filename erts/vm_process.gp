@@ -55,7 +55,19 @@ type VMProcess struct {
 	clock           clock.Clock
 	timer           *kernel.WakeTimer
 	callRegistry    *CallRegistry
+	spawnMFA        SpawnMFAEffect
+	nextReceiveMarker int64
+	receiveMarkers []receiveMarkerBinding
 }
+
+type receiveMarkerBinding struct {
+	reference term.Term
+	cursor int
+}
+
+type SpawnMFAEffect func(Context *kernel.Context, Module string, Function string, Arguments []term.Term, Link bool, Monitor bool) vm.ExternalCallOutcome
+
+func (process *VMProcess) grantMFASpawning(effect SpawnMFAEffect) { process.spawnMFA = effect }
 
 // assayxport:unit gotp.erts.vm-process
 func NewVMProcess(
@@ -179,6 +191,10 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			Peek: func() vm.ReceiveOutcome { return process.peekMessage(context) },
 			Advance: process.advanceMessage,
 				Remove: process.removeMessage,
+				ReserveMarker: process.reserveReceiveMarker,
+				BindMarker: process.bindReceiveMarker,
+				ClearMarker: process.clearReceiveMarker,
+				UseMarker: process.useReceiveMarker,
 			},
 			},
 			Timer: vm.TimerEffects{
@@ -199,7 +215,10 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			case result.Err(cause):
 				return process.fail(cause.Error())
 			case result.Ok(granted):
-				host = granted
+				match vm.HostGrantExternalFunctionLookup(granted, process.callRegistry.Contains) {
+				case result.Err(cause): return process.fail(cause.Error())
+				case result.Ok(withLookup): host = withLookup
+				}
 			}
 		}
 		var resumed result.Result[vm.ExecutionSlice, vm.Failure] = process.continuation.ResumeWithHost(
@@ -281,6 +300,7 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 }
 
 func vmExceptionReason(class term.Term, reason term.Term) term.Term {
+	match term.AtomName(class) { case option.Some(name): if name == "exit" { return term.Clone(reason) }; case option.None: }
 	return term.Tuple(
 		term.MustAtom("gotp_exception"),
 		term.Clone(class),
@@ -364,6 +384,46 @@ func (process *VMProcess) removeMessage() vm.RemoveOutcome {
 	match process.receiveMessages.Remove(process.receiveCursor) { case option.None: return vm.RemoveRejected("no current message"); case option.Some(_): }
 	process.receiveCursor = 0
 	return vm.ReceiveMessageRemoved()
+}
+
+func (process *VMProcess) reserveReceiveMarker() vm.ReceiveMarkerReserveOutcome {
+	process.nextReceiveMarker++
+	return vm.ReceiveMarkerReserved(term.Integer(process.nextReceiveMarker))
+}
+
+func (process *VMProcess) bindReceiveMarker(_ term.Term, reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if process.receiveMarkers[index].reference.Equal(reference) {
+			process.receiveMarkers[index].cursor = process.receiveMessages.Len()
+			return vm.ReceiveMarkerChanged()
+		}
+	}
+	process.receiveMarkers = append(process.receiveMarkers, receiveMarkerBinding{
+		reference: term.Clone(reference),
+		cursor: process.receiveMessages.Len(),
+	})
+	return vm.ReceiveMarkerChanged()
+}
+
+func (process *VMProcess) clearReceiveMarker(reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if process.receiveMarkers[index].reference.Equal(reference) {
+			process.receiveMarkers = append(process.receiveMarkers[:index], process.receiveMarkers[index+1:]...)
+			return vm.ReceiveMarkerChanged()
+		}
+	}
+	return vm.ReceiveMarkerChanged()
+}
+
+func (process *VMProcess) useReceiveMarker(reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if process.receiveMarkers[index].reference.Equal(reference) {
+			process.receiveCursor = process.receiveMarkers[index].cursor
+			return vm.ReceiveMarkerChanged()
+		}
+	}
+	process.receiveCursor = 0
+	return vm.ReceiveMarkerChanged()
 }
 
 func (process *VMProcess) fail(detail string) kernel.StepResult {

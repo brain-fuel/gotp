@@ -54,6 +54,9 @@ func executeBIFInstruction(
 	case option.Some(found):
 		shape = found
 	}
+	if instruction.Opcode.Name == "bif0" && len(instruction.Operands) == 2 {
+		shape = bifInstructionShape{failIndex: -1, importIndex: 0, argumentAt: 1, arguments: 0, destination: 1, operands: 2}
+	}
 	if len(instruction.Operands) != shape.operands {
 		return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf(
 			"%s has %d operands",
@@ -124,6 +127,7 @@ func executeBIFInstruction(
 	case ExternalCallRaised(class, reason):
 		return result.Err[instructionOutcome, Failure](RaisedException(term.Clone(class), term.Clone(reason)))
 	case ExternalCallRejected(detail):
+		if shape.failIndex < 0 { return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("BIF %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail))) }
 		return machine.branchBIFailure(instruction, shape.failIndex, target, detail)
 	case ExternalCallReturned(value):
 		match machine.assign(instruction.Operands[shape.destination], value) {

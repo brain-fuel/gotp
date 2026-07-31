@@ -892,14 +892,54 @@ func otpAtomToList(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpListToAtom(arguments []term.Term) vm.ExternalCallOutcome {
+	var characters []term.Term
+	switch __gp_m38 := any(arguments[0]).(type) {
+	case term.ProperListTerm:
+		values := __gp_m38.Elements
+		characters = values
+	default:
+		return otpBadarg()
+	}
+	runes := make([]rune, len(characters))
+	for index, character := range characters {
+		switch __gp_m39 := any(term.IntegerValue(character)).(type) {
+		case option.None[*big.Int]:
+			return otpBadarg()
+		case option.Some[*big.Int]:
+			value := __gp_m39.Value
+
+			if !value.IsInt64() {
+				return otpBadarg()
+			}
+			codePoint := value.Int64()
+			if codePoint < 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff) {
+				return otpBadarg()
+			}
+			runes[index] = rune(codePoint)
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	switch __gp_m40 := any(term.Atom(string(runes))).(type) {
+	case result.Err[term.Term, term.ValidationFailure]:
+		return vm.ExternalCallRaised{Class: term.MustAtom("error"), Reason: term.MustAtom("system_limit")}
+	case result.Ok[term.Term, term.ValidationFailure]:
+		atom := __gp_m40.Value
+		return vm.ExternalCallReturned{Value: atom}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func otpElement(arguments []term.Term) vm.ExternalCallOutcome {
 	var index *big.Int
-	switch __gp_m38 := any(term.IntegerValue(arguments[0])).(type) {
+	switch __gp_m41 := any(term.IntegerValue(arguments[0])).(type) {
 	case option.None[*big.Int]:
 
 		return otpBadarg()
 	case option.Some[*big.Int]:
-		value := __gp_m38.Value
+		value := __gp_m41.Value
 
 		index = value
 	default:
@@ -908,12 +948,12 @@ func otpElement(arguments []term.Term) vm.ExternalCallOutcome {
 	if !index.IsInt64() || index.Sign() <= 0 {
 		return otpBadarg()
 	}
-	switch __gp_m39 := any(otpTupleElements(arguments[1])).(type) {
+	switch __gp_m42 := any(otpTupleElements(arguments[1])).(type) {
 	case option.None[[]term.Term]:
 
 		return otpBadarg()
 	case option.Some[[]term.Term]:
-		elements := __gp_m39.Value
+		elements := __gp_m42.Value
 
 		position := index.Int64() - 1
 		if position >= int64(len(elements)) {
@@ -927,12 +967,12 @@ func otpElement(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpSetElement(arguments []term.Term) vm.ExternalCallOutcome {
 	var index *big.Int
-	switch __gp_m40 := any(term.IntegerValue(arguments[0])).(type) {
+	switch __gp_m43 := any(term.IntegerValue(arguments[0])).(type) {
 	case option.None[*big.Int]:
 
 		return otpBadarg()
 	case option.Some[*big.Int]:
-		value := __gp_m40.Value
+		value := __gp_m43.Value
 
 		index = value
 	default:
@@ -941,12 +981,12 @@ func otpSetElement(arguments []term.Term) vm.ExternalCallOutcome {
 	if !index.IsInt64() || index.Sign() <= 0 {
 		return otpBadarg()
 	}
-	switch __gp_m41 := any(otpTupleElements(arguments[1])).(type) {
+	switch __gp_m44 := any(otpTupleElements(arguments[1])).(type) {
 	case option.None[[]term.Term]:
 
 		return otpBadarg()
 	case option.Some[[]term.Term]:
-		elements := __gp_m41.Value
+		elements := __gp_m44.Value
 
 		position := index.Int64() - 1
 		if position >= int64(len(elements)) {
@@ -961,9 +1001,9 @@ func otpSetElement(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapSize(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m42 := any(arguments[0]).(type) {
+	switch __gp_m45 := any(arguments[0]).(type) {
 	case term.MapTerm:
-		entries := __gp_m42.Entries
+		entries := __gp_m45.Entries
 		return vm.ExternalCallReturned{Value: term.Integer(int64(len(entries)))}
 	default:
 		return otpBadarg()
@@ -971,9 +1011,9 @@ func otpMapSize(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpTupleSize(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m43 := any(arguments[0]).(type) {
+	switch __gp_m46 := any(arguments[0]).(type) {
 	case term.TupleTerm:
-		elements := __gp_m43.Elements
+		elements := __gp_m46.Elements
 		return vm.ExternalCallReturned{Value: term.Integer(int64(len(elements)))}
 	default:
 		return otpBadarg()
@@ -982,9 +1022,9 @@ func otpTupleSize(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpMapNext(arguments []term.Term) vm.ExternalCallOutcome {
 	var entries []term.MapEntry
-	switch __gp_m44 := any(arguments[1]).(type) {
+	switch __gp_m47 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		found := __gp_m44.Entries
+		found := __gp_m47.Entries
 		entries = found
 	default:
 		return otpBadarg()
@@ -998,9 +1038,9 @@ func otpMapNext(arguments []term.Term) vm.ExternalCallOutcome {
 			return otpBadarg()
 		}
 	}
-	switch __gp_m46 := any(arguments[0]).(type) {
+	switch __gp_m49 := any(arguments[0]).(type) {
 	case term.IntegerTerm:
-		path := __gp_m46.Value
+		path := __gp_m49.Value
 
 		if path.Sign() < 0 || !path.IsInt64() || path.Int64() > int64(len(entries)) {
 			return otpBadarg()
@@ -1010,7 +1050,7 @@ func otpMapNext(arguments []term.Term) vm.ExternalCallOutcome {
 		}
 		return vm.ExternalCallReturned{Value: otpMapAssociationList(entries, arguments[2])}
 	case term.ProperListTerm:
-		keys := __gp_m46.Elements
+		keys := __gp_m49.Elements
 
 		if !iteratorMode {
 			return otpBadarg()
@@ -1048,13 +1088,13 @@ func otpMapAssociationList(entries []term.MapEntry, accumulator term.Term) term.
 	for index, entry := range entries {
 		values[index] = term.Tuple(term.Clone(entry.Key), term.Clone(entry.Value))
 	}
-	switch __gp_m47 := any(accumulator).(type) {
+	switch __gp_m50 := any(accumulator).(type) {
 	case term.ProperListTerm:
-		tail := __gp_m47.Elements
+		tail := __gp_m50.Elements
 		return term.List(append(values, tail...)...)
 	case term.ImproperListTerm:
-		tail := __gp_m47.Elements
-		end := __gp_m47.Tail
+		tail := __gp_m50.Elements
+		end := __gp_m50.Tail
 		return term.ImproperList(append(values, tail...), end)
 	default:
 		return accumulator
@@ -1079,9 +1119,9 @@ func otpMapEntry(entries []term.MapEntry, key term.Term) (int, bool) {
 }
 
 func otpMapGet(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m48 := any(arguments[1]).(type) {
+	switch __gp_m51 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		entries := __gp_m48.Entries
+		entries := __gp_m51.Entries
 
 		index, found := otpMapEntry(entries, arguments[0])
 		if !found {
@@ -1094,9 +1134,9 @@ func otpMapGet(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapFind(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m49 := any(arguments[1]).(type) {
+	switch __gp_m52 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		entries := __gp_m49.Entries
+		entries := __gp_m52.Entries
 
 		index, found := otpMapEntry(entries, arguments[0])
 		if !found {
@@ -1110,18 +1150,18 @@ func otpMapFind(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpMapFromList(arguments []term.Term) vm.ExternalCallOutcome {
 	var values []term.Term
-	switch __gp_m50 := any(arguments[0]).(type) {
+	switch __gp_m53 := any(arguments[0]).(type) {
 	case term.ProperListTerm:
-		found := __gp_m50.Elements
+		found := __gp_m53.Elements
 		values = found
 	default:
 		return otpBadarg()
 	}
 	entries := make([]term.MapEntry, 0, len(values))
 	for _, value := range values {
-		switch __gp_m51 := any(value).(type) {
+		switch __gp_m54 := any(value).(type) {
 		case term.TupleTerm:
-			parts := __gp_m51.Elements
+			parts := __gp_m54.Elements
 
 			if len(parts) != 2 {
 				return otpBadarg()
@@ -1141,9 +1181,9 @@ func otpMapFromList(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpMapFromKeys(arguments []term.Term) vm.ExternalCallOutcome {
 	var keys []term.Term
-	switch __gp_m52 := any(arguments[0]).(type) {
+	switch __gp_m55 := any(arguments[0]).(type) {
 	case term.ProperListTerm:
-		found := __gp_m52.Elements
+		found := __gp_m55.Elements
 		keys = found
 	default:
 		return otpBadarg()
@@ -1158,9 +1198,9 @@ func otpMapFromKeys(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapIsKey(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m53 := any(arguments[1]).(type) {
+	switch __gp_m56 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		entries := __gp_m53.Entries
+		entries := __gp_m56.Entries
 		_, found := otpMapEntry(entries, arguments[0])
 		if found {
 			return vm.ExternalCallReturned{Value: term.MustAtom("true")}
@@ -1172,9 +1212,9 @@ func otpMapIsKey(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapKeys(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m54 := any(arguments[0]).(type) {
+	switch __gp_m57 := any(arguments[0]).(type) {
 	case term.MapTerm:
-		entries := __gp_m54.Entries
+		entries := __gp_m57.Entries
 		values := make([]term.Term, len(entries))
 		for index, entry := range entries {
 			values[index] = term.Clone(entry.Key)
@@ -1186,9 +1226,9 @@ func otpMapKeys(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapValues(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m55 := any(arguments[0]).(type) {
+	switch __gp_m58 := any(arguments[0]).(type) {
 	case term.MapTerm:
-		entries := __gp_m55.Entries
+		entries := __gp_m58.Entries
 		values := make([]term.Term, len(entries))
 		for index, entry := range entries {
 			values[index] = term.Clone(entry.Value)
@@ -1200,9 +1240,9 @@ func otpMapValues(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapPut(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m56 := any(arguments[2]).(type) {
+	switch __gp_m59 := any(arguments[2]).(type) {
 	case term.MapTerm:
-		entries := __gp_m56.Entries
+		entries := __gp_m59.Entries
 
 		updated := append([]term.MapEntry(nil), entries...)
 		index, found := otpMapEntry(updated, arguments[0])
@@ -1218,9 +1258,9 @@ func otpMapPut(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapUpdate(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m57 := any(arguments[2]).(type) {
+	switch __gp_m60 := any(arguments[2]).(type) {
 	case term.MapTerm:
-		entries := __gp_m57.Entries
+		entries := __gp_m60.Entries
 
 		index, found := otpMapEntry(entries, arguments[0])
 		if !found {
@@ -1235,9 +1275,9 @@ func otpMapUpdate(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapRemove(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m58 := any(arguments[1]).(type) {
+	switch __gp_m61 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		entries := __gp_m58.Entries
+		entries := __gp_m61.Entries
 
 		index, found := otpMapEntry(entries, arguments[0])
 		if !found {
@@ -1252,9 +1292,9 @@ func otpMapRemove(arguments []term.Term) vm.ExternalCallOutcome {
 }
 
 func otpMapTake(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m59 := any(arguments[1]).(type) {
+	switch __gp_m62 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		entries := __gp_m59.Entries
+		entries := __gp_m62.Entries
 
 		index, found := otpMapEntry(entries, arguments[0])
 		if !found {
@@ -1270,16 +1310,16 @@ func otpMapTake(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpMapMerge(arguments []term.Term) vm.ExternalCallOutcome {
 	var left []term.MapEntry
-	switch __gp_m60 := any(arguments[0]).(type) {
+	switch __gp_m63 := any(arguments[0]).(type) {
 	case term.MapTerm:
-		entries := __gp_m60.Entries
+		entries := __gp_m63.Entries
 		left = entries
 	default:
 		return otpBadmap(arguments[0])
 	}
-	switch __gp_m61 := any(arguments[1]).(type) {
+	switch __gp_m64 := any(arguments[1]).(type) {
 	case term.MapTerm:
-		right := __gp_m61.Entries
+		right := __gp_m64.Entries
 
 		merged := append([]term.MapEntry(nil), left...)
 		for _, entry := range right {
@@ -1298,20 +1338,20 @@ func otpMapMerge(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpIntegerRemainder(arguments []term.Term) vm.ExternalCallOutcome {
 	var left *big.Int
-	switch __gp_m62 := any(term.IntegerValue(arguments[0])).(type) {
+	switch __gp_m65 := any(term.IntegerValue(arguments[0])).(type) {
 	case option.None[*big.Int]:
 		return otpBadarith()
 	case option.Some[*big.Int]:
-		value := __gp_m62.Value
+		value := __gp_m65.Value
 		left = value
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m63 := any(term.IntegerValue(arguments[1])).(type) {
+	switch __gp_m66 := any(term.IntegerValue(arguments[1])).(type) {
 	case option.None[*big.Int]:
 		return otpBadarith()
 	case option.Some[*big.Int]:
-		right := __gp_m63.Value
+		right := __gp_m66.Value
 
 		if right.Sign() == 0 {
 			return otpBadarith()
@@ -1324,20 +1364,20 @@ func otpIntegerRemainder(arguments []term.Term) vm.ExternalCallOutcome {
 
 func otpIntegerShift(arguments []term.Term, right bool) vm.ExternalCallOutcome {
 	var value *big.Int
-	switch __gp_m64 := any(term.IntegerValue(arguments[0])).(type) {
+	switch __gp_m67 := any(term.IntegerValue(arguments[0])).(type) {
 	case option.None[*big.Int]:
 		return otpBadarith()
 	case option.Some[*big.Int]:
-		found := __gp_m64.Value
+		found := __gp_m67.Value
 		value = found
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m65 := any(term.IntegerValue(arguments[1])).(type) {
+	switch __gp_m68 := any(term.IntegerValue(arguments[1])).(type) {
 	case option.None[*big.Int]:
 		return otpBadarith()
 	case option.Some[*big.Int]:
-		distance := __gp_m65.Value
+		distance := __gp_m68.Value
 
 		if !distance.IsInt64() {
 			return otpBadarith()
@@ -1357,11 +1397,11 @@ func otpIntegerShift(arguments []term.Term, right bool) vm.ExternalCallOutcome {
 }
 
 func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m66 := any(term.Compare(arguments[0], arguments[1])).(type) {
+	switch __gp_m69 := any(term.Compare(arguments[0], arguments[1])).(type) {
 	case result.Err[term.Ordering, term.OrderFailure]:
 		return otpBadarg()
 	case result.Ok[term.Ordering, term.OrderFailure]:
-		order := __gp_m66.Value
+		order := __gp_m69.Value
 
 		switch any(order).(type) {
 		case term.TermLess:
@@ -1381,40 +1421,40 @@ func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
 func otpLooseEqual(arguments []term.Term) vm.ExternalCallOutcome {
 	equal := term.Equal(arguments[0], arguments[1])
 	if !equal {
-		switch __gp_m68 := any(otpNumberOf(arguments[0])).(type) {
+		switch __gp_m71 := any(otpNumberOf(arguments[0])).(type) {
 		case option.None[otpNumber]:
 
 		case option.Some[otpNumber]:
-			left := __gp_m68.Value
+			left := __gp_m71.Value
 
-			switch __gp_m69 := any(otpNumberOf(arguments[1])).(type) {
+			switch __gp_m72 := any(otpNumberOf(arguments[1])).(type) {
 			case option.None[otpNumber]:
 
 			case option.Some[otpNumber]:
-				right := __gp_m69.Value
+				right := __gp_m72.Value
 
-				switch __gp_m70 := any(left).(type) {
+				switch __gp_m73 := any(left).(type) {
 				case otpInteger:
-					leftInteger := __gp_m70.value
-					switch __gp_m71 := any(right).(type) {
+					leftInteger := __gp_m73.value
+					switch __gp_m74 := any(right).(type) {
 					case otpInteger:
-						rightInteger := __gp_m71.value
+						rightInteger := __gp_m74.value
 						equal = leftInteger.Cmp(rightInteger) == 0
 					case otpFloat:
-						rightFloat := __gp_m71.value
+						rightFloat := __gp_m74.value
 						rational, exact := new(big.Rat).SetString(strconv.FormatFloat(rightFloat, 'g', -1, 64))
 						equal = exact && rational.Cmp(new(big.Rat).SetInt(leftInteger)) == 0
 					default:
 						panic("goplus: impossible enum value in match")
 					}
 				case otpFloat:
-					leftFloat := __gp_m70.value
-					switch __gp_m72 := any(right).(type) {
+					leftFloat := __gp_m73.value
+					switch __gp_m75 := any(right).(type) {
 					case otpFloat:
-						rightFloat := __gp_m72.value
+						rightFloat := __gp_m75.value
 						equal = leftFloat == rightFloat
 					case otpInteger:
-						rightInteger := __gp_m72.value
+						rightInteger := __gp_m75.value
 						rational, exact := new(big.Rat).SetString(strconv.FormatFloat(leftFloat, 'g', -1, 64))
 						equal = exact && rational.Cmp(new(big.Rat).SetInt(rightInteger)) == 0
 					default:
@@ -1445,6 +1485,41 @@ func otpIsList(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpMakeFun(arguments []term.Term) vm.ExternalCallOutcome {
+	var module, function string
+	switch __gp_m77 := any(term.AtomName(arguments[0])).(type) {
+	case option.None[string]:
+		return otpBadarg()
+	case option.Some[string]:
+		value := __gp_m77.Value
+		module = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m78 := any(term.AtomName(arguments[1])).(type) {
+	case option.None[string]:
+		return otpBadarg()
+	case option.Some[string]:
+		value := __gp_m78.Value
+		function = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m79 := any(term.IntegerValue(arguments[2])).(type) {
+	case option.None[*big.Int]:
+		return otpBadarg()
+	case option.Some[*big.Int]:
+		arity := __gp_m79.Value
+
+		if arity.Sign() < 0 || !arity.IsUint64() || arity.Uint64() > uint64(^uint32(0)) {
+			return otpBadarg()
+		}
+		return vm.ExternalCallReturned{Value: term.Function(term.Fun{Form: term.ExportedFunction{}, Module: module, Function: function, Arity: uint32(arity.Uint64())})}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 // assayxport:unit gotp.erts.otp-pure-bifs
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
@@ -1464,6 +1539,7 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "==", Arity: 2}, Implementation: otpLooseEqual},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_list", Arity: 1}, Implementation: otpIsList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "make_fun", Arity: 3}, Implementation: otpMakeFun},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_size", Arity: 1}, Implementation: otpMapSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_get", Arity: 2}, Implementation: otpMapGet},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
@@ -1497,6 +1573,7 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "integer_to_list", Arity: 1}, Implementation: otpIntegerToList},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "float_to_list", Arity: 1}, Implementation: otpFloatToList},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "atom_to_list", Arity: 1}, Implementation: otpAtomToList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "list_to_atom", Arity: 1}, Implementation: otpListToAtom},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "element", Arity: 2}, Implementation: otpElement},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "setelement", Arity: 3}, Implementation: otpSetElement},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "error", Arity: 1}, Implementation: otpError},

@@ -411,6 +411,26 @@ func otpAtomToList(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpListToAtom(arguments []term.Term) vm.ExternalCallOutcome {
+	var characters []term.Term
+	match arguments[0] { case term.ProperListTerm(values): characters = values; case _: return otpBadarg() }
+	runes := make([]rune, len(characters))
+	for index, character := range characters {
+		match term.IntegerValue(character) {
+		case option.None: return otpBadarg()
+		case option.Some(value):
+			if !value.IsInt64() { return otpBadarg() }
+			codePoint := value.Int64()
+			if codePoint < 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff) { return otpBadarg() }
+			runes[index] = rune(codePoint)
+		}
+	}
+	match term.Atom(string(runes)) {
+	case result.Err(_): return vm.ExternalCallRaised(term.MustAtom("error"), term.MustAtom("system_limit"))
+	case result.Ok(atom): return vm.ExternalCallReturned(atom)
+	}
+}
+
 func otpElement(arguments []term.Term) vm.ExternalCallOutcome {
 	var index *big.Int
 	match term.IntegerValue(arguments[0]) {
@@ -697,6 +717,18 @@ func otpIsList(arguments []term.Term) vm.ExternalCallOutcome {
 	match arguments[0] { case term.ProperListTerm(_), term.ImproperListTerm(_, _): return vm.ExternalCallReturned(term.MustAtom("true")); case _: return vm.ExternalCallReturned(term.MustAtom("false")) }
 }
 
+func otpMakeFun(arguments []term.Term) vm.ExternalCallOutcome {
+	var module, function string
+	match term.AtomName(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): module = value }
+	match term.AtomName(arguments[1]) { case option.None: return otpBadarg(); case option.Some(value): function = value }
+	match term.IntegerValue(arguments[2]) {
+	case option.None: return otpBadarg()
+	case option.Some(arity):
+		if arity.Sign() < 0 || !arity.IsUint64() || arity.Uint64() > uint64(^uint32(0)) { return otpBadarg() }
+		return vm.ExternalCallReturned(term.Function(term.Fun{Form: term.ExportedFunction(), Module: module, Function: function, Arity: uint32(arity.Uint64())}))
+	}
+}
+
 // assayxport:unit gotp.erts.otp-pure-bifs
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
@@ -710,6 +742,7 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "==", Arity: 2}, Implementation: otpLooseEqual},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_list", Arity: 1}, Implementation: otpIsList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "make_fun", Arity: 3}, Implementation: otpMakeFun},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_size", Arity: 1}, Implementation: otpMapSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_get", Arity: 2}, Implementation: otpMapGet},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
@@ -743,6 +776,7 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "integer_to_list", Arity: 1}, Implementation: otpIntegerToList},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "float_to_list", Arity: 1}, Implementation: otpFloatToList},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "atom_to_list", Arity: 1}, Implementation: otpAtomToList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "list_to_atom", Arity: 1}, Implementation: otpListToAtom},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "element", Arity: 2}, Implementation: otpElement},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "setelement", Arity: 3}, Implementation: otpSetElement},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "error", Arity: 1}, Implementation: otpError},

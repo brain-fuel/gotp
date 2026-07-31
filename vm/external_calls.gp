@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"math/big"
 
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
@@ -111,6 +112,38 @@ func executeExternalCall(
 			arguments[index] = term.Clone(value)
 		}
 	}
+	if target.Module == "erlang" && target.Function == "apply" && target.Arity == 3 {
+		var module, function string
+		match term.AtomName(arguments[0]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): module = value }
+		match term.AtomName(arguments[1]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): function = value }
+		match arguments[2] {
+		case term.ProperListTerm(values):
+			if uint64(len(values)) > uint64(^uint32(0)) { return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("system_limit"))) }
+			target = ExternalFunction{Module: module, Function: function, Arity: uint32(len(values))}
+			arguments = make([]term.Term, len(values))
+			for index, value := range values { arguments[index] = term.Clone(value); match machine.SetX(index, value) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): } }
+		case _: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg")))
+		}
+	}
+	if target.Module == "erlang" && target.Function == "function_exported" && target.Arity == 3 {
+		var module, function string
+		match term.AtomName(arguments[0]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): module = value }
+		match term.AtomName(arguments[1]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): function = value }
+		var functionArity uint32
+		match term.IntegerValue(arguments[2]) {
+		case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg")))
+		case option.Some(value):
+			if value.Sign() < 0 || !value.IsUint64() || value.Uint64() > uint64(^uint32(0)) { return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))) }
+			functionArity = uint32(value.Uint64())
+		}
+		queried := ExternalFunction{Module: module, Function: function, Arity: functionArity}
+		exported := false
+		match machine.linkedFunction(queried) { case option.Some(_): exported = true; case option.None: }
+		if !exported && host.externalFunctionLookup != nil { exported = host.externalFunctionLookup(queried) }
+		value := term.MustAtom("false")
+		if exported { value = term.MustAtom("true") }
+		return finishExternalCall(machine, value, tail)
+	}
 	var capability ExternalCallCapability = host.ExternalCalls
 	match capability {
 	case ExternalCallsUnavailable:
@@ -131,12 +164,12 @@ func executeExternalCall(
 			fmt.Sprintf("external call %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail),
 		))
 	case ExternalCallReturned(value):
-		match machine.SetX(0, value) {
-		case result.Err(failure):
-			return result.Err[instructionOutcome, Failure](failure)
-		case result.Ok(MachineMutated):
-		}
+		return finishExternalCall(machine, value, tail)
 	}
+}
+
+func finishExternalCall(machine *Machine, value term.Term, tail bool) result.Result[instructionOutcome, Failure] {
+	match machine.SetX(0, value) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): }
 	if !tail {
 		machine.pc++
 		return result.Ok[instructionOutcome, Failure](InstructionContinues())
@@ -144,6 +177,34 @@ func executeExternalCall(
 	if !machine.returnToCaller() {
 		return result.Ok[instructionOutcome, Failure](InstructionHalts())
 	}
+	return result.Ok[instructionOutcome, Failure](InstructionContinues())
+}
+
+func executeApply(machine *Machine, instruction beam.Instruction, host HostCapabilities, tail bool) result.Result[instructionOutcome, Failure] {
+	want := 1; if tail { want = 2 }
+	if len(instruction.Operands) != want { return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("%s has %d operands", instruction.Opcode.Name, len(instruction.Operands)))) }
+	var arity uint64
+	match beam.Uint64(instruction.Operands[0]) { case option.None: return result.Err[instructionOutcome, Failure](InvalidProgram("apply arity is not uint64")); case option.Some(value): arity = value }
+	if arity + 2 > uint64(machine.x.Len()) || arity > uint64(^uint32(0)) { return result.Err[instructionOutcome, Failure](RegisterOutOfRange("x", int(arity)+1)) }
+	var module, function string
+	match machine.X(int(arity)) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): match term.AtomName(value) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(name): module = name } }
+	match machine.X(int(arity)+1) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): match term.AtomName(value) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(name): function = name } }
+	if tail { match machine.deallocate(instruction, 1) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): } }
+	arguments := make([]term.Term, int(arity))
+	for index := range arguments { match machine.X(index) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): arguments[index] = term.Clone(value) } }
+	target := ExternalFunction{Module: module, Function: function, Arity: uint32(arity)}
+	match host.ExternalCalls {
+	case ExternalCallsUnavailable: return machine.executeLinkedCall(target, tail, host)
+	case ExternalCallsAllowed: if host.externalCall == nil { return result.Err[instructionOutcome, Failure](InvalidConfiguration("external call capability effect is nil")) }
+	}
+	match host.externalCall(target, arguments) {
+	case ExternalCallUnbound: return machine.executeLinkedCall(target, tail, host)
+	case ExternalCallRaised(class, reason): return result.Err[instructionOutcome, Failure](RaisedException(term.Clone(class), term.Clone(reason)))
+	case ExternalCallRejected(detail): return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("apply %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)))
+	case ExternalCallReturned(value): match machine.SetX(0, value) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): }
+	}
+	if !tail { machine.pc++; return result.Ok[instructionOutcome, Failure](InstructionContinues()) }
+	if !machine.returnToCaller() { return result.Ok[instructionOutcome, Failure](InstructionHalts()) }
 	return result.Ok[instructionOutcome, Failure](InstructionContinues())
 }
 

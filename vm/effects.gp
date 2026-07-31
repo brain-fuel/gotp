@@ -48,6 +48,7 @@ type ExternalCallOutcome enum {
 }
 
 type ExternalCallEffect func(Target ExternalFunction, Arguments []term.Term) ExternalCallOutcome
+type ExternalFunctionLookupEffect func(Target ExternalFunction) bool
 
 type ExternalCallCapability enum {
 	ExternalCallsUnavailable()
@@ -99,6 +100,21 @@ type ReceivePeekEffect func() ReceiveOutcome
 type ReceiveAdvanceEffect func() AdvanceOutcome
 type ReceiveRemoveEffect func() RemoveOutcome
 
+type ReceiveMarkerReserveOutcome enum {
+	ReceiveMarkerReserved(Value term.Term)
+	ReceiveMarkerReserveRejected(Detail string)
+}
+
+type ReceiveMarkerMutation enum {
+	ReceiveMarkerChanged()
+	ReceiveMarkerRejected(Detail string)
+}
+
+type ReceiveMarkerReserveEffect func() ReceiveMarkerReserveOutcome
+type ReceiveMarkerBindEffect func(Marker term.Term, Reference term.Term) ReceiveMarkerMutation
+type ReceiveMarkerClearEffect func(Reference term.Term) ReceiveMarkerMutation
+type ReceiveMarkerUseEffect func(Reference term.Term) ReceiveMarkerMutation
+
 type ReceiveCapability enum {
 	ReceiveUnavailable()
 	ReceiveAllowed()
@@ -108,6 +124,10 @@ type ReceiveEffects struct {
 	Peek    ReceivePeekEffect
 	Advance ReceiveAdvanceEffect
 	Remove  ReceiveRemoveEffect
+	ReserveMarker ReceiveMarkerReserveEffect
+	BindMarker ReceiveMarkerBindEffect
+	ClearMarker ReceiveMarkerClearEffect
+	UseMarker ReceiveMarkerUseEffect
 }
 
 type MessagingEffects struct {
@@ -130,10 +150,15 @@ type HostCapabilities struct {
 	peek    ReceivePeekEffect
 	advance ReceiveAdvanceEffect
 	remove  ReceiveRemoveEffect
+	reserveMarker ReceiveMarkerReserveEffect
+	bindMarker ReceiveMarkerBindEffect
+	clearMarker ReceiveMarkerClearEffect
+	useMarker ReceiveMarkerUseEffect
 	timerWait   TimerWaitEffect
 	timerCancel TimerMutationEffect
 	timerFinish TimerMutationEffect
 	externalCall ExternalCallEffect
+	externalFunctionLookup ExternalFunctionLookupEffect
 	linkedCode LinkedCodeEffect
 }
 
@@ -191,6 +216,10 @@ func HostWithReceive(effects ReceiveEffects) result.Result[HostCapabilities, Fai
 			peek: effects.Peek,
 			advance: effects.Advance,
 			remove: effects.Remove,
+			reserveMarker: effects.ReserveMarker,
+			bindMarker: effects.BindMarker,
+			clearMarker: effects.ClearMarker,
+			useMarker: effects.UseMarker,
 		})
 	}
 }
@@ -218,6 +247,10 @@ func HostWithMessaging(effects MessagingEffects) result.Result[HostCapabilities,
 			peek: effects.Receive.Peek,
 			advance: effects.Receive.Advance,
 			remove: effects.Receive.Remove,
+			reserveMarker: effects.Receive.ReserveMarker,
+			bindMarker: effects.Receive.BindMarker,
+			clearMarker: effects.Receive.ClearMarker,
+			useMarker: effects.Receive.UseMarker,
 		})
 	}
 }
@@ -233,6 +266,15 @@ func HostGrantExternalCalls(
 	var allowed ExternalCallCapability = ExternalCallsAllowed()
 	host.ExternalCalls = allowed
 	host.externalCall = effect
+	return result.Ok[HostCapabilities, Failure](host)
+}
+
+func HostGrantExternalFunctionLookup(
+	host HostCapabilities,
+	effect ExternalFunctionLookupEffect,
+) result.Result[HostCapabilities, Failure] {
+	if effect == nil { return result.Err[HostCapabilities, Failure](InvalidConfiguration("external function lookup effect is nil")) }
+	host.externalFunctionLookup = effect
 	return result.Ok[HostCapabilities, Failure](host)
 }
 

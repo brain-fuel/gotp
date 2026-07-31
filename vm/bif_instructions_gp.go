@@ -58,6 +58,9 @@ func executeBIFInstruction(
 	default:
 		panic("goplus: impossible enum value in match")
 	}
+	if instruction.Opcode.Name == "bif0" && len(instruction.Operands) == 2 {
+		shape = bifInstructionShape{failIndex: -1, importIndex: 0, argumentAt: 1, arguments: 0, destination: 1, operands: 2}
+	}
 	if len(instruction.Operands) != shape.operands {
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
 			"%s has %d operands",
@@ -160,6 +163,9 @@ func executeBIFInstruction(
 	case ExternalCallRejected:
 		detail := __gp_m6.Detail
 
+		if shape.failIndex < 0 {
+			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("BIF %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)}}
+		}
 		return machine.branchBIFailure(instruction, shape.failIndex, target, detail)
 	case ExternalCallReturned:
 		value := __gp_m6.Value

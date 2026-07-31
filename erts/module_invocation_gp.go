@@ -11,6 +11,7 @@ import (
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
+	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
 	"goforge.dev/gotp/vm"
 )
@@ -167,7 +168,7 @@ func (modules *ModuleSet) Invoke(
 		for name, loaded := range modules.modules {
 			linked[name] = loaded.image()
 		}
-		return invokeLinkedModule(
+		created := invokeLinkedModule(
 			vm.ExternalFunction{Module: moduleName, Function: function, Arity: arity},
 			arguments,
 			linked,
@@ -176,7 +177,60 @@ func (modules *ModuleSet) Invoke(
 			source,
 			registryWithModuleInfo(registry, modules.modules),
 		)
+		switch __gp_m6 := any(created).(type) {
+		case result.Err[*VMProcess, ModuleLoadFailure]:
+			failure := __gp_m6.Err
+			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
+		case result.Ok[*VMProcess, ModuleLoadFailure]:
+			process := __gp_m6.Value
+			modules.grantProcessSpawning(process, source, registry)
+			return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
+}
+
+func (modules *ModuleSet) grantProcessSpawning(process *VMProcess, source clock.Clock, registry *CallRegistry) {
+	process.grantMFASpawning(func(context *kernel.Context, module string, function string, arguments []term.Term, link bool, monitor bool) vm.ExternalCallOutcome {
+		return modules.spawnModuleProcess(context, module, function, arguments, link, monitor, source, registry)
+	})
+}
+
+func (modules *ModuleSet) spawnModuleProcess(context *kernel.Context, module string, function string, arguments []term.Term, link bool, monitor bool, source clock.Clock, registry *CallRegistry) vm.ExternalCallOutcome {
+	switch __gp_m7 := any(modules.Invoke(module, function, arguments, source, registry)).(type) {
+	case result.Err[*VMProcess, ModuleLoadFailure]:
+		failure := __gp_m7.Err
+		return vm.ExternalCallRejected{Detail: ModuleLoadFailureError(failure)}
+	case result.Ok[*VMProcess, ModuleLoadFailure]:
+		child := __gp_m7.Value
+		return spawnLoadedProcess(context, child, link, monitor)
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func spawnLoadedProcess(context *kernel.Context, child *VMProcess, link bool, monitor bool) vm.ExternalCallOutcome {
+	var policy kernel.SpawnPolicy = kernel.Unlinked{TrapExit: false}
+	if link {
+		policy = kernel.Linked{To: context.Self(), TrapExit: false}
+	}
+	spawned := context.SpawnResult(child.Behavior(), policy)
+	if !spawned.Accepted {
+		return vm.ExternalCallRejected{Detail: spawned.Detail}
+	}
+	if !monitor {
+		return vm.ExternalCallReturned{Value: term.PIDValue(spawned.PID)}
+	}
+	return monitorSpawnedProcess(context, spawned.PID)
+}
+
+func monitorSpawnedProcess(context *kernel.Context, pid term.PID) vm.ExternalCallOutcome {
+	monitored := context.MonitorResult(pid)
+	if !monitored.Accepted {
+		return vm.ExternalCallRejected{Detail: monitored.Detail}
+	}
+	return vm.ExternalCallReturned{Value: term.Tuple(term.PIDValue(pid), term.ReferenceValue(monitored.Reference))}
 }

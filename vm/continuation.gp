@@ -271,6 +271,10 @@ func executeInstruction(
 		return executeExternalCall(machine, instruction, host, true, false)
 	case "call_ext_last":
 		return executeExternalCall(machine, instruction, host, true, true)
+	case "apply":
+		return executeApply(machine, instruction, host, false)
+	case "apply_last":
+		return executeApply(machine, instruction, host, true)
 	case "bif0", "bif1", "bif2", "gc_bif1", "gc_bif2", "gc_bif3":
 		return executeBIFInstruction(machine, instruction, host)
 	case "is_lt", "is_ge":
@@ -283,6 +287,9 @@ func executeInstruction(
 		return executeFunctionTest(machine, instruction)
 	case "catch", "try":
 		return executeExceptionSetup(machine, instruction)
+	case "build_stacktrace":
+		if len(instruction.Operands) != 0 { return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("build_stacktrace has %d operands", len(instruction.Operands)))) }
+		machine.pc = next
 	case "catch_end", "try_end", "try_case":
 		return executeExceptionCleanup(machine, instruction)
 	case "raise", "case_end", "badmatch", "if_end", "badrecord", "try_case_end":
@@ -436,6 +443,44 @@ func executeInstruction(
 			}
 			machine.pc = next
 		}
+	case "recv_marker_reserve":
+		if len(instruction.Operands) != 1 { return malformedReceiveMarkerInstruction(instruction) }
+		if host.reserveMarker == nil { return missingReceiveMarkerEffect("reserve") }
+		var reserved ReceiveMarkerReserveOutcome = host.reserveMarker()
+		match reserved {
+		case ReceiveMarkerReserveRejected(detail):
+			return result.Err[instructionOutcome, Failure](InvalidProgram("receive marker reserve rejected: " + detail))
+		case ReceiveMarkerReserved(marker):
+			match machine.assign(instruction.Operands[0], marker) {
+			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+			case result.Ok(MachineMutated): machine.pc = next
+			}
+		}
+	case "recv_marker_bind":
+		if len(instruction.Operands) != 2 { return malformedReceiveMarkerInstruction(instruction) }
+		if host.bindMarker == nil { return missingReceiveMarkerEffect("bind") }
+		var marker term.Term
+		var reference term.Term
+		var readMarker result.Result[term.Term, Failure] = machine.resolve(instruction.Operands[0])
+		match readMarker { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): marker = value }
+		var readReference result.Result[term.Term, Failure] = machine.resolve(instruction.Operands[1])
+		match readReference { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): reference = value }
+		var bound ReceiveMarkerMutation = host.bindMarker(marker, reference)
+		match bound { case ReceiveMarkerRejected(detail): return result.Err[instructionOutcome, Failure](InvalidProgram("receive marker bind rejected: " + detail)); case ReceiveMarkerChanged: machine.pc = next }
+	case "recv_marker_clear", "recv_marker_use":
+		if len(instruction.Operands) != 1 { return malformedReceiveMarkerInstruction(instruction) }
+		var reference term.Term
+		var readReference result.Result[term.Term, Failure] = machine.resolve(instruction.Operands[0])
+		match readReference { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): reference = value }
+		var mutation ReceiveMarkerMutation
+		if instruction.Opcode.Name == "recv_marker_clear" {
+			if host.clearMarker == nil { return missingReceiveMarkerEffect("clear") }
+			mutation = host.clearMarker(reference)
+		} else {
+			if host.useMarker == nil { return missingReceiveMarkerEffect("use") }
+			mutation = host.useMarker(reference)
+		}
+		match mutation { case ReceiveMarkerRejected(detail): return result.Err[instructionOutcome, Failure](InvalidProgram("receive marker mutation rejected: " + detail)); case ReceiveMarkerChanged: machine.pc = next }
 	case "timeout":
 		var timerCapability TimerCapability = host.Timer
 		match timerCapability {
@@ -526,6 +571,14 @@ func executeInstruction(
 		))
 	}
 	return result.Ok[instructionOutcome, Failure](InstructionContinues())
+}
+
+func malformedReceiveMarkerInstruction(instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("%s has %d operands", instruction.Opcode.Name, len(instruction.Operands))))
+}
+
+func missingReceiveMarkerEffect(operation string) result.Result[instructionOutcome, Failure] {
+	return result.Err[instructionOutcome, Failure](InvalidProgram("receive marker " + operation + " requires an explicit receive capability"))
 }
 
 func receiveTimeout(

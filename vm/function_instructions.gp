@@ -44,6 +44,9 @@ func executeMakeFun3(machine *Machine, instruction beam.Instruction) result.Resu
 			template.Free,
 		)))
 	}
+	if template.Arity < template.Free {
+		return result.Err[instructionOutcome, Failure](InvalidProgram("make_fun3 function arity is smaller than its free-variable count"))
+	}
 	environment := make([]term.Term, len(captures))
 	for captureIndex, operand := range captures {
 		match machine.resolve(operand) {
@@ -57,7 +60,7 @@ func executeMakeFun3(machine *Machine, instruction beam.Instruction) result.Resu
 		Form: term.LocalClosure(),
 		Module: machine.current.name,
 		Function: template.Function,
-		Arity: template.Arity,
+		Arity: template.Arity - template.Free,
 		Label: uint64(template.Label),
 		Index: template.Index,
 		Unique: template.Unique,

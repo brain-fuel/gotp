@@ -406,17 +406,29 @@ func VMProcessStateEqual(a, b VMProcessState) bool {
 }
 
 type VMProcess struct {
-	continuation    *vm.Continuation
-	quantum         vm.VMReductionBudget
-	state           VMProcessState
-	reductions      int
-	instructions    int
-	receiveMessages memory.Buffer[kernel.MessageEnvelope]
-	receiveCursor   int
-	clock           clock.Clock
-	timer           *kernel.WakeTimer
-	callRegistry    *CallRegistry
+	continuation      *vm.Continuation
+	quantum           vm.VMReductionBudget
+	state             VMProcessState
+	reductions        int
+	instructions      int
+	receiveMessages   memory.Buffer[kernel.MessageEnvelope]
+	receiveCursor     int
+	clock             clock.Clock
+	timer             *kernel.WakeTimer
+	callRegistry      *CallRegistry
+	spawnMFA          SpawnMFAEffect
+	nextReceiveMarker int64
+	receiveMarkers    []receiveMarkerBinding
 }
+
+type receiveMarkerBinding struct {
+	reference term.Term
+	cursor    int
+}
+
+type SpawnMFAEffect func(Context *kernel.Context, Module string, Function string, Arguments []term.Term, Link bool, Monitor bool) vm.ExternalCallOutcome
+
+func (process *VMProcess) grantMFASpawning(effect SpawnMFAEffect) { process.spawnMFA = effect }
 
 // assayxport:unit gotp.erts.vm-process
 func NewVMProcess(
@@ -578,9 +590,13 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 					}
 				},
 				Receive: vm.ReceiveEffects{
-					Peek:    func() vm.ReceiveOutcome { return process.peekMessage(context) },
-					Advance: process.advanceMessage,
-					Remove:  process.removeMessage,
+					Peek:          func() vm.ReceiveOutcome { return process.peekMessage(context) },
+					Advance:       process.advanceMessage,
+					Remove:        process.removeMessage,
+					ReserveMarker: process.reserveReceiveMarker,
+					BindMarker:    process.bindReceiveMarker,
+					ClearMarker:   process.clearReceiveMarker,
+					UseMarker:     process.useReceiveMarker,
 				},
 			},
 			Timer: vm.TimerEffects{
@@ -609,7 +625,16 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			case result.Ok[vm.HostCapabilities, vm.Failure]:
 				granted := __gp_m9.Value
 
-				host = granted
+				switch __gp_m10 := any(vm.HostGrantExternalFunctionLookup(granted, process.callRegistry.Contains)).(type) {
+				case result.Err[vm.HostCapabilities, vm.Failure]:
+					cause := __gp_m10.Err
+					return process.fail(vm.Error(cause))
+				case result.Ok[vm.HostCapabilities, vm.Failure]:
+					withLookup := __gp_m10.Value
+					host = withLookup
+				default:
+					panic("goplus: impossible enum value in match")
+				}
 			default:
 				panic("goplus: impossible enum value in match")
 			}
@@ -618,18 +643,18 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			process.quantum,
 			host,
 		)
-		switch __gp_m10 := any(resumed).(type) {
+		switch __gp_m11 := any(resumed).(type) {
 		case result.Err[vm.ExecutionSlice, vm.Failure]:
-			cause := __gp_m10.Err
+			cause := __gp_m11.Err
 
 			return process.failVM(cause)
 		case result.Ok[vm.ExecutionSlice, vm.Failure]:
-			slice := __gp_m10.Value
+			slice := __gp_m11.Value
 
 			var execution vm.ExecutionSlice = slice
-			switch __gp_m11 := any(execution).(type) {
+			switch __gp_m12 := any(execution).(type) {
 			case vm.ExecutionSuspended:
-				progress := __gp_m11.Progress
+				progress := __gp_m12.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -637,7 +662,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.state = suspended
 				return kernel.Yield{}
 			case vm.ExecutionWaiting:
-				progress := __gp_m11.Progress
+				progress := __gp_m12.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -645,9 +670,9 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.state = waiting
 				return kernel.Wait{}
 			case vm.ExecutionRaised:
-				class := __gp_m11.Class
-				reason := __gp_m11.Reason
-				progress := __gp_m11.Progress
+				class := __gp_m12.Class
+				reason := __gp_m12.Reason
+				progress := __gp_m12.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -657,8 +682,8 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.receiveMessages.Release()
 				return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 			case vm.ExecutionCompleted:
-				value := __gp_m11.Value
-				progress := __gp_m11.Progress
+				value := __gp_m12.Value
+				progress := __gp_m12.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -681,10 +706,10 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 // assayxport:unit gotp.erts.vm-process-exceptions
 func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 	var checked vm.Failure = failure
-	switch __gp_m12 := any(checked).(type) {
+	switch __gp_m13 := any(checked).(type) {
 	case vm.RaisedException:
-		class := __gp_m12.Class
-		reason := __gp_m12.Reason
+		class := __gp_m13.Class
+		reason := __gp_m13.Reason
 
 		var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: process.instructions}
 		process.state = raised
@@ -700,6 +725,16 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 }
 
 func vmExceptionReason(class term.Term, reason term.Term) term.Term {
+	switch __gp_m14 := any(term.AtomName(class)).(type) {
+	case option.Some[string]:
+		name := __gp_m14.Value
+		if name == "exit" {
+			return term.Clone(reason)
+		}
+	case option.None[string]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	return term.Tuple(
 		term.MustAtom("gotp_exception"),
 		term.Clone(class),
@@ -724,13 +759,13 @@ func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m14 := any(context.WakeTimerAfter(process.clock, delay)).(type) {
+	switch __gp_m16 := any(context.WakeTimerAfter(process.clock, delay)).(type) {
 	case result.Err[*kernel.WakeTimer, kernel.Failure]:
-		failure := __gp_m14.Err
+		failure := __gp_m16.Err
 
 		return vm.TimerRejected{Detail: kernel.FailureError(failure)}
 	case result.Ok[*kernel.WakeTimer, kernel.Failure]:
-		timer := __gp_m14.Value
+		timer := __gp_m16.Value
 
 		process.timer = timer
 		return vm.TimerPending{}
@@ -764,22 +799,22 @@ func (process *VMProcess) finishTimer() vm.TimerMutation {
 // assayxport:unit gotp.erts.selective-receive
 func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome {
 	if process.receiveCursor < process.receiveMessages.Len() {
-		switch __gp_m15 := any(process.receiveMessages.At(process.receiveCursor)).(type) {
+		switch __gp_m17 := any(process.receiveMessages.At(process.receiveCursor)).(type) {
 		case option.None[kernel.MessageEnvelope]:
 			return vm.ReceiveEmpty{}
 		case option.Some[kernel.MessageEnvelope]:
-			envelope := __gp_m15.Value
+			envelope := __gp_m17.Value
 			return vm.ReceiveMessage{Value: term.Clone(envelope.Message)}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m16 := any(context.ReceiveMessage(nil)).(type) {
+	switch __gp_m18 := any(context.ReceiveMessage(nil)).(type) {
 	case option.None[kernel.MessageEnvelope]:
 
 		return vm.ReceiveEmpty{}
 	case option.Some[kernel.MessageEnvelope]:
-		envelope := __gp_m16.Value
+		envelope := __gp_m18.Value
 
 		stored := kernel.MessageEnvelope{
 			Message: term.Clone(envelope.Message),
@@ -813,6 +848,46 @@ func (process *VMProcess) removeMessage() vm.RemoveOutcome {
 	}
 	process.receiveCursor = 0
 	return vm.ReceiveMessageRemoved{}
+}
+
+func (process *VMProcess) reserveReceiveMarker() vm.ReceiveMarkerReserveOutcome {
+	process.nextReceiveMarker++
+	return vm.ReceiveMarkerReserved{Value: term.Integer(process.nextReceiveMarker)}
+}
+
+func (process *VMProcess) bindReceiveMarker(_ term.Term, reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if term.Equal(process.receiveMarkers[index].reference, reference) {
+			process.receiveMarkers[index].cursor = process.receiveMessages.Len()
+			return vm.ReceiveMarkerChanged{}
+		}
+	}
+	process.receiveMarkers = append(process.receiveMarkers, receiveMarkerBinding{
+		reference: term.Clone(reference),
+		cursor:    process.receiveMessages.Len(),
+	})
+	return vm.ReceiveMarkerChanged{}
+}
+
+func (process *VMProcess) clearReceiveMarker(reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if term.Equal(process.receiveMarkers[index].reference, reference) {
+			process.receiveMarkers = append(process.receiveMarkers[:index], process.receiveMarkers[index+1:]...)
+			return vm.ReceiveMarkerChanged{}
+		}
+	}
+	return vm.ReceiveMarkerChanged{}
+}
+
+func (process *VMProcess) useReceiveMarker(reference term.Term) vm.ReceiveMarkerMutation {
+	for index := range process.receiveMarkers {
+		if term.Equal(process.receiveMarkers[index].reference, reference) {
+			process.receiveCursor = process.receiveMarkers[index].cursor
+			return vm.ReceiveMarkerChanged{}
+		}
+	}
+	process.receiveCursor = 0
+	return vm.ReceiveMarkerChanged{}
 }
 
 func (process *VMProcess) fail(detail string) kernel.StepResult {

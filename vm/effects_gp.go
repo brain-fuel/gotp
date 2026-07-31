@@ -444,6 +444,7 @@ func ExternalCallOutcomeEqual(a, b ExternalCallOutcome) bool {
 }
 
 type ExternalCallEffect func(Target ExternalFunction, Arguments []term.Term) ExternalCallOutcome
+type ExternalFunctionLookupEffect func(Target ExternalFunction) bool
 
 //goplus:enum ExternalCallCapability
 type ExternalCallCapability interface{ isExternalCallCapability() }
@@ -1081,6 +1082,177 @@ type ReceivePeekEffect func() ReceiveOutcome
 type ReceiveAdvanceEffect func() AdvanceOutcome
 type ReceiveRemoveEffect func() RemoveOutcome
 
+//goplus:enum ReceiveMarkerReserveOutcome
+type ReceiveMarkerReserveOutcome interface{ isReceiveMarkerReserveOutcome() }
+
+//goplus:variant (ReceiveMarkerReserveOutcome) ReceiveMarkerReserved(Value term.Term)
+type ReceiveMarkerReserved struct {
+	Value term.Term
+}
+
+func (ReceiveMarkerReserved) isReceiveMarkerReserveOutcome() {}
+
+//goplus:variant (ReceiveMarkerReserveOutcome) ReceiveMarkerReserveRejected(Detail string)
+type ReceiveMarkerReserveRejected struct {
+	Detail string
+}
+
+func (ReceiveMarkerReserveRejected) isReceiveMarkerReserveOutcome() {}
+
+// ReceiveMarkerReserveOutcomeCases selects one handler per ReceiveMarkerReserveOutcome variant for ReceiveMarkerReserveOutcomeFold.
+type ReceiveMarkerReserveOutcomeCases[R any] struct {
+	ReceiveMarkerReserved        func(Value term.Term) R
+	ReceiveMarkerReserveRejected func(Detail string) R
+}
+
+// ReceiveMarkerReserveOutcomeFold reduces ReceiveMarkerReserveOutcome by one-level case analysis.
+func ReceiveMarkerReserveOutcomeFold[R any](v ReceiveMarkerReserveOutcome, cs ReceiveMarkerReserveOutcomeCases[R]) R {
+	switch m := any(v).(type) {
+	case ReceiveMarkerReserved:
+		return cs.ReceiveMarkerReserved(m.Value)
+	case ReceiveMarkerReserveRejected:
+		return cs.ReceiveMarkerReserveRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in ReceiveMarkerReserveOutcomeFold")
+	}
+}
+
+// ReceiveMarkerReserveOutcomeEqOverrides carries optional per-variant hooks for ReceiveMarkerReserveOutcomeEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type ReceiveMarkerReserveOutcomeEqOverrides struct {
+	ReceiveMarkerReserved        func(x, y ReceiveMarkerReserved) (eq, handled bool)
+	ReceiveMarkerReserveRejected func(x, y ReceiveMarkerReserveRejected) (eq, handled bool)
+}
+
+// ReceiveMarkerReserveOutcomeEqualWith reports structural equality of a and b under ov.
+func ReceiveMarkerReserveOutcomeEqualWith(a, b ReceiveMarkerReserveOutcome, ov ReceiveMarkerReserveOutcomeEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case ReceiveMarkerReserved:
+		y, ok := any(b).(ReceiveMarkerReserved)
+		if !ok {
+			return false
+		}
+		if ov.ReceiveMarkerReserved != nil {
+			if eq, handled := ov.ReceiveMarkerReserved(x, y); handled {
+				return eq
+			}
+		}
+		if x.Value != y.Value {
+			return false
+		}
+		return true
+	case ReceiveMarkerReserveRejected:
+		y, ok := any(b).(ReceiveMarkerReserveRejected)
+		if !ok {
+			return false
+		}
+		if ov.ReceiveMarkerReserveRejected != nil {
+			if eq, handled := ov.ReceiveMarkerReserveRejected(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// ReceiveMarkerReserveOutcomeEqual reports structural equality of a and b.
+func ReceiveMarkerReserveOutcomeEqual(a, b ReceiveMarkerReserveOutcome) bool {
+	return ReceiveMarkerReserveOutcomeEqualWith(a, b, ReceiveMarkerReserveOutcomeEqOverrides{})
+}
+
+//goplus:enum ReceiveMarkerMutation
+type ReceiveMarkerMutation interface{ isReceiveMarkerMutation() }
+
+//goplus:variant (ReceiveMarkerMutation) ReceiveMarkerChanged()
+type ReceiveMarkerChanged struct{}
+
+func (ReceiveMarkerChanged) isReceiveMarkerMutation() {}
+
+//goplus:variant (ReceiveMarkerMutation) ReceiveMarkerRejected(Detail string)
+type ReceiveMarkerRejected struct {
+	Detail string
+}
+
+func (ReceiveMarkerRejected) isReceiveMarkerMutation() {}
+
+// ReceiveMarkerMutationCases selects one handler per ReceiveMarkerMutation variant for ReceiveMarkerMutationFold.
+type ReceiveMarkerMutationCases[R any] struct {
+	ReceiveMarkerChanged  func() R
+	ReceiveMarkerRejected func(Detail string) R
+}
+
+// ReceiveMarkerMutationFold reduces ReceiveMarkerMutation by one-level case analysis.
+func ReceiveMarkerMutationFold[R any](v ReceiveMarkerMutation, cs ReceiveMarkerMutationCases[R]) R {
+	switch m := any(v).(type) {
+	case ReceiveMarkerChanged:
+		return cs.ReceiveMarkerChanged()
+	case ReceiveMarkerRejected:
+		return cs.ReceiveMarkerRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in ReceiveMarkerMutationFold")
+	}
+}
+
+// ReceiveMarkerMutationEqOverrides carries optional per-variant hooks for ReceiveMarkerMutationEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type ReceiveMarkerMutationEqOverrides struct {
+	ReceiveMarkerChanged  func(x, y ReceiveMarkerChanged) (eq, handled bool)
+	ReceiveMarkerRejected func(x, y ReceiveMarkerRejected) (eq, handled bool)
+}
+
+// ReceiveMarkerMutationEqualWith reports structural equality of a and b under ov.
+func ReceiveMarkerMutationEqualWith(a, b ReceiveMarkerMutation, ov ReceiveMarkerMutationEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case ReceiveMarkerChanged:
+		y, ok := any(b).(ReceiveMarkerChanged)
+		if !ok {
+			return false
+		}
+		if ov.ReceiveMarkerChanged != nil {
+			if eq, handled := ov.ReceiveMarkerChanged(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case ReceiveMarkerRejected:
+		y, ok := any(b).(ReceiveMarkerRejected)
+		if !ok {
+			return false
+		}
+		if ov.ReceiveMarkerRejected != nil {
+			if eq, handled := ov.ReceiveMarkerRejected(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// ReceiveMarkerMutationEqual reports structural equality of a and b.
+func ReceiveMarkerMutationEqual(a, b ReceiveMarkerMutation) bool {
+	return ReceiveMarkerMutationEqualWith(a, b, ReceiveMarkerMutationEqOverrides{})
+}
+
+type ReceiveMarkerReserveEffect func() ReceiveMarkerReserveOutcome
+type ReceiveMarkerBindEffect func(Marker term.Term, Reference term.Term) ReceiveMarkerMutation
+type ReceiveMarkerClearEffect func(Reference term.Term) ReceiveMarkerMutation
+type ReceiveMarkerUseEffect func(Reference term.Term) ReceiveMarkerMutation
+
 //goplus:enum ReceiveCapability
 type ReceiveCapability interface{ isReceiveCapability() }
 
@@ -1159,9 +1331,13 @@ func ReceiveCapabilityEqual(a, b ReceiveCapability) bool {
 }
 
 type ReceiveEffects struct {
-	Peek    ReceivePeekEffect
-	Advance ReceiveAdvanceEffect
-	Remove  ReceiveRemoveEffect
+	Peek          ReceivePeekEffect
+	Advance       ReceiveAdvanceEffect
+	Remove        ReceiveRemoveEffect
+	ReserveMarker ReceiveMarkerReserveEffect
+	BindMarker    ReceiveMarkerBindEffect
+	ClearMarker   ReceiveMarkerClearEffect
+	UseMarker     ReceiveMarkerUseEffect
 }
 
 type MessagingEffects struct {
@@ -1175,20 +1351,25 @@ type TimedMessagingEffects struct {
 }
 
 type HostCapabilities struct {
-	Send          SendCapability
-	Receive       ReceiveCapability
-	Timer         TimerCapability
-	ExternalCalls ExternalCallCapability
-	LinkedCode    LinkedCodeCapability
-	send          SendEffect
-	peek          ReceivePeekEffect
-	advance       ReceiveAdvanceEffect
-	remove        ReceiveRemoveEffect
-	timerWait     TimerWaitEffect
-	timerCancel   TimerMutationEffect
-	timerFinish   TimerMutationEffect
-	externalCall  ExternalCallEffect
-	linkedCode    LinkedCodeEffect
+	Send                   SendCapability
+	Receive                ReceiveCapability
+	Timer                  TimerCapability
+	ExternalCalls          ExternalCallCapability
+	LinkedCode             LinkedCodeCapability
+	send                   SendEffect
+	peek                   ReceivePeekEffect
+	advance                ReceiveAdvanceEffect
+	remove                 ReceiveRemoveEffect
+	reserveMarker          ReceiveMarkerReserveEffect
+	bindMarker             ReceiveMarkerBindEffect
+	clearMarker            ReceiveMarkerClearEffect
+	useMarker              ReceiveMarkerUseEffect
+	timerWait              TimerWaitEffect
+	timerCancel            TimerMutationEffect
+	timerFinish            TimerMutationEffect
+	externalCall           ExternalCallEffect
+	externalFunctionLookup ExternalFunctionLookupEffect
+	linkedCode             LinkedCodeEffect
 }
 
 func NoHostCapabilities() HostCapabilities {
@@ -1248,6 +1429,10 @@ func HostWithReceive(effects ReceiveEffects) result.Result[HostCapabilities, Fai
 			peek:          effects.Peek,
 			advance:       effects.Advance,
 			remove:        effects.Remove,
+			reserveMarker: effects.ReserveMarker,
+			bindMarker:    effects.BindMarker,
+			clearMarker:   effects.ClearMarker,
+			useMarker:     effects.UseMarker,
 		}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -1280,6 +1465,10 @@ func HostWithMessaging(effects MessagingEffects) result.Result[HostCapabilities,
 			peek:          effects.Receive.Peek,
 			advance:       effects.Receive.Advance,
 			remove:        effects.Receive.Remove,
+			reserveMarker: effects.Receive.ReserveMarker,
+			bindMarker:    effects.Receive.BindMarker,
+			clearMarker:   effects.Receive.ClearMarker,
+			useMarker:     effects.Receive.UseMarker,
 		}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -1297,6 +1486,17 @@ func HostGrantExternalCalls(
 	var allowed ExternalCallCapability = ExternalCallsAllowed{}
 	host.ExternalCalls = allowed
 	host.externalCall = effect
+	return result.Ok[HostCapabilities, Failure]{Value: host}
+}
+
+func HostGrantExternalFunctionLookup(
+	host HostCapabilities,
+	effect ExternalFunctionLookupEffect,
+) result.Result[HostCapabilities, Failure] {
+	if effect == nil {
+		return result.Err[HostCapabilities, Failure]{Err: InvalidConfiguration{Detail: "external function lookup effect is nil"}}
+	}
+	host.externalFunctionLookup = effect
 	return result.Ok[HostCapabilities, Failure]{Value: host}
 }
 

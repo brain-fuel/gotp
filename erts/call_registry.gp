@@ -37,6 +37,12 @@ type CallRegistry struct {
 	implementations map[vm.ExternalFunction]ExternalImplementation
 }
 
+func (registry *CallRegistry) Contains(target vm.ExternalFunction) bool {
+	if registry == nil { return false }
+	_, present := registry.implementations[target]
+	return present
+}
+
 // assayxport:unit gotp.erts.call-registry
 func NewCallRegistry(bindings []CallBinding) result.Result[*CallRegistry, CallRegistryFailure] {
 	implementations := make(map[vm.ExternalFunction]ExternalImplementation, len(bindings))

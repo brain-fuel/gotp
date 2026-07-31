@@ -32,7 +32,7 @@ func TestMakeFun3CapturesAndCallFunRestoresCaller(t *testing.T) {
 		StepLimit: 20,
 		ModuleName: "closure_demo",
 		Functions: map[uint64]beam.FunctionTemplate{
-			0: {Function: "captured", Arity: 1, Label: 2, Index: 0, Free: 1, Unique: 7},
+			0: {Function: "captured", Arity: 2, Label: 2, Index: 0, Free: 1, Unique: 7},
 		},
 	}) {
 	case result.Err(failure):

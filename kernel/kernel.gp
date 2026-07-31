@@ -29,6 +29,19 @@ type SpawnPolicy enum {
 	Linked(To term.PID, TrapExit bool)
 }
 
+type ContextSpawnOutcome enum {
+	ContextSpawned(PID term.PID)
+	ContextSpawnRejected(Detail string)
+}
+
+type ContextMonitorOutcome enum {
+	ContextMonitored(Reference term.Reference)
+	ContextMonitorRejected(Detail string)
+}
+
+type ContextSpawnResult struct { PID term.PID; Detail string; Accepted bool }
+type ContextMonitorResult struct { Reference term.Reference; Detail string; Accepted bool }
+
 type KernelConfig struct {
 	Node     uint32
 	Creation uint32
@@ -139,7 +152,10 @@ type process struct {
 	groupLeader term.PID
 	monitorNames map[term.Reference]string
 	remoteUnlinks map[term.PID]uint64
+	dictionary []dictionaryEntry
 }
+
+type dictionaryEntry struct { key term.Term; value term.Term }
 
 type Kernel struct {
 	config        KernelConfig
@@ -435,6 +451,24 @@ func (kernel *Kernel) Monitor(
 	}
 }
 
+func (kernel *Kernel) MonitorAlias(
+	watcher term.PID,
+	target term.PID,
+) result.Result[term.Reference, Failure] {
+	reference := kernel.newReference()
+	match kernel.MonitorReference(watcher, target, reference) {
+	case result.Err(failure): return result.Err[term.Reference, Failure](failure)
+	case result.Ok(_):
+		match kernel.liveProcess(watcher) {
+		case option.None: return result.Err[term.Reference, Failure](MissingProcess("alias owner", watcher))
+		case option.Some(current):
+			current.aliases[reference] = struct{}{}
+			kernel.aliases[reference] = watcher
+			return result.Ok[term.Reference, Failure](reference)
+		}
+	}
+}
+
 // assayxport:unit gotp.kernel.remote-monitor-signals
 func (kernel *Kernel) MonitorReference(
 	watcher term.PID,
@@ -581,6 +615,10 @@ func (kernel *Kernel) Demonitor(
 		target, exists := watcherProcess.monitoring[reference]
 		if exists {
 			delete(watcherProcess.monitoring, reference)
+			if _, aliased := watcherProcess.aliases[reference]; aliased {
+				delete(watcherProcess.aliases, reference)
+				delete(kernel.aliases, reference)
+			}
 			match kernel.liveProcess(target) {
 			case option.Some(targetProcess):
 				delete(targetProcess.monitoredBy, reference)
@@ -1008,8 +1046,49 @@ func (context *Context) Self() term.PID {
 	return context.process.pid
 }
 
+func (context *Context) NodeID() uint32 { return context.kernel.config.Node }
+func (context *Context) NodeName() string { return "nonode@nohost" }
+
 func (context *Context) Send(to term.PID, message term.Term) Delivery {
 	return context.kernel.Send(context.process.pid, to, message)
+}
+
+func (context *Context) SendRegistered(name string, message term.Term) Delivery {
+	return context.kernel.SendRegistered(context.process.pid, name, message)
+}
+
+func (context *Context) Register(name string, pid term.PID) result.Result[KernelMutation, Failure] {
+	return context.kernel.Register(name, pid)
+}
+
+func (context *Context) Unregister(name string) result.Result[KernelMutation, Failure] {
+	return context.kernel.Unregister(name)
+}
+
+func (context *Context) Whereis(name string) option.Option[term.PID] {
+	return context.kernel.Whereis(name)
+}
+
+func (context *Context) ProcessInfo(pid term.PID, item string) option.Option[term.Term] {
+	current, present := context.kernel.processes[pid]
+	if !present { return option.None[term.Term]() }
+	match current.status { case Exited: return option.None[term.Term](); case _: }
+	switch item {
+	case "registered_name":
+		match current.registeredName { case option.None: return option.Some[term.Term](term.Tuple(term.MustAtom("registered_name"), term.List())); case option.Some(name): return option.Some[term.Term](term.Tuple(term.MustAtom("registered_name"), term.MustAtom(name))) }
+	case "trap_exit":
+		value := "false"; if current.trapExit { value = "true" }
+		return option.Some[term.Term](term.Tuple(term.MustAtom("trap_exit"), term.MustAtom(value)))
+	case "links":
+		links := make([]term.Term, 0, len(current.links)); for linked := range current.links { links = append(links, term.PIDValue(linked)) }
+		return option.Some[term.Term](term.Tuple(term.MustAtom("links"), term.List(links...)))
+	case "dictionary":
+		values := make([]term.Term, 0, len(current.dictionary)); for _, entry := range current.dictionary { values = append(values, term.Tuple(term.Clone(entry.key), term.Clone(entry.value))) }
+		return option.Some[term.Term](term.Tuple(term.MustAtom("dictionary"), term.List(values...)))
+	case "message_queue_len": return option.Some[term.Term](term.Tuple(term.MustAtom("message_queue_len"), term.Integer(int64(current.mailbox.Len()))))
+	case "status": return option.Some[term.Term](term.Tuple(term.MustAtom("status"), term.MustAtom("waiting")))
+	default: return option.Some[term.Term](term.Tuple(term.MustAtom(item), term.List()))
+	}
 }
 
 func (context *Context) Receive(
@@ -1078,16 +1157,68 @@ func (context *Context) Spawn(
 	return context.kernel.Spawn(behavior, policy)
 }
 
+func (context *Context) SpawnOutcome(behavior Behavior, policy SpawnPolicy) ContextSpawnOutcome {
+	match context.Spawn(behavior, policy) { case result.Err(failure): return ContextSpawnRejected(failure.Error()); case result.Ok(pid): return ContextSpawned(pid) }
+}
+
+func (context *Context) SpawnResult(behavior Behavior, policy SpawnPolicy) ContextSpawnResult {
+	match context.Spawn(behavior, policy) { case result.Err(failure): return ContextSpawnResult{Detail: failure.Error()}; case result.Ok(pid): return ContextSpawnResult{PID: pid, Accepted: true} }
+}
+
 func (context *Context) Link(
 	other term.PID,
 ) result.Result[KernelMutation, Failure] {
 	return context.kernel.Link(context.process.pid, other)
 }
 
+func (context *Context) Unlink(other term.PID) KernelMutation {
+	return context.kernel.Unlink(context.process.pid, other)
+}
+
+func (context *Context) DictionaryGet(key term.Term) option.Option[term.Term] {
+	for _, entry := range context.process.dictionary { if entry.key.Equal(key) { return option.Some(term.Clone(entry.value)) } }
+	return option.None[term.Term]()
+}
+
+func (context *Context) DictionaryPut(key term.Term, value term.Term) option.Option[term.Term] {
+	for index := range context.process.dictionary {
+		if context.process.dictionary[index].key.Equal(key) {
+			prior := term.Clone(context.process.dictionary[index].value)
+			context.process.dictionary[index].value = term.Clone(value)
+			return option.Some(prior)
+		}
+	}
+	context.process.dictionary = append(context.process.dictionary, dictionaryEntry{key: term.Clone(key), value: term.Clone(value)})
+	return option.None[term.Term]()
+}
+
+func (context *Context) DictionaryErase(key term.Term) option.Option[term.Term] {
+	for index := range context.process.dictionary {
+		if context.process.dictionary[index].key.Equal(key) {
+			prior := term.Clone(context.process.dictionary[index].value)
+			context.process.dictionary = append(context.process.dictionary[:index], context.process.dictionary[index+1:]...)
+			return option.Some(prior)
+		}
+	}
+	return option.None[term.Term]()
+}
+
 func (context *Context) Monitor(
 	other term.PID,
 ) result.Result[term.Reference, Failure] {
 	return context.kernel.Monitor(context.process.pid, other)
+}
+
+func (context *Context) MonitorOutcome(other term.PID) ContextMonitorOutcome {
+	match context.Monitor(other) { case result.Err(failure): return ContextMonitorRejected(failure.Error()); case result.Ok(reference): return ContextMonitored(reference) }
+}
+
+func (context *Context) MonitorResult(other term.PID) ContextMonitorResult {
+	match context.Monitor(other) { case result.Err(failure): return ContextMonitorResult{Detail: failure.Error()}; case result.Ok(reference): return ContextMonitorResult{Reference: reference, Accepted: true} }
+}
+
+func (context *Context) MonitorAliasResult(other term.PID) ContextMonitorResult {
+	match context.kernel.MonitorAlias(context.process.pid, other) { case result.Err(failure): return ContextMonitorResult{Detail: failure.Error()}; case result.Ok(reference): return ContextMonitorResult{Reference: reference, Accepted: true} }
 }
 
 func (context *Context) Demonitor(
@@ -1100,6 +1231,8 @@ func (context *Context) Demonitor(
 func (context *Context) Alias() result.Result[term.Reference, Failure] {
 	return context.kernel.Alias(context.process.pid)
 }
+
+func (context *Context) MakeReference() term.Reference { return context.kernel.newReference() }
 
 func (context *Context) Unalias(reference term.Reference) AliasRemoval {
 	return context.kernel.Unalias(context.process.pid, reference)
