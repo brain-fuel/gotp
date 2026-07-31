@@ -4,6 +4,8 @@ import (
 	"math/big"
 	"testing"
 
+	"goforge.dev/goplus/std/memory"
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
@@ -12,6 +14,7 @@ import (
 )
 
 func hotCodeModule(digest string) *beam.Module { return &beam.Module{Name: "sample", Digest: digest} }
+var _ memory.Handle
 
 // assayxport:unit gotp.erts.hot-code-laws
 func TestForcedHotCodePurgeExitsEachOldCodeProcessOnce(t *testing.T) {
@@ -77,4 +80,15 @@ func TestHotCodeResolverLeasesCurrentVMGeneration(t *testing.T) {
 		leave(); leave()
 		match runtime.SoftPurge("sample").State { case beam.OldCodeVersionPurged(count): if count != 0 { t.Fatalf("invalidated = %d", count) }; case _: t.Fatal("soft purge did not remove old code") }
 	}
+}
+
+func TestHotCodePurgeReclaimsLiteralGenerationAfterLease(t *testing.T) {
+	var runtime *HotCodeRuntime; match NewHotCodeRuntime(HotCodeExitWith(func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered() })) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(created): runtime = created }
+	literals := requireLiteralArena(t); match literals.Store(0, []byte("old literal")) { case result.Err(failure): t.Fatal(failure); case result.Ok(_): }
+	match runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "literal-v1", literalArena: literals}) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	owner := term.PID{Node: 1, Number: 17, Creation: 1}; var reference beam.CodeReference; match runtime.Enter(owner, "sample") { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(entry): reference = entry.Reference }
+	match runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "literal-v2"}) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	busy := runtime.SoftPurge("sample"); if busy.ReclaimedLiterals != 0 || literals.Stats().Closed { t.Fatal("busy purge reclaimed leased literals") }
+	match runtime.Leave(owner, reference) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	purged := runtime.SoftPurge("sample"); if purged.ReclaimedLiterals != 1 || !literals.Stats().Closed { t.Fatalf("purge = %d/%v", purged.ReclaimedLiterals, literals.Stats().Closed) }; match purged.ReleaseFailure { case option.None: case option.Some(failure): t.Fatal(failure) }
 }

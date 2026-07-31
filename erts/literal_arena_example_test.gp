@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"goforge.dev/goplus/std/memory"
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 )
 
@@ -20,5 +21,7 @@ func TestLiteralArenaResetInvalidatesGenerationAndReusesCapacity(t *testing.T) {
 }
 
 func TestLiteralArenaRejectsDuplicateIdentity(t *testing.T) { literals := requireLiteralArena(t); defer literals.Close(); match literals.Store(1, []byte("first")) { case result.Err(failure): t.Fatal(failure); case result.Ok(_): }; match literals.Store(1, []byte("second")) { case result.Err(failure): match failure { case DuplicateLiteral(_): case _: t.Fatal(failure) }; case result.Ok(_): t.Fatal("duplicate literal was accepted") } }
+
+func TestModuleLoaderRetainsLiteralChunkInArena(t *testing.T) { match DecodeModule(literalExecutableModuleBytes(), ModuleLoaderConfig{}) { case result.Err(failure): t.Fatal(failure); case result.Ok(module): defer module.Close(); match module.LiteralMemory() { case option.None: t.Fatal("literal module has no arena memory"); case option.Some(stats): if stats.Used == 0 || stats.Allocations != 1 { t.Fatalf("literal memory = %+v", stats) } } } }
 
 func requireLiteralArena(t *testing.T) *LiteralArena { match NewLiteralArena(4096) { case result.Err(failure): t.Fatal(failure); return nil; case result.Ok(literals): return literals } }

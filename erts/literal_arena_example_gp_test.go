@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"goforge.dev/goplus/std/memory"
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 )
 
@@ -98,14 +99,38 @@ func TestLiteralArenaRejectsDuplicateIdentity(t *testing.T) {
 	}
 }
 
-func requireLiteralArena(t *testing.T) *LiteralArena {
-	switch __gp_m9 := any(NewLiteralArena(4096)).(type) {
-	case result.Err[*LiteralArena, LiteralArenaFailure]:
+func TestModuleLoaderRetainsLiteralChunkInArena(t *testing.T) {
+	switch __gp_m9 := any(DecodeModule(literalExecutableModuleBytes(), ModuleLoaderConfig{})).(type) {
+	case result.Err[*LoadedModule, ModuleLoadFailure]:
 		failure := __gp_m9.Err
+		t.Fatal(failure)
+	case result.Ok[*LoadedModule, ModuleLoadFailure]:
+		module := __gp_m9.Value
+		defer module.Close()
+		switch __gp_m10 := any(module.LiteralMemory()).(type) {
+		case option.None[memory.Stats]:
+			t.Fatal("literal module has no arena memory")
+		case option.Some[memory.Stats]:
+			stats := __gp_m10.Value
+			if stats.Used == 0 || stats.Allocations != 1 {
+				t.Fatalf("literal memory = %+v", stats)
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func requireLiteralArena(t *testing.T) *LiteralArena {
+	switch __gp_m11 := any(NewLiteralArena(4096)).(type) {
+	case result.Err[*LiteralArena, LiteralArenaFailure]:
+		failure := __gp_m11.Err
 		t.Fatal(failure)
 		return nil
 	case result.Ok[*LiteralArena, LiteralArenaFailure]:
-		literals := __gp_m9.Value
+		literals := __gp_m11.Value
 		return literals
 	default:
 		panic("goplus: impossible enum value in match")

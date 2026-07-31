@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"goforge.dev/goplus/std/clock"
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
@@ -17,6 +18,7 @@ type ModuleLoadFailure enum {
 	InvocationArityOutOfRange(Arity int)
 	BeamLoadFailure(Cause beam.Failure)
 	LiteralLoadFailure(Cause beam.LiteralFailure)
+	LiteralArenaLoadFailure(Cause LiteralArenaFailure)
 	FunctionLoadFailure(Cause beam.FunctionFailure)
 	MachineLoadFailure(Cause vm.Failure)
 	ProcessLoadFailure(Cause AdapterFailure)
@@ -40,6 +42,8 @@ func (failure ModuleLoadFailure) Error() string {
 		return "gotp/erts: load BEAM module: " + cause.Error()
 	case LiteralLoadFailure(cause):
 		return "gotp/erts: load BEAM literals: " + cause.Error()
+	case LiteralArenaLoadFailure(cause):
+		return "gotp/erts: retain BEAM literal bytes: " + cause.Error()
 	case FunctionLoadFailure(cause):
 		return "gotp/erts: load BEAM functions: " + cause.Error()
 	case MachineLoadFailure(cause):
@@ -80,6 +84,7 @@ type LoadedModule struct {
 	instructions []beam.Instruction
 	config       vm.MachineConfig
 	exports      map[ExportKey]uint64
+	literalArena *LiteralArena
 }
 
 type ModuleSet struct {
@@ -166,6 +171,9 @@ func (module *LoadedModule) Digest() string {
 func (module *LoadedModule) LiteralCount() int {
 	return len(module.config.Literals)
 }
+
+func (module *LoadedModule) LiteralMemory() option.Option[memory.Stats] { if module.literalArena == nil { return option.None[memory.Stats]() }; return option.Some(module.literalArena.Stats()) }
+func (module *LoadedModule) Close() result.Result[memory.Mutation, ModuleLoadFailure] { if module.literalArena == nil { return result.Ok[memory.Mutation, ModuleLoadFailure](memory.Applied()) }; match module.literalArena.Close() { case result.Err(failure): return result.Err[memory.Mutation, ModuleLoadFailure](LiteralArenaLoadFailure(failure)); case result.Ok(applied): module.literalArena = nil; return result.Ok[memory.Mutation, ModuleLoadFailure](applied) } }
 
 func (module *LoadedModule) Entry(function string, arity uint32) result.Result[uint64, ModuleLoadFailure] {
 	label, present := module.exports[ExportKey{Function: function, Arity: arity}]
@@ -362,11 +370,22 @@ func LoadModule(
 		return result.Err[*LoadedModule, ModuleLoadFailure](MachineLoadFailure(failure))
 	case result.Ok(_):
 	}
+	var literalArena *LiteralArena
+	match module.Chunk("LitT") {
+	case option.None:
+	case option.Some(chunk):
+		capacity := len(chunk); if capacity < 1 { capacity = 1 }
+		match NewLiteralArena(capacity) {
+		case result.Err(failure): return result.Err[*LoadedModule, ModuleLoadFailure](LiteralArenaLoadFailure(failure))
+		case result.Ok(arena): match arena.Store(0, chunk) { case result.Err(failure): arena.Close(); return result.Err[*LoadedModule, ModuleLoadFailure](LiteralArenaLoadFailure(failure)); case result.Ok(_): literalArena = arena }
+		}
+	}
 	return result.Ok[*LoadedModule, ModuleLoadFailure](&LoadedModule{
 		name: module.Name,
 		digest: module.Digest,
 		instructions: append([]beam.Instruction(nil), decoded.Instructions...),
 		config: machineConfig,
 		exports: exports,
+		literalArena: literalArena,
 	})
 }

@@ -3,6 +3,7 @@ package erts
 import (
 	"fmt"
 
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
@@ -41,12 +42,15 @@ type HotCodeEntry struct {
 type HotCodePurgeReport struct {
 	State beam.CodePurgeState
 	Exited int
+	ReclaimedLiterals int
+	ReleaseFailure option.Option[LiteralArenaFailure]
 }
 
 type HotCodeRuntime struct {
 	store beam.CodeStore
 	owners map[uint64]map[term.PID]int
 	images map[uint64]vm.ModuleImage
+	literals map[uint64]*LiteralArena
 	exits HotCodeExitCapability
 }
 
@@ -59,14 +63,14 @@ func NewHotCodeRuntime(exits HotCodeExitCapability) result.Result[*HotCodeRuntim
 	match exits {
 	case HotCodeExitWith(exit): if exit == nil { return result.Err[*HotCodeRuntime, HotCodeRuntimeFailure](NilHotCodeExit()) }
 	}
-	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure](&HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, images: map[uint64]vm.ModuleImage{}, exits: exits})
+	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure](&HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, images: map[uint64]vm.ModuleImage{}, literals: map[uint64]*LiteralArena{}, exits: exits})
 }
 
 func (runtime *HotCodeRuntime) InstallLoaded(module *LoadedModule) result.Result[beam.CodeHandle, HotCodeRuntimeFailure] {
 	if module == nil { return result.Err[beam.CodeHandle, HotCodeRuntimeFailure](NilLoadedHotCodeModule()) }
 	match runtime.Install(&beam.Module{Name: module.name, Digest: module.digest}) {
 	case result.Err(failure): return result.Err[beam.CodeHandle, HotCodeRuntimeFailure](failure)
-	case result.Ok(handle): runtime.images[handle.Generation] = module.image(); return result.Ok[beam.CodeHandle, HotCodeRuntimeFailure](handle)
+	case result.Ok(handle): runtime.images[handle.Generation] = module.image(); if module.literalArena != nil { runtime.literals[handle.Generation] = module.literalArena; module.literalArena = nil }; return result.Ok[beam.CodeHandle, HotCodeRuntimeFailure](handle)
 	}
 }
 
@@ -129,11 +133,12 @@ func (runtime *HotCodeRuntime) SoftPurge(module string) HotCodePurgeReport {
 	old := runtime.store.Old(module)
 	transition := runtime.store.SoftPurge(module)
 	runtime.store = transition.Store
+	reclaimed := 0; var releaseFailure option.Option[LiteralArenaFailure] = option.None[LiteralArenaFailure]()
 	match transition.State {
-	case beam.OldCodeVersionPurged(_): match old { case option.Some(handle): delete(runtime.images, handle.Generation); case option.None: }
+	case beam.OldCodeVersionPurged(_): match old { case option.Some(handle): delete(runtime.images, handle.Generation); reclaimed, releaseFailure = runtime.releaseLiterals(handle.Generation); case option.None: }
 	case beam.NoOldCodeVersion, beam.OldCodeVersionBusy(_):
 	}
-	return HotCodePurgeReport{State: transition.State}
+	return HotCodePurgeReport{State: transition.State, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure}
 }
 
 func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
@@ -141,6 +146,7 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 	transition := runtime.store.Purge(module)
 	runtime.store = transition.Store
 	exited := 0
+	reclaimed := 0; var releaseFailure option.Option[LiteralArenaFailure] = option.None[LiteralArenaFailure]()
 	match old {
 	case option.None:
 	case option.Some(handle):
@@ -151,6 +157,9 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 		}
 		delete(runtime.owners, handle.Generation)
 		delete(runtime.images, handle.Generation)
+		reclaimed, releaseFailure = runtime.releaseLiterals(handle.Generation)
 	}
-	return HotCodePurgeReport{State: transition.State, Exited: exited}
+	return HotCodePurgeReport{State: transition.State, Exited: exited, ReclaimedLiterals: reclaimed, ReleaseFailure: releaseFailure}
 }
+
+func (runtime *HotCodeRuntime) releaseLiterals(generation uint64) (int, option.Option[LiteralArenaFailure]) { literals, present := runtime.literals[generation]; if !present { return 0, option.None[LiteralArenaFailure]() }; count := literals.Len(); match literals.Close() { case result.Err(failure): return 0, option.Some(failure); case result.Ok(_): delete(runtime.literals, generation); return count, option.None[LiteralArenaFailure]() } }

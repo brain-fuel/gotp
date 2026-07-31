@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"testing"
 
+	"goforge.dev/goplus/std/memory"
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
@@ -15,6 +17,8 @@ import (
 )
 
 func hotCodeModule(digest string) *beam.Module { return &beam.Module{Name: "sample", Digest: digest} }
+
+var _ memory.Handle
 
 // assayxport:unit gotp.erts.hot-code-laws
 func TestForcedHotCodePurgeExitsEachOldCodeProcessOnce(t *testing.T) {
@@ -229,6 +233,81 @@ func TestHotCodeResolverLeasesCurrentVMGeneration(t *testing.T) {
 		default:
 			t.Fatal("soft purge did not remove old code")
 		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestHotCodePurgeReclaimsLiteralGenerationAfterLease(t *testing.T) {
+	var runtime *HotCodeRuntime
+	switch __gp_m20 := any(NewHotCodeRuntime(HotCodeExitWith{Exit: func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered{} }})).(type) {
+	case result.Err[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		failure := __gp_m20.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		created := __gp_m20.Value
+		runtime = created
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	literals := requireLiteralArena(t)
+	switch __gp_m21 := any(literals.Store(0, []byte("old literal"))).(type) {
+	case result.Err[memory.Handle, LiteralArenaFailure]:
+		failure := __gp_m21.Err
+		t.Fatal(failure)
+	case result.Ok[memory.Handle, LiteralArenaFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m22 := any(runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "literal-v1", literalArena: literals})).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m22.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	owner := term.PID{Node: 1, Number: 17, Creation: 1}
+	var reference beam.CodeReference
+	switch __gp_m23 := any(runtime.Enter(owner, "sample")).(type) {
+	case result.Err[HotCodeEntry, HotCodeRuntimeFailure]:
+		failure := __gp_m23.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[HotCodeEntry, HotCodeRuntimeFailure]:
+		entry := __gp_m23.Value
+		reference = entry.Reference
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m24 := any(runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "literal-v2"})).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m24.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	busy := runtime.SoftPurge("sample")
+	if busy.ReclaimedLiterals != 0 || literals.Stats().Closed {
+		t.Fatal("busy purge reclaimed leased literals")
+	}
+	switch __gp_m25 := any(runtime.Leave(owner, reference)).(type) {
+	case result.Err[bool, HotCodeRuntimeFailure]:
+		failure := __gp_m25.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[bool, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	purged := runtime.SoftPurge("sample")
+	if purged.ReclaimedLiterals != 1 || !literals.Stats().Closed {
+		t.Fatalf("purge = %d/%v", purged.ReclaimedLiterals, literals.Stats().Closed)
+	}
+	switch __gp_m26 := any(purged.ReleaseFailure).(type) {
+	case option.None[LiteralArenaFailure]:
+	case option.Some[LiteralArenaFailure]:
+		failure := __gp_m26.Value
+		t.Fatal(failure)
 	default:
 		panic("goplus: impossible enum value in match")
 	}

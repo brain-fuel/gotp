@@ -100,3 +100,5 @@ This document is not a release and does not authorize a tag or publication.
   and immutable-copy reads.
 - Loader and hot-code purge integration remain open; no ERTS parity claim is
   made.
+- Connected BEAM `LitT` ownership to loaded modules and generation-aware
+  hot-code purge; leased old code retains literals until soft purge succeeds.

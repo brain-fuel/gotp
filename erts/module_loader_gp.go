@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"goforge.dev/goplus/std/clock"
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
@@ -47,6 +48,13 @@ type LiteralLoadFailure struct {
 }
 
 func (LiteralLoadFailure) isModuleLoadFailure() {}
+
+//goplus:variant (ModuleLoadFailure) LiteralArenaLoadFailure(Cause LiteralArenaFailure)
+type LiteralArenaLoadFailure struct {
+	Cause LiteralArenaFailure
+}
+
+func (LiteralArenaLoadFailure) isModuleLoadFailure() {}
 
 //goplus:variant (ModuleLoadFailure) FunctionLoadFailure(Cause beam.FunctionFailure)
 type FunctionLoadFailure struct {
@@ -123,6 +131,7 @@ type ModuleLoadFailureCases[R any] struct {
 	InvocationArityOutOfRange func(Arity int) R
 	BeamLoadFailure           func(Cause beam.Failure) R
 	LiteralLoadFailure        func(Cause beam.LiteralFailure) R
+	LiteralArenaLoadFailure   func(Cause LiteralArenaFailure) R
 	FunctionLoadFailure       func(Cause beam.FunctionFailure) R
 	MachineLoadFailure        func(Cause vm.Failure) R
 	ProcessLoadFailure        func(Cause AdapterFailure) R
@@ -147,6 +156,8 @@ func ModuleLoadFailureFold[R any](m ModuleLoadFailure, cs ModuleLoadFailureCases
 		return cs.BeamLoadFailure(m.Cause)
 	case LiteralLoadFailure:
 		return cs.LiteralLoadFailure(m.Cause)
+	case LiteralArenaLoadFailure:
+		return cs.LiteralArenaLoadFailure(m.Cause)
 	case FunctionLoadFailure:
 		return cs.FunctionLoadFailure(m.Cause)
 	case MachineLoadFailure:
@@ -178,6 +189,7 @@ type ModuleLoadFailureEqOverrides struct {
 	InvocationArityOutOfRange func(x, y InvocationArityOutOfRange) (eq, handled bool)
 	BeamLoadFailure           func(x, y BeamLoadFailure) (eq, handled bool)
 	LiteralLoadFailure        func(x, y LiteralLoadFailure) (eq, handled bool)
+	LiteralArenaLoadFailure   func(x, y LiteralArenaLoadFailure) (eq, handled bool)
 	FunctionLoadFailure       func(x, y FunctionLoadFailure) (eq, handled bool)
 	MachineLoadFailure        func(x, y MachineLoadFailure) (eq, handled bool)
 	ProcessLoadFailure        func(x, y ProcessLoadFailure) (eq, handled bool)
@@ -258,6 +270,20 @@ func ModuleLoadFailureEqualWith(a, b ModuleLoadFailure, ov ModuleLoadFailureEqOv
 			}
 		}
 		if x.Cause != y.Cause {
+			return false
+		}
+		return true
+	case LiteralArenaLoadFailure:
+		y, ok := any(b).(LiteralArenaLoadFailure)
+		if !ok {
+			return false
+		}
+		if ov.LiteralArenaLoadFailure != nil {
+			if eq, handled := ov.LiteralArenaLoadFailure(x, y); handled {
+				return eq
+			}
+		}
+		if !LiteralArenaFailureEqual(x.Cause, y.Cause) {
 			return false
 		}
 		return true
@@ -432,6 +458,10 @@ func ModuleLoadFailureError(failure ModuleLoadFailure) string {
 		cause := __gp_m0.Cause
 
 		return "gotp/erts: load BEAM literals: " + beam.LiteralFailureError(cause)
+	case LiteralArenaLoadFailure:
+		cause := __gp_m0.Cause
+
+		return "gotp/erts: retain BEAM literal bytes: " + LiteralArenaFailureError(cause)
 	case FunctionLoadFailure:
 		cause := __gp_m0.Cause
 
@@ -497,6 +527,7 @@ type LoadedModule struct {
 	instructions []beam.Instruction
 	config       vm.MachineConfig
 	exports      map[ExportKey]uint64
+	literalArena *LiteralArena
 }
 
 type ModuleSet struct {
@@ -607,14 +638,37 @@ func (module *LoadedModule) LiteralCount() int {
 	return len(module.config.Literals)
 }
 
+func (module *LoadedModule) LiteralMemory() option.Option[memory.Stats] {
+	if module.literalArena == nil {
+		return option.None[memory.Stats]{}
+	}
+	return option.Some[memory.Stats]{Value: module.literalArena.Stats()}
+}
+func (module *LoadedModule) Close() result.Result[memory.Mutation, ModuleLoadFailure] {
+	if module.literalArena == nil {
+		return result.Ok[memory.Mutation, ModuleLoadFailure]{Value: memory.Applied{}}
+	}
+	switch __gp_m5 := any(module.literalArena.Close()).(type) {
+	case result.Err[memory.Mutation, LiteralArenaFailure]:
+		failure := __gp_m5.Err
+		return result.Err[memory.Mutation, ModuleLoadFailure]{Err: LiteralArenaLoadFailure{Cause: failure}}
+	case result.Ok[memory.Mutation, LiteralArenaFailure]:
+		applied := __gp_m5.Value
+		module.literalArena = nil
+		return result.Ok[memory.Mutation, ModuleLoadFailure]{Value: applied}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (module *LoadedModule) Entry(function string, arity uint32) result.Result[uint64, ModuleLoadFailure] {
 	label, present := module.exports[ExportKey{Function: function, Arity: arity}]
-	switch __gp_m5 := any(option.Of(label, present)).(type) {
+	switch __gp_m6 := any(option.Of(label, present)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[uint64, ModuleLoadFailure]{Err: MissingExport{Function: function, Arity: arity}}
 	case option.Some[uint64]:
-		entry := __gp_m5.Value
+		entry := __gp_m6.Value
 
 		return result.Ok[uint64, ModuleLoadFailure]{Value: entry}
 	default:
@@ -623,13 +677,13 @@ func (module *LoadedModule) Entry(function string, arity uint32) result.Result[u
 }
 
 func (module *LoadedModule) NewMachine() result.Result[*vm.Machine, ModuleLoadFailure] {
-	switch __gp_m6 := any(vm.NewMachine(module.instructions, module.config)).(type) {
+	switch __gp_m7 := any(vm.NewMachine(module.instructions, module.config)).(type) {
 	case result.Err[*vm.Machine, vm.Failure]:
-		failure := __gp_m6.Err
+		failure := __gp_m7.Err
 
 		return result.Err[*vm.Machine, ModuleLoadFailure]{Err: MachineLoadFailure{Cause: failure}}
 	case result.Ok[*vm.Machine, vm.Failure]:
-		machine := __gp_m6.Value
+		machine := __gp_m7.Value
 
 		return result.Ok[*vm.Machine, ModuleLoadFailure]{Value: machine}
 	default:
@@ -642,29 +696,29 @@ func (module *LoadedModule) NewProcess(
 	arity uint32,
 	source clock.Clock,
 ) result.Result[*VMProcess, ModuleLoadFailure] {
-	switch __gp_m7 := any(module.Entry(function, arity)).(type) {
+	switch __gp_m8 := any(module.Entry(function, arity)).(type) {
 	case result.Err[uint64, ModuleLoadFailure]:
-		failure := __gp_m7.Err
+		failure := __gp_m8.Err
 
 		return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 	case result.Ok[uint64, ModuleLoadFailure]:
-		entry := __gp_m7.Value
+		entry := __gp_m8.Value
 
-		switch __gp_m8 := any(module.NewMachine()).(type) {
+		switch __gp_m9 := any(module.NewMachine()).(type) {
 		case result.Err[*vm.Machine, ModuleLoadFailure]:
-			failure := __gp_m8.Err
+			failure := __gp_m9.Err
 
 			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 		case result.Ok[*vm.Machine, ModuleLoadFailure]:
-			machine := __gp_m8.Value
+			machine := __gp_m9.Value
 
-			switch __gp_m9 := any(NewVMProcessWithClock(machine, entry, source)).(type) {
+			switch __gp_m10 := any(NewVMProcessWithClock(machine, entry, source)).(type) {
 			case result.Err[*VMProcess, AdapterFailure]:
-				failure := __gp_m9.Err
+				failure := __gp_m10.Err
 
 				return result.Err[*VMProcess, ModuleLoadFailure]{Err: ProcessLoadFailure{Cause: failure}}
 			case result.Ok[*VMProcess, AdapterFailure]:
-				process := __gp_m9.Value
+				process := __gp_m10.Value
 
 				return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
 			default:
@@ -684,29 +738,29 @@ func (module *LoadedModule) NewLinkedProcess(
 	source clock.Clock,
 	registry *CallRegistry,
 ) result.Result[*VMProcess, ModuleLoadFailure] {
-	switch __gp_m10 := any(module.Entry(function, arity)).(type) {
+	switch __gp_m11 := any(module.Entry(function, arity)).(type) {
 	case result.Err[uint64, ModuleLoadFailure]:
-		failure := __gp_m10.Err
+		failure := __gp_m11.Err
 
 		return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 	case result.Ok[uint64, ModuleLoadFailure]:
-		entry := __gp_m10.Value
+		entry := __gp_m11.Value
 
-		switch __gp_m11 := any(module.NewMachine()).(type) {
+		switch __gp_m12 := any(module.NewMachine()).(type) {
 		case result.Err[*vm.Machine, ModuleLoadFailure]:
-			failure := __gp_m11.Err
+			failure := __gp_m12.Err
 
 			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 		case result.Ok[*vm.Machine, ModuleLoadFailure]:
-			machine := __gp_m11.Value
+			machine := __gp_m12.Value
 
-			switch __gp_m12 := any(NewVMProcessWithRegistry(machine, entry, source, registry)).(type) {
+			switch __gp_m13 := any(NewVMProcessWithRegistry(machine, entry, source, registry)).(type) {
 			case result.Err[*VMProcess, AdapterFailure]:
-				failure := __gp_m12.Err
+				failure := __gp_m13.Err
 
 				return result.Err[*VMProcess, ModuleLoadFailure]{Err: ProcessLoadFailure{Cause: failure}}
 			case result.Ok[*VMProcess, AdapterFailure]:
-				process := __gp_m12.Value
+				process := __gp_m13.Value
 
 				return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
 			default:
@@ -725,13 +779,13 @@ func DecodeModule(
 	data []byte,
 	config ModuleLoaderConfig,
 ) result.Result[*LoadedModule, ModuleLoadFailure] {
-	switch __gp_m13 := any(beam.Parse(data)).(type) {
+	switch __gp_m14 := any(beam.Parse(data)).(type) {
 	case result.Err[*beam.Module, beam.Failure]:
-		failure := __gp_m13.Err
+		failure := __gp_m14.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[*beam.Module, beam.Failure]:
-		module := __gp_m13.Value
+		module := __gp_m14.Value
 
 		return LoadModule(module, config)
 	default:
@@ -744,13 +798,13 @@ func LoadModuleFile(
 	path string,
 	config ModuleLoaderConfig,
 ) result.Result[*LoadedModule, ModuleLoadFailure] {
-	switch __gp_m14 := any(beam.Load(capability, path)).(type) {
+	switch __gp_m15 := any(beam.Load(capability, path)).(type) {
 	case result.Err[*beam.Module, beam.Failure]:
-		failure := __gp_m14.Err
+		failure := __gp_m15.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[*beam.Module, beam.Failure]:
-		module := __gp_m14.Value
+		module := __gp_m15.Value
 
 		return LoadModule(module, config)
 	default:
@@ -766,25 +820,25 @@ func LoadModule(
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: NilModule{}}
 	}
 	var code []byte
-	switch __gp_m15 := any(module.Chunk("Code")).(type) {
+	switch __gp_m16 := any(module.Chunk("Code")).(type) {
 	case option.None[[]byte]:
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: beam.MissingChunk{ID: "Code"}}}
 	case option.Some[[]byte]:
-		chunk := __gp_m15.Value
+		chunk := __gp_m16.Value
 
 		code = chunk
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 	var decoded beam.DecodedCode
-	switch __gp_m16 := any(beam.DecodeCodeChunk(code, config.CodeLimits)).(type) {
+	switch __gp_m17 := any(beam.DecodeCodeChunk(code, config.CodeLimits)).(type) {
 	case result.Err[beam.DecodedCode, beam.Failure]:
-		failure := __gp_m16.Err
+		failure := __gp_m17.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[beam.DecodedCode, beam.Failure]:
-		value := __gp_m16.Value
+		value := __gp_m17.Value
 
 		decoded = value
 	default:
@@ -793,9 +847,9 @@ func LoadModule(
 	atoms := make(map[uint64]string, len(module.Atoms))
 	for offset, name := range module.Atoms {
 		index := uint64(offset + 1)
-		switch __gp_m17 := any(term.Atom(name)).(type) {
+		switch __gp_m18 := any(term.Atom(name)).(type) {
 		case result.Err[term.Term, term.ValidationFailure]:
-			failure := __gp_m17.Err
+			failure := __gp_m18.Err
 
 			return result.Err[*LoadedModule, ModuleLoadFailure]{Err: InvalidModuleAtom{Index: index, Cause: failure}}
 		case result.Ok[term.Term, term.ValidationFailure]:
@@ -806,26 +860,26 @@ func LoadModule(
 		}
 	}
 	var literals map[uint64]term.Term
-	switch __gp_m18 := any(beam.DecodeModuleLiterals(module, config.LiteralLimits)).(type) {
+	switch __gp_m19 := any(beam.DecodeModuleLiterals(module, config.LiteralLimits)).(type) {
 	case result.Err[map[uint64]term.Term, beam.LiteralFailure]:
-		failure := __gp_m18.Err
+		failure := __gp_m19.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: LiteralLoadFailure{Cause: failure}}
 	case result.Ok[map[uint64]term.Term, beam.LiteralFailure]:
-		values := __gp_m18.Value
+		values := __gp_m19.Value
 
 		literals = values
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 	var functions map[uint64]beam.FunctionTemplate
-	switch __gp_m19 := any(beam.DecodeModuleFunctions(module, config.FunctionLimits)).(type) {
+	switch __gp_m20 := any(beam.DecodeModuleFunctions(module, config.FunctionLimits)).(type) {
 	case result.Err[map[uint64]beam.FunctionTemplate, beam.FunctionFailure]:
-		failure := __gp_m19.Err
+		failure := __gp_m20.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: FunctionLoadFailure{Cause: failure}}
 	case result.Ok[map[uint64]beam.FunctionTemplate, beam.FunctionFailure]:
-		values := __gp_m19.Value
+		values := __gp_m20.Value
 
 		functions = values
 	default:
@@ -844,11 +898,11 @@ func LoadModule(
 		if instruction.Opcode.Name != "label" || len(instruction.Operands) != 1 {
 			continue
 		}
-		switch __gp_m20 := any(beam.Uint64(instruction.Operands[0])).(type) {
+		switch __gp_m21 := any(beam.Uint64(instruction.Operands[0])).(type) {
 		case option.None[uint64]:
 
 		case option.Some[uint64]:
-			label := __gp_m20.Value
+			label := __gp_m21.Value
 
 			labels[label] = true
 		default:
@@ -882,13 +936,46 @@ func LoadModule(
 		ModuleName: module.Name,
 		Exports:    vmExports,
 	}
-	switch __gp_m21 := any(vm.NewMachine(decoded.Instructions, machineConfig)).(type) {
+	switch __gp_m22 := any(vm.NewMachine(decoded.Instructions, machineConfig)).(type) {
 	case result.Err[*vm.Machine, vm.Failure]:
-		failure := __gp_m21.Err
+		failure := __gp_m22.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: MachineLoadFailure{Cause: failure}}
 	case result.Ok[*vm.Machine, vm.Failure]:
 
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	var literalArena *LiteralArena
+	switch __gp_m23 := any(module.Chunk("LitT")).(type) {
+	case option.None[[]byte]:
+
+	case option.Some[[]byte]:
+		chunk := __gp_m23.Value
+
+		capacity := len(chunk)
+		if capacity < 1 {
+			capacity = 1
+		}
+		switch __gp_m24 := any(NewLiteralArena(capacity)).(type) {
+		case result.Err[*LiteralArena, LiteralArenaFailure]:
+			failure := __gp_m24.Err
+			return result.Err[*LoadedModule, ModuleLoadFailure]{Err: LiteralArenaLoadFailure{Cause: failure}}
+		case result.Ok[*LiteralArena, LiteralArenaFailure]:
+			arena := __gp_m24.Value
+			switch __gp_m25 := any(arena.Store(0, chunk)).(type) {
+			case result.Err[memory.Handle, LiteralArenaFailure]:
+				failure := __gp_m25.Err
+				arena.Close()
+				return result.Err[*LoadedModule, ModuleLoadFailure]{Err: LiteralArenaLoadFailure{Cause: failure}}
+			case result.Ok[memory.Handle, LiteralArenaFailure]:
+				literalArena = arena
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -898,5 +985,6 @@ func LoadModule(
 		instructions: append([]beam.Instruction(nil), decoded.Instructions...),
 		config:       machineConfig,
 		exports:      exports,
+		literalArena: literalArena,
 	}}
 }

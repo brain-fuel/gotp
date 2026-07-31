@@ -28,8 +28,10 @@ rather than mutable arena aliases.
 
 ## Remaining obligations
 
-The BEAM loader and two-version purge path must transfer each module's encoded
-literal table into this ownership boundary and release it only after old-code
-leases expire. Decoded `term.Term` representation, process heaps, message
+The BEAM loader now transfers each module's encoded `LitT` chunk into this
+ownership boundary. Successful hot-code installation transfers ownership to the
+runtime generation; busy soft purge retains it, while successful soft purge and
+forced purge close it and report the reclaimed literal count. Decoded
+`term.Term` representation, current-generation removal, process heaps, message
 fragments, binaries, stacks, and scheduler-local caches remain separate memory
 parity obligations. This ADR does not establish ERTS memory parity.

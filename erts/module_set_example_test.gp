@@ -62,7 +62,7 @@ func TestModuleSetRejectsDuplicateModuleName(t *testing.T) {
 			if name != "import_demo" {
 				t.Fatalf("duplicate module = %q", name)
 			}
-		case NilModule, NilModuleSet, InvocationArityOutOfRange(_), BeamLoadFailure(_), LiteralLoadFailure(_), FunctionLoadFailure(_), MachineLoadFailure(_), ProcessLoadFailure(_), InvalidModuleAtom(_, _), DuplicateModuleExport(_, _), MissingModule(_), MissingExport(_, _), ExportLabelMissing(_, _, _):
+		case NilModule, NilModuleSet, InvocationArityOutOfRange(_), BeamLoadFailure(_), LiteralLoadFailure(_), LiteralArenaLoadFailure(_), FunctionLoadFailure(_), MachineLoadFailure(_), ProcessLoadFailure(_), InvalidModuleAtom(_, _), DuplicateModuleExport(_, _), MissingModule(_), MissingExport(_, _), ExportLabelMissing(_, _, _):
 			t.Fatalf("duplicate failure = %v", failure)
 		}
 	}
