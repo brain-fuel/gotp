@@ -21,3 +21,4 @@ the corresponding directory:
 - `queue.beam`: `5893b425af2ace164fe8eb500bc62ea8828bca30d9da623b691c15f8cff60b0c`
 - `gb_sets.beam`: `17eff1ac12afdd04796d2909b9a041560848be24fa4e11fdff2b9002d1ec8230`
 - `gb_trees.beam`: `2b2a65ada2b5509922258f109f91377084b44ced92afbabec8162cdac846030d`
+- `sets.beam`: `8451a0fece97c927584a36e3adefa749a1792a0ee126ab2ccea67929be69ceda`

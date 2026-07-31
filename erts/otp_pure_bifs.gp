@@ -466,6 +466,10 @@ func otpMapSize(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpTupleSize(arguments []term.Term) vm.ExternalCallOutcome {
+	match arguments[0] { case term.TupleTerm(elements): return vm.ExternalCallReturned(term.Integer(int64(len(elements)))); case _: return otpBadarg() }
+}
+
 func otpMapNext(arguments []term.Term) vm.ExternalCallOutcome {
 	var entries []term.MapEntry
 	match arguments[1] { case term.MapTerm(found): entries = found; case _: return otpBadarg() }
@@ -655,6 +659,30 @@ func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpLooseEqual(arguments []term.Term) vm.ExternalCallOutcome {
+	equal := term.Equal(arguments[0], arguments[1])
+	if !equal {
+		match otpNumberOf(arguments[0]) {
+		case option.None:
+		case option.Some(left):
+			match otpNumberOf(arguments[1]) {
+			case option.None:
+			case option.Some(right):
+				match left {
+				case otpInteger(leftInteger): match right { case otpInteger(rightInteger): equal = leftInteger.Cmp(rightInteger) == 0; case otpFloat(rightFloat): rational, exact := new(big.Rat).SetString(strconv.FormatFloat(rightFloat, 'g', -1, 64)); equal = exact && rational.Cmp(new(big.Rat).SetInt(leftInteger)) == 0 }
+				case otpFloat(leftFloat): match right { case otpFloat(rightFloat): equal = leftFloat == rightFloat; case otpInteger(rightInteger): rational, exact := new(big.Rat).SetString(strconv.FormatFloat(leftFloat, 'g', -1, 64)); equal = exact && rational.Cmp(new(big.Rat).SetInt(rightInteger)) == 0 }
+				}
+			}
+		}
+	}
+	if equal { return vm.ExternalCallReturned(term.MustAtom("true")) }
+	return vm.ExternalCallReturned(term.MustAtom("false"))
+}
+
+func otpIsList(arguments []term.Term) vm.ExternalCallOutcome {
+	match arguments[0] { case term.ProperListTerm(_), term.ImproperListTerm(_, _): return vm.ExternalCallReturned(term.MustAtom("true")); case _: return vm.ExternalCallReturned(term.MustAtom("false")) }
+}
+
 // assayxport:unit gotp.erts.otp-pure-bifs
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
@@ -666,7 +694,12 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "--", Arity: 2}, Implementation: otpListSubtract},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "-", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpArithmetic(arguments, otpSubtract()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "==", Arity: 2}, Implementation: otpLooseEqual},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_list", Arity: 1}, Implementation: otpIsList},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_size", Arity: 1}, Implementation: otpMapSize},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_get", Arity: 2}, Implementation: otpMapGet},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "tuple_size", Arity: 1}, Implementation: otpTupleSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "rem", Arity: 2}, Implementation: otpIntegerRemainder},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "map_next", Arity: 3}, Implementation: otpMapNext},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "cmp_term", Arity: 2}, Implementation: otpCompareTerm},

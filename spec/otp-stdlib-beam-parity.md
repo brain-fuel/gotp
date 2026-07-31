@@ -52,3 +52,16 @@ provides the emulator-owned native map operations, `erts_internal:map_next/3`,
 
 See ADRs `0049-vm-global-export-metadata` and
 `0050-exported-functions-use-external-dispatch`.
+
+## List-backed collection evidence
+
+The unmodified `proplists`, `ordsets`, and `queue` modules execute in linked
+module sets with pinned `lists`, `maps`, and `sets` dependencies as required.
+Documented unordered results compare by membership; every ordered result,
+return value, and exception remains exact.
+
+- `proplists` corpus: `sha256:0c51cfdbe21944d5ac7c86f05b70d0338273316e2d5a3b3e1d216e6448b7727f`
+- `ordsets` corpus: `sha256:36478744a455a3838cbfc22d8b41d6529b101873dc149883e4b081d66d6bd743`
+- `ordsets` callback corpus: `sha256:326efe35a809b3fa490c2a4931a253739c3fcf85783e7160e3f43302e4ec53c6`
+- `queue` corpus: `sha256:ffbbdde72db7e5c355b1e95de987848e4f9f485be8d3b25a30fe573335c562cf`
+- `queue` callback corpus: `sha256:f80edf1d4484b834c1b1b753587901f1ce95d59ba7d9f5d4a6ce8b3e5596c98d`

@@ -159,3 +159,7 @@ This document is not a release and does not authorize a tag or publication.
   BEAM closures, through deterministic OTP-oracle corpora.
 - Added the native immutable map BIF surface, native and ordered map iteration,
   total-term comparison, integer remainder, and exported-function dispatch.
+- Executed every export of the pinned `proplists`, `ordsets`, and `queue`
+  modules, including their higher-order operations with BEAM closures.
+- Added core `tuple_size`, `map_get`, `is_map_key`, numeric `==`, and `is_list`
+  BIF behavior required by those modules.
