@@ -12,10 +12,12 @@ typed ownership group for runtime slices. Removal clears vacated slots, reset
 clears GC-visible references while retaining capacity, and release clears and
 drops the complete backing allocation.
 
-GoTP artifact `gotp.erts.vm-process` uses this buffer for selective-receive
-message fragments. Live processes preserve ordering and cursor semantics.
-Completion, uncaught exception, and VM failure release all buffered envelopes
-so terminated processes do not retain message term graphs.
+GoTP artifacts `gotp.erts.vm-process` and `gotp.vm.register-memory` use this
+buffer for selective-receive message fragments and X/Y registers. Live
+processes preserve ordering, cursor, and reverse Y-index semantics. Frame
+deallocation clears removed Y slots. Completion and uncaught exception clear X
+terms and drop Y and message backing storage; hard VM failures invoke the same
+continuation release capability.
 
 ## Traceability
 
@@ -24,10 +26,10 @@ so terminated processes do not retain message term graphs.
 - Std laws: `test:goplus.std.memory-buffer-laws`.
 - Consumer code: `gotp.erts.vm-process`.
 - Consumer laws: `test:gotp.erts.selective-receive-laws`.
+- VM laws: `test:gotp.vm.register-memory-laws`.
 
 ## Remaining obligations
 
-X/Y registers, continuation return stacks, exception stacks, process heap term
-storage, kernel signal queues, off-heap binaries, and scheduler-local caches
-still use ordinary Go allocations. This decision does not establish ERTS
-process-memory parity.
+Continuation return stacks, exception stacks, process heap term storage, kernel
+signal queues, off-heap binaries, and scheduler-local caches still use ordinary
+Go allocations. This decision does not establish ERTS process-memory parity.

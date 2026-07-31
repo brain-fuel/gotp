@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
@@ -55,8 +56,8 @@ type MachineMutation enum {
 type Machine struct {
 	program   []beam.Instruction
 	labels    map[uint64]int
-	x         []option.Option[term.Term]
-	y         []option.Option[term.Term]
+	x         memory.Buffer[option.Option[term.Term]]
+	y         memory.Buffer[option.Option[term.Term]]
 	atoms     map[uint64]string
 	literals  map[uint64]term.Term
 	imports   map[uint64]ExternalFunction
@@ -114,10 +115,8 @@ func NewMachine(
 			labels[label] = index
 		}
 	}
-	registers := make([]option.Option[term.Term], config.XRegisters)
-	for index := range registers {
-		registers[index] = option.None[term.Term]
-	}
+	registers := memory.NewBuffer[option.Option[term.Term]](config.XRegisters)
+	for index := 0; index < config.XRegisters; index++ { registers.Append(option.None[term.Term]()) }
 	moduleName := config.ModuleName
 	if moduleName == "" {
 		moduleName = "$root"
@@ -157,6 +156,7 @@ func NewMachine(
 		program: root.program,
 		labels: root.labels,
 		x: registers,
+		y: memory.NewBuffer[option.Option[term.Term]](64),
 		atoms: root.atoms,
 		literals: root.literals,
 		imports: root.imports,
@@ -172,12 +172,14 @@ func (machine *Machine) SetX(
 	index int,
 	value term.Term,
 ) result.Result[MachineMutation, Failure] {
-	if index < 0 || index >= len(machine.x) {
+	if index < 0 || index >= machine.x.Len() {
 		return result.Err[MachineMutation, Failure](RegisterOutOfRange("x", index))
 	}
-	machine.x[index] = option.Some[term.Term](term.Clone(value))
+	machine.x.Set(index, option.Some[term.Term](term.Clone(value)))
 	return result.Ok[MachineMutation, Failure](MachineMutated())
 }
+
+func (machine *Machine) resetProcessMemory() { for index := 0; index < machine.x.Len(); index++ { machine.x.Set(index, option.None[term.Term]()) }; machine.y.Release() }
 
 func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
 	return machine.register(machine.x, "x", index)
@@ -277,13 +279,13 @@ func (machine *Machine) assign(
 	case beam.TypedRegisterOperand(register, _):
 		return machine.assign(register, value)
 	case beam.XRegisterOperand(index):
-		return machine.writeIndexed(machine.x, "x", index, value)
+		return machine.writeIndexed(&machine.x, "x", index, value)
 	case beam.YRegisterOperand(index):
 		match machine.yPosition(index) {
 		case result.Err(failure):
 			return result.Err[MachineMutation, Failure](failure)
 		case result.Ok(position):
-			machine.y[position] = option.Some[term.Term](term.Clone(value))
+			machine.y.Set(position, option.Some[term.Term](term.Clone(value)))
 			return result.Ok[MachineMutation, Failure](MachineMutated())
 		}
 	case _:
@@ -292,7 +294,7 @@ func (machine *Machine) assign(
 }
 
 func (machine *Machine) readIndexed(
-	registers []option.Option[term.Term],
+	registers memory.Buffer[option.Option[term.Term]],
 	name string,
 	index *big.Int,
 ) result.Result[term.Term, Failure] {
@@ -308,7 +310,7 @@ func (machine *Machine) readIndexed(
 }
 
 func (machine *Machine) writeIndexed(
-	registers []option.Option[term.Term],
+	registers *memory.Buffer[option.Option[term.Term]],
 	name string,
 	index *big.Int,
 	value term.Term,
@@ -317,27 +319,30 @@ func (machine *Machine) writeIndexed(
 	case option.None:
 		return result.Err[MachineMutation, Failure](InvalidProgram(name + " register index is not uint64"))
 	case option.Some(position):
-		if position >= uint64(len(registers)) {
+		if position >= uint64(registers.Len()) {
 			return result.Err[MachineMutation, Failure](RegisterOutOfRange(name, int(position)))
 		}
-		registers[int(position)] = option.Some[term.Term](term.Clone(value))
+		registers.Set(int(position), option.Some[term.Term](term.Clone(value)))
 		return result.Ok[MachineMutation, Failure](MachineMutated())
 	}
 }
 
 func (machine *Machine) register(
-	registers []option.Option[term.Term],
+	registers memory.Buffer[option.Option[term.Term]],
 	name string,
 	index int,
 ) result.Result[term.Term, Failure] {
-	if index < 0 || index >= len(registers) {
+	if index < 0 || index >= registers.Len() {
 		return result.Err[term.Term, Failure](RegisterOutOfRange(name, index))
 	}
-	match registers[index] {
+	match registers.At(index) {
+	case option.None: return result.Err[term.Term, Failure](RegisterOutOfRange(name, index))
+	case option.Some(slot): match slot {
 	case option.Some(value):
 		return result.Ok[term.Term, Failure](term.Clone(value))
 	case option.None:
 		return result.Err[term.Term, Failure](UninitializedRegister(name, index))
+	}
 	}
 }
 
@@ -346,10 +351,10 @@ func (machine *Machine) yPosition(index *big.Int) result.Result[int, Failure] {
 	case option.None:
 		return result.Err[int, Failure](InvalidProgram("y register index is not uint64"))
 	case option.Some(value):
-		if value >= uint64(len(machine.y)) {
+		if value >= uint64(machine.y.Len()) {
 			return result.Err[int, Failure](RegisterOutOfRange("y", int(value)))
 		}
-		return result.Ok[int, Failure](len(machine.y) - 1 - int(value))
+		return result.Ok[int, Failure](machine.y.Len() - 1 - int(value))
 	}
 }
 
@@ -391,7 +396,7 @@ func (machine *Machine) allocate(
 		return result.Err[MachineMutation, Failure](failure)
 	case result.Ok(count):
 		for index := 0; index < count; index++ {
-			machine.y = append(machine.y, option.None[term.Term])
+			machine.y.Append(option.None[term.Term]())
 		}
 		return result.Ok[MachineMutation, Failure](MachineMutated())
 	}
@@ -405,10 +410,10 @@ func (machine *Machine) deallocate(
 	case result.Err(failure):
 		return result.Err[MachineMutation, Failure](failure)
 	case result.Ok(count):
-		if count > len(machine.y) {
+		if count > machine.y.Len() {
 			return result.Err[MachineMutation, Failure](InvalidProgram("invalid deallocation count"))
 		}
-		machine.y = machine.y[:len(machine.y)-count]
+		machine.y.Truncate(machine.y.Len()-count)
 		return result.Ok[MachineMutation, Failure](MachineMutated())
 	}
 }

@@ -653,6 +653,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.instructions = progress.TotalInstructions
 				var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
 				process.state = raised
+				process.continuation.ReleaseMemory()
 				process.receiveMessages.Release()
 				return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 			case vm.ExecutionCompleted:
@@ -663,6 +664,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.instructions = progress.TotalInstructions
 				var completed VMProcessState = VMProcessCompleted{Value: value, TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
 				process.state = completed
+				process.continuation.ReleaseMemory()
 				process.receiveMessages.Release()
 				return kernel.Stop{Reason: term.MustAtom("normal")}
 			default:
@@ -686,6 +688,7 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 
 		var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: process.instructions}
 		process.state = raised
+		process.continuation.ReleaseMemory()
 		process.receiveMessages.Release()
 		return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 	case vm.InvalidConfiguration, vm.ImmediateOutOfRange, vm.HeapIndexOutOfRange, vm.MemoryFailure, vm.InvalidProgram, vm.RegisterOutOfRange, vm.UninitializedRegister, vm.MissingConstant, vm.MissingLabel, vm.StepLimitExceeded, vm.UnsupportedOpcode:
@@ -815,6 +818,7 @@ func (process *VMProcess) removeMessage() vm.RemoveOutcome {
 func (process *VMProcess) fail(detail string) kernel.StepResult {
 	var failed VMProcessState = VMProcessFailed{Detail: detail, TotalReductions: process.reductions, TotalInstructions: process.instructions}
 	process.state = failed
+	process.continuation.ReleaseMemory()
 	process.receiveMessages.Release()
 	return kernel.Stop{Reason: vmFailureReason(detail)}
 }

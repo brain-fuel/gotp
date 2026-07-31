@@ -240,6 +240,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				progress.TotalInstructions,
 			)
 			process.state = raised
+			process.continuation.ReleaseMemory()
 			process.receiveMessages.Release()
 			return kernel.Stop(vmExceptionReason(class, reason))
 		case vm.ExecutionCompleted(value, progress):
@@ -251,6 +252,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				progress.TotalInstructions,
 			)
 			process.state = completed
+			process.continuation.ReleaseMemory()
 			process.receiveMessages.Release()
 			return kernel.Stop(term.MustAtom("normal"))
 		}
@@ -270,6 +272,7 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 			process.instructions,
 		)
 		process.state = raised
+		process.continuation.ReleaseMemory()
 		process.receiveMessages.Release()
 		return kernel.Stop(vmExceptionReason(class, reason))
 	case vm.InvalidConfiguration(_), vm.ImmediateOutOfRange(_), vm.HeapIndexOutOfRange(_, _), vm.MemoryFailure(_), vm.InvalidProgram(_), vm.RegisterOutOfRange(_, _), vm.UninitializedRegister(_, _), vm.MissingConstant(_, _), vm.MissingLabel(_), vm.StepLimitExceeded(_), vm.UnsupportedOpcode(_, _, _):
@@ -370,6 +373,7 @@ func (process *VMProcess) fail(detail string) kernel.StepResult {
 		process.instructions,
 	)
 	process.state = failed
+	process.continuation.ReleaseMemory()
 	process.receiveMessages.Release()
 	return kernel.Stop(vmFailureReason(detail))
 }

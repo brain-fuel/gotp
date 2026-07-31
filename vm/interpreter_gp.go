@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
@@ -110,8 +111,8 @@ func MachineMutationEqual(a, b MachineMutation) bool {
 type Machine struct {
 	program          []beam.Instruction
 	labels           map[uint64]int
-	x                []option.Option[term.Term]
-	y                []option.Option[term.Term]
+	x                memory.Buffer[option.Option[term.Term]]
+	y                memory.Buffer[option.Option[term.Term]]
 	atoms            map[uint64]string
 	literals         map[uint64]term.Term
 	imports          map[uint64]ExternalFunction
@@ -174,9 +175,9 @@ func NewMachine(
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	registers := make([]option.Option[term.Term], config.XRegisters)
-	for index := range registers {
-		registers[index] = option.None[term.Term]{}
+	registers := memory.NewBuffer[option.Option[term.Term]](config.XRegisters)
+	for index := 0; index < config.XRegisters; index++ {
+		registers.Append(option.None[term.Term]{})
 	}
 	moduleName := config.ModuleName
 	if moduleName == "" {
@@ -228,6 +229,7 @@ func NewMachine(
 		program:   root.program,
 		labels:    root.labels,
 		x:         registers,
+		y:         memory.NewBuffer[option.Option[term.Term]](64),
 		atoms:     root.atoms,
 		literals:  root.literals,
 		imports:   root.imports,
@@ -243,11 +245,18 @@ func (machine *Machine) SetX(
 	index int,
 	value term.Term,
 ) result.Result[MachineMutation, Failure] {
-	if index < 0 || index >= len(machine.x) {
+	if index < 0 || index >= machine.x.Len() {
 		return result.Err[MachineMutation, Failure]{Err: RegisterOutOfRange{Register: "x", Index: index}}
 	}
-	machine.x[index] = option.Some[term.Term]{Value: term.Clone(value)}
+	machine.x.Set(index, option.Some[term.Term]{Value: term.Clone(value)})
 	return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
+}
+
+func (machine *Machine) resetProcessMemory() {
+	for index := 0; index < machine.x.Len(); index++ {
+		machine.x.Set(index, option.None[term.Term]{})
+	}
+	machine.y.Release()
 }
 
 func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
@@ -406,7 +415,7 @@ func (machine *Machine) assign(
 	case beam.XRegisterOperand:
 		index := __gp_m10.Index
 
-		return machine.writeIndexed(machine.x, "x", index, value)
+		return machine.writeIndexed(&machine.x, "x", index, value)
 	case beam.YRegisterOperand:
 		index := __gp_m10.Index
 
@@ -418,7 +427,7 @@ func (machine *Machine) assign(
 		case result.Ok[int, Failure]:
 			position := __gp_m11.Value
 
-			machine.y[position] = option.Some[term.Term]{Value: term.Clone(value)}
+			machine.y.Set(position, option.Some[term.Term]{Value: term.Clone(value)})
 			return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 		default:
 			panic("goplus: impossible enum value in match")
@@ -430,7 +439,7 @@ func (machine *Machine) assign(
 }
 
 func (machine *Machine) readIndexed(
-	registers []option.Option[term.Term],
+	registers memory.Buffer[option.Option[term.Term]],
 	name string,
 	index *big.Int,
 ) result.Result[term.Term, Failure] {
@@ -451,7 +460,7 @@ func (machine *Machine) readIndexed(
 }
 
 func (machine *Machine) writeIndexed(
-	registers []option.Option[term.Term],
+	registers *memory.Buffer[option.Option[term.Term]],
 	name string,
 	index *big.Int,
 	value term.Term,
@@ -463,10 +472,10 @@ func (machine *Machine) writeIndexed(
 	case option.Some[uint64]:
 		position := __gp_m13.Value
 
-		if position >= uint64(len(registers)) {
+		if position >= uint64(registers.Len()) {
 			return result.Err[MachineMutation, Failure]{Err: RegisterOutOfRange{Register: name, Index: int(position)}}
 		}
-		registers[int(position)] = option.Some[term.Term]{Value: term.Clone(value)}
+		registers.Set(int(position), option.Some[term.Term]{Value: term.Clone(value)})
 		return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -474,38 +483,46 @@ func (machine *Machine) writeIndexed(
 }
 
 func (machine *Machine) register(
-	registers []option.Option[term.Term],
+	registers memory.Buffer[option.Option[term.Term]],
 	name string,
 	index int,
 ) result.Result[term.Term, Failure] {
-	if index < 0 || index >= len(registers) {
+	if index < 0 || index >= registers.Len() {
 		return result.Err[term.Term, Failure]{Err: RegisterOutOfRange{Register: name, Index: index}}
 	}
-	switch __gp_m14 := any(registers[index]).(type) {
-	case option.Some[term.Term]:
-		value := __gp_m14.Value
+	switch __gp_m14 := any(registers.At(index)).(type) {
+	case option.None[option.Option[term.Term]]:
+		return result.Err[term.Term, Failure]{Err: RegisterOutOfRange{Register: name, Index: index}}
+	case option.Some[option.Option[term.Term]]:
+		slot := __gp_m14.Value
+		switch __gp_m15 := any(slot).(type) {
+		case option.Some[term.Term]:
+			value := __gp_m15.Value
 
-		return result.Ok[term.Term, Failure]{Value: term.Clone(value)}
-	case option.None[term.Term]:
+			return result.Ok[term.Term, Failure]{Value: term.Clone(value)}
+		case option.None[term.Term]:
 
-		return result.Err[term.Term, Failure]{Err: UninitializedRegister{Register: name, Index: index}}
+			return result.Err[term.Term, Failure]{Err: UninitializedRegister{Register: name, Index: index}}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 }
 
 func (machine *Machine) yPosition(index *big.Int) result.Result[int, Failure] {
-	switch __gp_m15 := any(registerIndex(index)).(type) {
+	switch __gp_m16 := any(registerIndex(index)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[int, Failure]{Err: InvalidProgram{Detail: "y register index is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m15.Value
+		value := __gp_m16.Value
 
-		if value >= uint64(len(machine.y)) {
+		if value >= uint64(machine.y.Len()) {
 			return result.Err[int, Failure]{Err: RegisterOutOfRange{Register: "y", Index: int(value)}}
 		}
-		return result.Ok[int, Failure]{Value: len(machine.y) - 1 - int(value)}
+		return result.Ok[int, Failure]{Value: machine.y.Len() - 1 - int(value)}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -522,7 +539,7 @@ func (machine *Machine) instructionLabel(
 			operandIndex,
 		)}}
 	}
-	switch __gp_m16 := any(labelIndex(instruction.Operands[operandIndex])).(type) {
+	switch __gp_m17 := any(labelIndex(instruction.Operands[operandIndex])).(type) {
 	case option.None[uint64]:
 
 		return result.Err[int, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
@@ -531,12 +548,12 @@ func (machine *Machine) instructionLabel(
 			operandIndex,
 		)}}
 	case option.Some[uint64]:
-		label := __gp_m16.Value
+		label := __gp_m17.Value
 
 		target, present := machine.labels[label]
-		switch __gp_m17 := any(option.Of(target, present)).(type) {
+		switch __gp_m18 := any(option.Of(target, present)).(type) {
 		case option.Some[int]:
-			position := __gp_m17.Value
+			position := __gp_m18.Value
 
 			return result.Ok[int, Failure]{Value: position + 1}
 		case option.None[int]:
@@ -554,16 +571,16 @@ func (machine *Machine) allocate(
 	instruction beam.Instruction,
 	operandIndex int,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m18 := any(allocationCount(instruction, operandIndex)).(type) {
+	switch __gp_m19 := any(allocationCount(instruction, operandIndex)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m18.Err
+		failure := __gp_m19.Err
 
 		return result.Err[MachineMutation, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m18.Value
+		count := __gp_m19.Value
 
 		for index := 0; index < count; index++ {
-			machine.y = append(machine.y, option.None[term.Term]{})
+			machine.y.Append(option.None[term.Term]{})
 		}
 		return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 	default:
@@ -575,18 +592,18 @@ func (machine *Machine) deallocate(
 	instruction beam.Instruction,
 	operandIndex int,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m19 := any(allocationCount(instruction, operandIndex)).(type) {
+	switch __gp_m20 := any(allocationCount(instruction, operandIndex)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m19.Err
+		failure := __gp_m20.Err
 
 		return result.Err[MachineMutation, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m19.Value
+		count := __gp_m20.Value
 
-		if count > len(machine.y) {
+		if count > machine.y.Len() {
 			return result.Err[MachineMutation, Failure]{Err: InvalidProgram{Detail: "invalid deallocation count"}}
 		}
-		machine.y = machine.y[:len(machine.y)-count]
+		machine.y.Truncate(machine.y.Len() - count)
 		return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -603,13 +620,13 @@ func allocationCount(
 			instruction.Opcode.Name,
 		)}}
 	}
-	switch __gp_m20 := any(instruction.Operands[operandIndex]).(type) {
+	switch __gp_m21 := any(instruction.Operands[operandIndex]).(type) {
 	case beam.UnsignedOperand:
-		value := __gp_m20.Value
+		value := __gp_m21.Value
 
-		switch __gp_m21 := any(registerIndex(value)).(type) {
+		switch __gp_m22 := any(registerIndex(value)).(type) {
 		case option.Some[uint64]:
-			count := __gp_m21.Value
+			count := __gp_m22.Value
 
 			if count <= 1_000_000 {
 				return result.Ok[int, Failure]{Value: int(count)}
@@ -626,13 +643,13 @@ func allocationCount(
 }
 
 func labelIndex(operand beam.Operand) option.Option[uint64] {
-	switch __gp_m22 := any(operand).(type) {
+	switch __gp_m23 := any(operand).(type) {
 	case beam.LabelOperand:
-		index := __gp_m22.Index
+		index := __gp_m23.Index
 
 		return registerIndex(index)
 	case beam.UnsignedOperand:
-		index := __gp_m22.Value
+		index := __gp_m23.Value
 
 		return registerIndex(index)
 	default:
@@ -739,7 +756,7 @@ func labelsForProgram(program []beam.Instruction) result.Result[map[uint64]int, 
 				len(instruction.Operands),
 			)}}
 		}
-		switch __gp_m23 := any(labelIndex(instruction.Operands[0])).(type) {
+		switch __gp_m24 := any(labelIndex(instruction.Operands[0])).(type) {
 		case option.None[uint64]:
 
 			return result.Err[map[uint64]int, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
@@ -747,7 +764,7 @@ func labelsForProgram(program []beam.Instruction) result.Result[map[uint64]int, 
 				index,
 			)}}
 		case option.Some[uint64]:
-			label := __gp_m23.Value
+			label := __gp_m24.Value
 
 			if _, duplicate := labels[label]; duplicate {
 				return result.Err[map[uint64]int, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("duplicate label %d", label)}}
@@ -764,13 +781,13 @@ func newMachineImage(config ModuleImage) result.Result[*machineImage, Failure] {
 	if config.Name == "" {
 		return result.Err[*machineImage, Failure]{Err: InvalidProgram{Detail: "linked module name is empty"}}
 	}
-	switch __gp_m24 := any(labelsForProgram(config.Program)).(type) {
+	switch __gp_m25 := any(labelsForProgram(config.Program)).(type) {
 	case result.Err[map[uint64]int, Failure]:
-		failure := __gp_m24.Err
+		failure := __gp_m25.Err
 
 		return result.Err[*machineImage, Failure]{Err: failure}
 	case result.Ok[map[uint64]int, Failure]:
-		labels := __gp_m24.Value
+		labels := __gp_m25.Value
 
 		image := &machineImage{
 			name:      config.Name,
@@ -782,9 +799,9 @@ func newMachineImage(config ModuleImage) result.Result[*machineImage, Failure] {
 			functions: cloneFunctionPool(config.Functions),
 			exports:   cloneExportPool(config.Exports),
 		}
-		switch __gp_m25 := any(validateImageExports(image)).(type) {
+		switch __gp_m26 := any(validateImageExports(image)).(type) {
 		case result.Err[bool, Failure]:
-			failure := __gp_m25.Err
+			failure := __gp_m26.Err
 
 			return result.Err[*machineImage, Failure]{Err: failure}
 		case result.Ok[bool, Failure]:

@@ -114,3 +114,6 @@ This document is not a release and does not authorize a tag or publication.
   entire mailbox fragment group on completion, uncaught exception, or failure.
 - Register, continuation, heap, signal-queue, binary, and scheduler-cache memory
   remain open; no ERTS memory parity claim is made.
+- Migrated X/Y registers to typed reusable buffers; Y deallocation clears
+  removed slots, while terminal continuation paths clear X terms and release Y
+  backing storage.

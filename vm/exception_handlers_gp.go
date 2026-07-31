@@ -149,7 +149,7 @@ func executeExceptionSetup(machine *Machine, instruction beam.Instruction) resul
 		codeLeave:   machine.currentCodeLeave,
 		pc:          handlerPC,
 		returnDepth: len(machine.returnPCs),
-		yDepth:      len(machine.y),
+		yDepth:      machine.y.Len(),
 		active:      true,
 		pending:     option.None[pendingException]{},
 	})
@@ -341,8 +341,8 @@ func (machine *Machine) unwindException(class term.Term, reason term.Term) resul
 		machine.returnPCs = machine.returnPCs[:handler.returnDepth]
 		machine.returnImages = machine.returnImages[:handler.returnDepth]
 		machine.returnCodeLeaves = machine.returnCodeLeaves[:handler.returnDepth]
-		if len(machine.y) > handler.yDepth {
-			machine.y = machine.y[:handler.yDepth]
+		if machine.y.Len() > handler.yDepth {
+			machine.y.Truncate(handler.yDepth)
 		}
 		machine.activate(handler.image)
 		machine.currentCodeLeave = handler.codeLeave

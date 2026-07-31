@@ -66,7 +66,7 @@ func executeBIFInstruction(
 		case option.None:
 			return result.Err[instructionOutcome, Failure](InvalidProgram("GC BIF live count is not uint64"))
 		case option.Some(live):
-			if live > uint64(len(machine.x)) {
+			if live > uint64(machine.x.Len()) {
 				return result.Err[instructionOutcome, Failure](InvalidProgram("GC BIF live count exceeds X registers"))
 			}
 		}

@@ -178,11 +178,11 @@ func executeCallFun(machine *Machine, instruction beam.Instruction) result.Resul
 	if !present {
 		return result.Err[instructionOutcome, Failure]{Err: MissingLabel{Label: function.Label}}
 	}
-	if arity+uint64(len(function.Environment)) > uint64(len(machine.x)) {
+	if arity+uint64(len(function.Environment)) > uint64(machine.x.Len()) {
 		return result.Err[instructionOutcome, Failure]{Err: RegisterOutOfRange{Register: "x", Index: int(arity) + len(function.Environment) - 1}}
 	}
 	for index, captured := range function.Environment {
-		machine.x[int(arity)+index] = option.Some[term.Term]{Value: term.Clone(captured)}
+		machine.x.Set(int(arity)+index, option.Some[term.Term]{Value: term.Clone(captured)})
 	}
 	machine.pushReturn(machine.pc + 1)
 	machine.activate(image)

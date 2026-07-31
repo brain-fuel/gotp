@@ -82,7 +82,7 @@ func executeExternalCall(
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	if arity > uint64(len(machine.x)) || arity > uint64(^uint32(0)) {
+	if arity > uint64(machine.x.Len()) || arity > uint64(^uint32(0)) {
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "external call arity is out of range"}}
 	}
 	var importIndex uint64

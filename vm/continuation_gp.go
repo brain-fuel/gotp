@@ -352,6 +352,14 @@ type Continuation struct {
 	completed bool
 }
 
+func (continuation *Continuation) ReleaseMemory() {
+	if continuation == nil || continuation.machine == nil {
+		return
+	}
+	continuation.machine.resetProcessMemory()
+	continuation.completed = true
+}
+
 // assayxport:unit gotp.vm.reduction-continuation
 func NewVMReductionBudget(value int) result.Result[VMReductionBudget, Failure] {
 	if value <= 0 {
