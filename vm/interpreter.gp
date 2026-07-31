@@ -196,6 +196,64 @@ func (machine *Machine) SetX(
 
 func (machine *Machine) resetProcessMemory() { machine.releaseAllCode(); for index := 0; index < machine.x.Len(); index++ { machine.x.Set(index, option.None[term.Term]()) }; machine.y.Release(); machine.returns.Release(); machine.handlers.Release(); if machine.processMemory != nil { machine.processMemory.Reset() } }
 
+func (machine *Machine) ensureHeap(words int) result.Result[HeapMutation, Failure] {
+	match machine.processMemory.Ensure(words) {
+	case result.Ok(_): return result.Ok[HeapMutation, Failure](HeapMutated())
+	case result.Err(failure):
+		match failure {
+		case MemoryFailure(cause):
+			match cause {
+			case memory.CapacityExhausted: return machine.processMemory.Collect(machine.liveTerms(), words)
+			case memory.ArenaClosed, memory.InvalidHandle, memory.InvalidCheckpoint, memory.InvalidConfiguration(_), memory.BoundsViolation(_), memory.PlatformFailure(_), memory.GroupReleased: return result.Err[HeapMutation, Failure](failure)
+			}
+		case RaisedException(_, _), InvalidConfiguration(_), ImmediateOutOfRange(_), HeapIndexOutOfRange(_, _), InvalidProgram(_), RegisterOutOfRange(_, _), UninitializedRegister(_, _), MissingConstant(_, _), MissingLabel(_), StepLimitExceeded(_), UnsupportedOpcode(_, _, _): return result.Err[HeapMutation, Failure](failure)
+		}
+	}
+}
+
+func (machine *Machine) trackHeapTerm(value term.Term, words int) result.Result[HeapMutation, Failure] {
+	match machine.processMemory.Track(value, words) {
+	case result.Ok(_): return result.Ok[HeapMutation, Failure](HeapMutated())
+	case result.Err(failure):
+		match failure {
+		case MemoryFailure(cause):
+			match cause {
+			case memory.CapacityExhausted:
+				match machine.processMemory.Collect(machine.liveTerms(), words) {
+				case result.Err(collectionFailure): return result.Err[HeapMutation, Failure](collectionFailure)
+				case result.Ok(HeapMutated): return machine.processMemory.Track(value, words)
+				}
+			case memory.ArenaClosed, memory.InvalidHandle, memory.InvalidCheckpoint, memory.InvalidConfiguration(_), memory.BoundsViolation(_), memory.PlatformFailure(_), memory.GroupReleased: return result.Err[HeapMutation, Failure](failure)
+			}
+		case RaisedException(_, _), InvalidConfiguration(_), ImmediateOutOfRange(_), HeapIndexOutOfRange(_, _), InvalidProgram(_), RegisterOutOfRange(_, _), UninitializedRegister(_, _), MissingConstant(_, _), MissingLabel(_), StepLimitExceeded(_), UnsupportedOpcode(_, _, _): return result.Err[HeapMutation, Failure](failure)
+		}
+	}
+}
+
+func (machine *Machine) liveTerms() []term.Term {
+	live := make([]term.Term, 0, machine.x.Len()+machine.y.Len())
+	for index := 0; index < machine.x.Len(); index++ {
+		match machine.x.At(index) {
+		case option.None:
+		case option.Some(slot): match slot { case option.None: case option.Some(value): live = append(live, value) }
+		}
+	}
+	for index := 0; index < machine.y.Len(); index++ {
+		match machine.y.At(index) {
+		case option.None:
+		case option.Some(slot): match slot { case option.None: case option.Some(value): live = append(live, value) }
+		}
+	}
+	for index := 0; index < machine.handlers.Len(); index++ {
+		match machine.handlers.At(index) {
+		case option.None:
+		case option.Some(handler):
+			match handler.pending { case option.None: case option.Some(pending): live = append(live, pending.class, pending.reason, pending.trace) }
+		}
+	}
+	return live
+}
+
 func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
 	return machine.register(machine.x, "x", index)
 }

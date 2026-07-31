@@ -30,7 +30,7 @@ func executeCoreTermInstruction(
 		case result.Ok[int, Failure]:
 			words := __gp_m0.Value
 
-			switch __gp_m1 := any(machine.processMemory.Ensure(words)).(type) {
+			switch __gp_m1 := any(machine.ensureHeap(words)).(type) {
 			case result.Err[HeapMutation, Failure]:
 				failure := __gp_m1.Err
 				return result.Err[instructionOutcome, Failure]{Err: failure}
@@ -50,7 +50,7 @@ func executeCoreTermInstruction(
 		case result.Ok[int, Failure]:
 			words := __gp_m2.Value
 
-			switch __gp_m3 := any(machine.processMemory.Ensure(words)).(type) {
+			switch __gp_m3 := any(machine.ensureHeap(words)).(type) {
 			case result.Err[HeapMutation, Failure]:
 				failure := __gp_m3.Err
 				return result.Err[instructionOutcome, Failure]{Err: failure}
@@ -540,7 +540,7 @@ func putList(machine *Machine, instruction beam.Instruction) result.Result[instr
 			tail := __gp_m32.Value
 
 			value := prependList(head, tail)
-			switch __gp_m33 := any(machine.processMemory.Track(value, 2)).(type) {
+			switch __gp_m33 := any(machine.trackHeapTerm(value, 2)).(type) {
 			case result.Err[HeapMutation, Failure]:
 				failure := __gp_m33.Err
 				return result.Err[instructionOutcome, Failure]{Err: failure}
@@ -668,7 +668,7 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 		}
 	}
 	value := term.Tuple(elements...)
-	switch __gp_m42 := any(machine.processMemory.Track(value, len(elements)+1)).(type) {
+	switch __gp_m42 := any(machine.trackHeapTerm(value, len(elements)+1)).(type) {
 	case result.Err[HeapMutation, Failure]:
 		failure := __gp_m42.Err
 		return result.Err[instructionOutcome, Failure]{Err: failure}

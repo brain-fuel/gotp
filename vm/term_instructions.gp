@@ -23,7 +23,7 @@ func executeCoreTermInstruction(
 		match heapWordCount(instruction, 0) {
 		case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 		case result.Ok(words):
-			match machine.processMemory.Ensure(words) {
+			match machine.ensureHeap(words) {
 			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 			case result.Ok(HeapMutated): machine.pc++
 			}
@@ -32,7 +32,7 @@ func executeCoreTermInstruction(
 		match heapWordCount(instruction, 1) {
 		case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 		case result.Ok(words):
-			match machine.processMemory.Ensure(words) {
+			match machine.ensureHeap(words) {
 			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 			case result.Ok(HeapMutated):
 				match machine.allocate(instruction, 0) {
@@ -362,7 +362,7 @@ func putList(machine *Machine, instruction beam.Instruction) result.Result[instr
 			return result.Err[instructionOutcome, Failure](failure)
 		case result.Ok(tail):
 			value := prependList(head, tail)
-			match machine.processMemory.Track(value, 2) {
+			match machine.trackHeapTerm(value, 2) {
 			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 			case result.Ok(HeapMutated):
 			}
@@ -442,7 +442,7 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 		}
 	}
 	value := term.Tuple(elements...)
-	match machine.processMemory.Track(value, len(elements)+1) {
+	match machine.trackHeapTerm(value, len(elements)+1) {
 	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
 	case result.Ok(HeapMutated):
 	}

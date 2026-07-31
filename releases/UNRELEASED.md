@@ -126,3 +126,6 @@ This document is not a release and does not authorize a tag or publication.
 - Integrated the arena-backed process heap with BEAM heap checks and list/tuple
   construction, with grouped immutable roots and explicit off-heap ownership
   for binaries larger than 64 bytes.
+- Added live-root copying collection and geometric heap growth over X/Y and
+  pending exception roots, dropping unreachable construction roots and
+  rebuilding off-heap binary ownership transactionally.

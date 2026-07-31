@@ -38,6 +38,13 @@ reserve arena words and retain immutable Go term roots. Binary roots larger than
 release resets the arena generation and drops both root buffers as one process
 lifetime group.
 
+Heap exhaustion now triggers a copying transition over live X/Y and pending
+exception roots. The replacement arena is built before ownership changes,
+off-heap binary roots are reconstructed, unreachable construction roots are
+dropped, and capacity grows geometrically when the live set plus reservation
+does not fit. Any reconstruction or platform-release failure remains an
+explicit result and leaves no partially installed replacement.
+
 ## Traceability
 
 - Decision: `adr:0050-process-owned-runtime-buffers`.
@@ -52,7 +59,7 @@ lifetime group.
 
 ## Remaining obligations
 
-Full BEAM garbage collection, heap growth, generational copying, binary
-reference counting, and scheduler-local caches other than the run and
+Generational young/old heaps, write barriers, exact shared-subterm preservation,
+binary reference counting, and scheduler-local caches other than the run and
 remote-signal queues remain incomplete. This decision does not establish ERTS
 process-memory parity.

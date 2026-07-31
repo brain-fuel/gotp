@@ -32,6 +32,24 @@ func TestProcessMemoryGroupsHeapAndOffHeapRoots(t *testing.T) {
 	}
 }
 
+func TestProcessMemoryCollectionDropsDeadRootsAndGrows(t *testing.T) {
+	match NewProcessMemory(32) {
+	case result.Err(failure): t.Fatal(failure.Error())
+	case result.Ok(process):
+		dead := term.Tuple(term.Integer(1))
+		live := term.Tuple(term.Binary(bytes.Repeat([]byte{9}, offHeapBinaryThreshold+1)))
+		match process.Track(dead, 2) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(HeapMutated): }
+		match process.Collect([]term.Term{live}, 100) {
+		case result.Err(failure): t.Fatal(failure.Error())
+		case result.Ok(HeapMutated):
+		}
+		if process.RootCount() != 1 || process.OffHeapCount() != 1 {
+			t.Fatalf("roots/offheap = %d/%d", process.RootCount(), process.OffHeapCount())
+		}
+		match process.Ensure(100) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(HeapMutated): }
+	}
+}
+
 func TestSmallIntegerRoundTripLaw(t *testing.T) {
 	law := func(raw int64) bool {
 		value := raw >> 3

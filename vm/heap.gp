@@ -91,6 +91,91 @@ func (process *ProcessMemory) Track(value term.Term, words int) result.Result[He
 	}
 }
 
+func (process *ProcessMemory) Collect(
+	live []term.Term,
+	requiredWords int,
+) result.Result[HeapMutation, Failure] {
+	if requiredWords < 0 {
+		return result.Err[HeapMutation, Failure](InvalidConfiguration("negative collection reservation"))
+	}
+	liveWords := 0
+	for _, value := range live {
+		words := termHeapWords(value)
+		if words > maxInt()-liveWords {
+			return result.Err[HeapMutation, Failure](MemoryFailure(memory.CapacityExhausted()))
+		}
+		liveWords += words
+	}
+	if requiredWords > maxInt()-liveWords || liveWords+requiredWords > maxInt()/wordBytes {
+		return result.Err[HeapMutation, Failure](MemoryFailure(memory.CapacityExhausted()))
+	}
+	requiredBytes := (liveWords + requiredWords) * wordBytes
+	capacity := process.heap.Stats().Capacity
+	if capacity < wordBytes { capacity = wordBytes }
+	for capacity < requiredBytes {
+		if capacity > maxInt()/2 { capacity = requiredBytes; break }
+		capacity *= 2
+	}
+	var replacement *ProcessMemory
+	match NewProcessMemory(capacity) {
+	case result.Err(failure): return result.Err[HeapMutation, Failure](failure)
+	case result.Ok(created): replacement = created
+	}
+	for _, value := range live {
+		words := termHeapWords(value)
+		if words == 0 { continue }
+		match replacement.Track(value, words) {
+		case result.Err(failure):
+			replacement.heap.Close()
+			return result.Err[HeapMutation, Failure](failure)
+		case result.Ok(HeapMutated):
+		}
+	}
+	match process.heap.Close() {
+	case result.Err(failure):
+		process.installReplacement(replacement)
+		return result.Err[HeapMutation, Failure](failure)
+	case result.Ok(_):
+		process.installReplacement(replacement)
+		return result.Ok[HeapMutation, Failure](HeapMutated())
+	}
+}
+
+func (process *ProcessMemory) installReplacement(replacement *ProcessMemory) {
+	process.heap = replacement.heap
+	process.roots.Release()
+	process.offHeap.Release()
+	process.roots = replacement.roots
+	process.offHeap = replacement.offHeap
+}
+
+func termHeapWords(value term.Term) int {
+	match value {
+	case term.InvalidTerm, term.AtomTerm(_), term.PIDTerm(_), term.ReferenceTerm(_), term.PortTerm(_): return 0
+	case term.IntegerTerm(integer):
+		if integer.IsInt64() { raw := integer.Int64(); if raw >= -(1<<60) && raw < 1<<60 { return 0 } }
+		return 2 + (integer.BitLen()+63)/64
+	case term.FloatTerm(_): return 2
+	case term.BinaryTerm(raw):
+		if len(raw) > offHeapBinaryThreshold { return 6 }
+		return 2 + (len(raw)+wordBytes-1)/wordBytes
+	case term.TupleTerm(elements): return 1 + len(elements) + termSliceHeapWords(elements)
+	case term.ProperListTerm(elements): return 2*len(elements) + termSliceHeapWords(elements)
+	case term.ImproperListTerm(elements, tail): return 2*len(elements) + termSliceHeapWords(elements) + termHeapWords(tail)
+	case term.MapTerm(entries):
+		words := 3 + 2*len(entries)
+		for _, entry := range entries { words += termHeapWords(entry.Key) + termHeapWords(entry.Value) }
+		return words
+	case term.FunTerm(function): return 5 + len(function.Environment) + termSliceHeapWords(function.Environment)
+	}
+}
+
+func termSliceHeapWords(values []term.Term) int {
+	words := 0
+	for _, value := range values { words += termHeapWords(value) }
+	return words
+}
+
 func (process *ProcessMemory) trackOffHeap(value term.Term) {
 	match value {
 	case term.BinaryTerm(raw):

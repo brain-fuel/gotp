@@ -157,43 +157,181 @@ func (process *ProcessMemory) Track(value term.Term, words int) result.Result[He
 	}
 }
 
-func (process *ProcessMemory) trackOffHeap(value term.Term) {
-	switch __gp_m2 := any(value).(type) {
+func (process *ProcessMemory) Collect(
+	live []term.Term,
+	requiredWords int,
+) result.Result[HeapMutation, Failure] {
+	if requiredWords < 0 {
+		return result.Err[HeapMutation, Failure]{Err: InvalidConfiguration{Detail: "negative collection reservation"}}
+	}
+	liveWords := 0
+	for _, value := range live {
+		words := termHeapWords(value)
+		if words > maxInt()-liveWords {
+			return result.Err[HeapMutation, Failure]{Err: MemoryFailure{Cause: memory.CapacityExhausted{}}}
+		}
+		liveWords += words
+	}
+	if requiredWords > maxInt()-liveWords || liveWords+requiredWords > maxInt()/wordBytes {
+		return result.Err[HeapMutation, Failure]{Err: MemoryFailure{Cause: memory.CapacityExhausted{}}}
+	}
+	requiredBytes := (liveWords + requiredWords) * wordBytes
+	capacity := process.heap.Stats().Capacity
+	if capacity < wordBytes {
+		capacity = wordBytes
+	}
+	for capacity < requiredBytes {
+		if capacity > maxInt()/2 {
+			capacity = requiredBytes
+			break
+		}
+		capacity *= 2
+	}
+	var replacement *ProcessMemory
+	switch __gp_m2 := any(NewProcessMemory(capacity)).(type) {
+	case result.Err[*ProcessMemory, Failure]:
+		failure := __gp_m2.Err
+		return result.Err[HeapMutation, Failure]{Err: failure}
+	case result.Ok[*ProcessMemory, Failure]:
+		created := __gp_m2.Value
+		replacement = created
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	for _, value := range live {
+		words := termHeapWords(value)
+		if words == 0 {
+			continue
+		}
+		switch __gp_m3 := any(replacement.Track(value, words)).(type) {
+		case result.Err[HeapMutation, Failure]:
+			failure := __gp_m3.Err
+
+			replacement.heap.Close()
+			return result.Err[HeapMutation, Failure]{Err: failure}
+		case result.Ok[HeapMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	switch __gp_m4 := any(process.heap.Close()).(type) {
+	case result.Err[HeapMutation, Failure]:
+		failure := __gp_m4.Err
+
+		process.installReplacement(replacement)
+		return result.Err[HeapMutation, Failure]{Err: failure}
+	case result.Ok[HeapMutation, Failure]:
+
+		process.installReplacement(replacement)
+		return result.Ok[HeapMutation, Failure]{Value: HeapMutated{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (process *ProcessMemory) installReplacement(replacement *ProcessMemory) {
+	process.heap = replacement.heap
+	process.roots.Release()
+	process.offHeap.Release()
+	process.roots = replacement.roots
+	process.offHeap = replacement.offHeap
+}
+
+func termHeapWords(value term.Term) int {
+	switch __gp_m5 := any(value).(type) {
+	case term.InvalidTerm, term.AtomTerm, term.PIDTerm, term.ReferenceTerm, term.PortTerm:
+		return 0
+	case term.IntegerTerm:
+		integer := __gp_m5.Value
+
+		if integer.IsInt64() {
+			raw := integer.Int64()
+			if raw >= -(1<<60) && raw < 1<<60 {
+				return 0
+			}
+		}
+		return 2 + (integer.BitLen()+63)/64
+	case term.FloatTerm:
+		return 2
 	case term.BinaryTerm:
-		raw := __gp_m2.Bytes
+		raw := __gp_m5.Bytes
+
+		if len(raw) > offHeapBinaryThreshold {
+			return 6
+		}
+		return 2 + (len(raw)+wordBytes-1)/wordBytes
+	case term.TupleTerm:
+		elements := __gp_m5.Elements
+		return 1 + len(elements) + termSliceHeapWords(elements)
+	case term.ProperListTerm:
+		elements := __gp_m5.Elements
+		return 2*len(elements) + termSliceHeapWords(elements)
+	case term.ImproperListTerm:
+		elements := __gp_m5.Elements
+		tail := __gp_m5.Tail
+		return 2*len(elements) + termSliceHeapWords(elements) + termHeapWords(tail)
+	case term.MapTerm:
+		entries := __gp_m5.Entries
+
+		words := 3 + 2*len(entries)
+		for _, entry := range entries {
+			words += termHeapWords(entry.Key) + termHeapWords(entry.Value)
+		}
+		return words
+	case term.FunTerm:
+		function := __gp_m5.Value
+		return 5 + len(function.Environment) + termSliceHeapWords(function.Environment)
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func termSliceHeapWords(values []term.Term) int {
+	words := 0
+	for _, value := range values {
+		words += termHeapWords(value)
+	}
+	return words
+}
+
+func (process *ProcessMemory) trackOffHeap(value term.Term) {
+	switch __gp_m6 := any(value).(type) {
+	case term.BinaryTerm:
+		raw := __gp_m6.Bytes
 
 		if len(raw) > offHeapBinaryThreshold {
 			process.offHeap.Append(value)
 		}
 	case term.TupleTerm:
-		elements := __gp_m2.Elements
+		elements := __gp_m6.Elements
 
 		for _, element := range elements {
 			process.trackOffHeap(element)
 		}
 	case term.ProperListTerm:
-		elements := __gp_m2.Elements
+		elements := __gp_m6.Elements
 
 		for _, element := range elements {
 			process.trackOffHeap(element)
 		}
 	case term.ImproperListTerm:
-		elements := __gp_m2.Elements
-		tail := __gp_m2.Tail
+		elements := __gp_m6.Elements
+		tail := __gp_m6.Tail
 
 		for _, element := range elements {
 			process.trackOffHeap(element)
 		}
 		process.trackOffHeap(tail)
 	case term.MapTerm:
-		entries := __gp_m2.Entries
+		entries := __gp_m6.Entries
 
 		for _, entry := range entries {
 			process.trackOffHeap(entry.Key)
 			process.trackOffHeap(entry.Value)
 		}
 	case term.FunTerm:
-		function := __gp_m2.Value
+		function := __gp_m6.Value
 
 		for _, captured := range function.Environment {
 			process.trackOffHeap(captured)
@@ -216,16 +354,16 @@ func (process *ProcessMemory) RootCount() int      { return process.roots.Len() 
 func (process *ProcessMemory) OffHeapCount() int   { return process.offHeap.Len() }
 
 func NewProcessHeap(capacity int) result.Result[*ProcessHeap, Failure] {
-	switch __gp_m3 := any(memory.New(memory.Config{
+	switch __gp_m7 := any(memory.New(memory.Config{
 		Capacity: capacity,
 		Zero:     memory.ZeroOnRelease{},
 	})).(type) {
 	case result.Ok[*memory.Arena, memory.Failure]:
-		arena := __gp_m3.Value
+		arena := __gp_m7.Value
 
 		return result.Ok[*ProcessHeap, Failure]{Value: &ProcessHeap{arena: arena}}
 	case result.Err[*memory.Arena, memory.Failure]:
-		cause := __gp_m3.Err
+		cause := __gp_m7.Err
 
 		return result.Err[*ProcessHeap, Failure]{Err: MemoryFailure{Cause: cause}}
 	default:
@@ -237,13 +375,13 @@ func (heap *ProcessHeap) Allocate(words int) result.Result[HeapRef, Failure] {
 	if words <= 0 {
 		return result.Err[HeapRef, Failure]{Err: InvalidConfiguration{Detail: "heap allocation must contain words"}}
 	}
-	switch __gp_m4 := any(heap.arena.Allocate(words*wordBytes, wordBytes)).(type) {
+	switch __gp_m8 := any(heap.arena.Allocate(words*wordBytes, wordBytes)).(type) {
 	case result.Ok[memory.Handle, memory.Failure]:
-		handle := __gp_m4.Value
+		handle := __gp_m8.Value
 
 		return result.Ok[HeapRef, Failure]{Value: HeapRef{handle: handle, words: words}}
 	case result.Err[memory.Handle, memory.Failure]:
-		cause := __gp_m4.Err
+		cause := __gp_m8.Err
 
 		return result.Err[HeapRef, Failure]{Err: MemoryFailure{Cause: cause}}
 	default:
@@ -269,9 +407,9 @@ func (heap *ProcessHeap) Load(reference HeapRef, index int) result.Result[Word, 
 		return result.Err[Word, Failure]{Err: HeapIndexOutOfRange{Index: index, Words: reference.words}}
 	}
 	var raw [wordBytes]byte
-	switch __gp_m5 := any(heap.arena.Read(reference.handle, index*wordBytes, raw[:])).(type) {
+	switch __gp_m9 := any(heap.arena.Read(reference.handle, index*wordBytes, raw[:])).(type) {
 	case result.Err[memory.Mutation, memory.Failure]:
-		cause := __gp_m5.Err
+		cause := __gp_m9.Err
 
 		return result.Err[Word, Failure]{Err: MemoryFailure{Cause: cause}}
 	case result.Ok[memory.Mutation, memory.Failure]:
@@ -303,12 +441,12 @@ func (heap *ProcessHeap) Close() result.Result[HeapMutation, Failure] {
 func adaptMutation(
 	outcome result.Result[memory.Mutation, memory.Failure],
 ) result.Result[HeapMutation, Failure] {
-	switch __gp_m6 := any(outcome).(type) {
+	switch __gp_m10 := any(outcome).(type) {
 	case result.Ok[memory.Mutation, memory.Failure]:
 
 		return result.Ok[HeapMutation, Failure]{Value: HeapMutated{}}
 	case result.Err[memory.Mutation, memory.Failure]:
-		cause := __gp_m6.Err
+		cause := __gp_m10.Err
 
 		return result.Err[HeapMutation, Failure]{Err: MemoryFailure{Cause: cause}}
 	default:
