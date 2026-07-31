@@ -108,6 +108,12 @@ func MachineMutationEqual(a, b MachineMutation) bool {
 	return MachineMutationEqualWith(a, b, MachineMutationEqOverrides{})
 }
 
+type returnFrame struct {
+	pc        int
+	image     *machineImage
+	codeLeave func()
+}
+
 type Machine struct {
 	program          []beam.Instruction
 	labels           map[uint64]int
@@ -117,14 +123,12 @@ type Machine struct {
 	literals         map[uint64]term.Term
 	imports          map[uint64]ExternalFunction
 	functions        map[uint64]beam.FunctionTemplate
-	returnPCs        []int
-	returnImages     []*machineImage
-	returnCodeLeaves []func()
+	returns          memory.Buffer[returnFrame]
 	current          *machineImage
 	currentCodeLeave func()
 	root             *machineImage
 	modules          map[string]*machineImage
-	handlers         []exceptionHandler
+	handlers         memory.Buffer[exceptionHandler]
 	nextHandler      uint64
 	pc               int
 	steps            int
@@ -230,6 +234,8 @@ func NewMachine(
 		labels:    root.labels,
 		x:         registers,
 		y:         memory.NewBuffer[option.Option[term.Term]](64),
+		returns:   memory.NewBuffer[returnFrame](32),
+		handlers:  memory.NewBuffer[exceptionHandler](8),
 		atoms:     root.atoms,
 		literals:  root.literals,
 		imports:   root.imports,
@@ -253,10 +259,13 @@ func (machine *Machine) SetX(
 }
 
 func (machine *Machine) resetProcessMemory() {
+	machine.releaseAllCode()
 	for index := 0; index < machine.x.Len(); index++ {
 		machine.x.Set(index, option.None[term.Term]{})
 	}
 	machine.y.Release()
+	machine.returns.Release()
+	machine.handlers.Release()
 }
 
 func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
@@ -838,27 +847,29 @@ func (machine *Machine) activate(image *machineImage) {
 }
 
 func (machine *Machine) pushReturn(pc int) {
-	machine.returnPCs = append(machine.returnPCs, pc)
-	machine.returnImages = append(machine.returnImages, machine.current)
-	machine.returnCodeLeaves = append(machine.returnCodeLeaves, machine.currentCodeLeave)
+	machine.returns.Append(returnFrame{pc: pc, image: machine.current, codeLeave: machine.currentCodeLeave})
 }
 
 func (machine *Machine) returnToCaller() bool {
-	if len(machine.returnPCs) == 0 {
+	if machine.returns.Len() == 0 {
 		machine.leaveCurrentCode()
 		return false
 	}
-	last := len(machine.returnPCs) - 1
-	image := machine.returnImages[last]
-	leave := machine.returnCodeLeaves[last]
-	pc := machine.returnPCs[last]
+	last := machine.returns.Len() - 1
+	var frame returnFrame
+	switch __gp_m27 := any(machine.returns.Remove(last)).(type) {
+	case option.None[returnFrame]:
+		return false
+	case option.Some[returnFrame]:
+		found := __gp_m27.Value
+		frame = found
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	machine.leaveCurrentCode()
-	machine.returnPCs = machine.returnPCs[:last]
-	machine.returnImages = machine.returnImages[:last]
-	machine.returnCodeLeaves = machine.returnCodeLeaves[:last]
-	machine.activate(image)
-	machine.currentCodeLeave = leave
-	machine.pc = pc
+	machine.activate(frame.image)
+	machine.currentCodeLeave = frame.codeLeave
+	machine.pc = frame.pc
 	return true
 }
 
@@ -877,10 +888,17 @@ func (machine *Machine) leaveCurrentCode() {
 
 func (machine *Machine) releaseAllCode() {
 	machine.leaveCurrentCode()
-	for index := len(machine.returnCodeLeaves) - 1; index >= 0; index-- {
-		if machine.returnCodeLeaves[index] != nil {
-			machine.returnCodeLeaves[index]()
+	for index := machine.returns.Len() - 1; index >= 0; index-- {
+		switch __gp_m28 := any(machine.returns.At(index)).(type) {
+		case option.Some[returnFrame]:
+			frame := __gp_m28.Value
+			if frame.codeLeave != nil {
+				frame.codeLeave()
+			}
+		case option.None[returnFrame]:
+		default:
+			panic("goplus: impossible enum value in match")
 		}
 	}
-	machine.returnCodeLeaves = machine.returnCodeLeaves[:0]
+	machine.returns.Reset()
 }

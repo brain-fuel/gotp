@@ -90,10 +90,8 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 		machine.pc++
 	}
 	machine.steps = 0
-	machine.returnPCs = machine.returnPCs[:0]
-	machine.returnImages = machine.returnImages[:0]
 	machine.releaseAllCode()
-	machine.handlers = machine.handlers[:0]
+	machine.handlers.Reset()
 	machine.nextHandler = 0
 	if machine.root != nil {
 		machine.activate(machine.root)

@@ -117,3 +117,6 @@ This document is not a release and does not authorize a tag or publication.
 - Migrated X/Y registers to typed reusable buffers; Y deallocation clears
   removed slots, while terminal continuation paths clear X terms and release Y
   backing storage.
+- Replaced parallel return slices with typed return frames and migrated return
+  and exception stacks to clearing buffers with reverse, exactly-once code-lease
+  release.

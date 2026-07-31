@@ -142,13 +142,13 @@ func executeExceptionSetup(machine *Machine, instruction beam.Instruction) resul
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	machine.handlers = append(machine.handlers, exceptionHandler{
+	machine.handlers.Append(exceptionHandler{
 		token:       token,
 		kind:        kind,
 		image:       machine.current,
 		codeLeave:   machine.currentCodeLeave,
 		pc:          handlerPC,
-		returnDepth: len(machine.returnPCs),
+		returnDepth: machine.returns.Len(),
 		yDepth:      machine.y.Len(),
 		active:      true,
 		pending:     option.None[pendingException]{},
@@ -186,7 +186,7 @@ func (machine *Machine) handlerToken(operand beam.Operand) result.Result[uint64,
 }
 
 func (machine *Machine) topHandler(operand beam.Operand) result.Result[exceptionHandler, Failure] {
-	if len(machine.handlers) == 0 {
+	if machine.handlers.Len() == 0 {
 		return result.Err[exceptionHandler, Failure]{Err: InvalidProgram{Detail: "exception handler stack is empty"}}
 	}
 	var token uint64
@@ -202,7 +202,16 @@ func (machine *Machine) topHandler(operand beam.Operand) result.Result[exception
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	handler := machine.handlers[len(machine.handlers)-1]
+	var handler exceptionHandler
+	switch __gp_m5 := any(machine.handlers.At(machine.handlers.Len() - 1)).(type) {
+	case option.None[exceptionHandler]:
+		return result.Err[exceptionHandler, Failure]{Err: InvalidProgram{Detail: "exception handler stack is empty"}}
+	case option.Some[exceptionHandler]:
+		found := __gp_m5.Value
+		handler = found
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	if handler.token != token {
 		return result.Err[exceptionHandler, Failure]{Err: InvalidProgram{Detail: "exception handler token is not stack top"}}
 	}
@@ -214,13 +223,13 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("%s has %d operands", instruction.Opcode.Name, len(instruction.Operands))}}
 	}
 	var handler exceptionHandler
-	switch __gp_m5 := any(machine.topHandler(instruction.Operands[0])).(type) {
+	switch __gp_m6 := any(machine.topHandler(instruction.Operands[0])).(type) {
 	case result.Err[exceptionHandler, Failure]:
-		failure := __gp_m5.Err
+		failure := __gp_m6.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[exceptionHandler, Failure]:
-		value := __gp_m5.Value
+		value := __gp_m6.Value
 
 		handler = value
 	default:
@@ -240,18 +249,18 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	machine.handlers = machine.handlers[:len(machine.handlers)-1]
+	machine.handlers.Remove(machine.handlers.Len() - 1)
 	if instruction.Opcode.Name == "catch_end" {
-		switch __gp_m7 := any(handler.pending).(type) {
+		switch __gp_m8 := any(handler.pending).(type) {
 		case option.None[pendingException]:
 
 		case option.Some[pendingException]:
-			raised := __gp_m7.Value
+			raised := __gp_m8.Value
 
 			var caught term.Term
-			switch __gp_m8 := any(term.AtomName(raised.class)).(type) {
+			switch __gp_m9 := any(term.AtomName(raised.class)).(type) {
 			case option.Some[string]:
-				name := __gp_m8.Value
+				name := __gp_m9.Value
 
 				switch name {
 				case "throw":
@@ -269,9 +278,9 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 			default:
 				panic("goplus: impossible enum value in match")
 			}
-			switch __gp_m9 := any(machine.SetX(0, caught)).(type) {
+			switch __gp_m10 := any(machine.SetX(0, caught)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m9.Err
+				failure := __gp_m10.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -288,34 +297,43 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 }
 
 func (machine *Machine) unwindException(class term.Term, reason term.Term) result.Result[bool, Failure] {
-	for index := len(machine.handlers) - 1; index >= 0; index-- {
-		handler := &machine.handlers[index]
+	for index := machine.handlers.Len() - 1; index >= 0; index-- {
+		var handler exceptionHandler
+		switch __gp_m11 := any(machine.handlers.At(index)).(type) {
+		case option.None[exceptionHandler]:
+			continue
+		case option.Some[exceptionHandler]:
+			found := __gp_m11.Value
+			handler = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 		if !handler.active {
 			continue
 		}
-		switch __gp_m10 := any(machine.SetX(2, term.List())).(type) {
-		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m10.Err
-
-			return result.Err[bool, Failure]{Err: failure}
-		case result.Ok[MachineMutation, Failure]:
-
-		default:
-			panic("goplus: impossible enum value in match")
-		}
-		switch __gp_m11 := any(machine.SetX(1, reason)).(type) {
-		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m11.Err
-
-			return result.Err[bool, Failure]{Err: failure}
-		case result.Ok[MachineMutation, Failure]:
-
-		default:
-			panic("goplus: impossible enum value in match")
-		}
-		switch __gp_m12 := any(machine.SetX(0, class)).(type) {
+		switch __gp_m12 := any(machine.SetX(2, term.List())).(type) {
 		case result.Err[MachineMutation, Failure]:
 			failure := __gp_m12.Err
+
+			return result.Err[bool, Failure]{Err: failure}
+		case result.Ok[MachineMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m13 := any(machine.SetX(1, reason)).(type) {
+		case result.Err[MachineMutation, Failure]:
+			failure := __gp_m13.Err
+
+			return result.Err[bool, Failure]{Err: failure}
+		case result.Ok[MachineMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m14 := any(machine.SetX(0, class)).(type) {
+		case result.Err[MachineMutation, Failure]:
+			failure := __gp_m14.Err
 
 			return result.Err[bool, Failure]{Err: failure}
 		case result.Ok[MachineMutation, Failure]:
@@ -329,18 +347,24 @@ func (machine *Machine) unwindException(class term.Term, reason term.Term) resul
 			reason: term.Clone(reason),
 			trace:  term.List(),
 		}}
-		machine.handlers = machine.handlers[:index+1]
+		machine.handlers.Set(index, handler)
+		machine.handlers.Truncate(index + 1)
 		if machine.current != handler.image {
 			machine.leaveCurrentCode()
 		}
-		for depth := len(machine.returnCodeLeaves) - 1; depth > handler.returnDepth; depth-- {
-			if machine.returnCodeLeaves[depth] != nil {
-				machine.returnCodeLeaves[depth]()
+		for depth := machine.returns.Len() - 1; depth > handler.returnDepth; depth-- {
+			switch __gp_m15 := any(machine.returns.At(depth)).(type) {
+			case option.Some[returnFrame]:
+				frame := __gp_m15.Value
+				if frame.codeLeave != nil {
+					frame.codeLeave()
+				}
+			case option.None[returnFrame]:
+			default:
+				panic("goplus: impossible enum value in match")
 			}
 		}
-		machine.returnPCs = machine.returnPCs[:handler.returnDepth]
-		machine.returnImages = machine.returnImages[:handler.returnDepth]
-		machine.returnCodeLeaves = machine.returnCodeLeaves[:handler.returnDepth]
+		machine.returns.Truncate(handler.returnDepth)
 		if machine.y.Len() > handler.yDepth {
 			machine.y.Truncate(handler.yDepth)
 		}
@@ -360,22 +384,22 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 		if len(instruction.Operands) != 2 {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("raise has %d operands", len(instruction.Operands))}}
 		}
-		switch __gp_m13 := any(machine.X(0)).(type) {
+		switch __gp_m16 := any(machine.X(0)).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m13.Err
+			failure := __gp_m16.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m13.Value
+			value := __gp_m16.Value
 			class = value
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-		switch __gp_m14 := any(machine.resolve(instruction.Operands[1])).(type) {
+		switch __gp_m17 := any(machine.resolve(instruction.Operands[1])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m14.Err
+			failure := __gp_m17.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m14.Value
+			value := __gp_m17.Value
 			reason = value
 		default:
 			panic("goplus: impossible enum value in match")
@@ -384,12 +408,12 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 		if len(instruction.Operands) != 1 {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "case_end must have one operand"}}
 		}
-		switch __gp_m15 := any(machine.resolve(instruction.Operands[0])).(type) {
+		switch __gp_m18 := any(machine.resolve(instruction.Operands[0])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m15.Err
+			failure := __gp_m18.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m15.Value
+			value := __gp_m18.Value
 			reason = term.Tuple(term.MustAtom("case_clause"), value)
 		default:
 			panic("goplus: impossible enum value in match")
@@ -398,12 +422,12 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 		if len(instruction.Operands) != 1 {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "badmatch must have one operand"}}
 		}
-		switch __gp_m16 := any(machine.resolve(instruction.Operands[0])).(type) {
+		switch __gp_m19 := any(machine.resolve(instruction.Operands[0])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m16.Err
+			failure := __gp_m19.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m16.Value
+			value := __gp_m19.Value
 			reason = term.Tuple(term.MustAtom("badmatch"), value)
 		default:
 			panic("goplus: impossible enum value in match")
@@ -417,12 +441,12 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 		if len(instruction.Operands) != 1 {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "badrecord must have one operand"}}
 		}
-		switch __gp_m17 := any(machine.resolve(instruction.Operands[0])).(type) {
+		switch __gp_m20 := any(machine.resolve(instruction.Operands[0])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m17.Err
+			failure := __gp_m20.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m17.Value
+			value := __gp_m20.Value
 			reason = term.Tuple(term.MustAtom("badrecord"), value)
 		default:
 			panic("goplus: impossible enum value in match")
@@ -431,12 +455,12 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 		if len(instruction.Operands) != 1 {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "try_case_end must have one operand"}}
 		}
-		switch __gp_m18 := any(machine.resolve(instruction.Operands[0])).(type) {
+		switch __gp_m21 := any(machine.resolve(instruction.Operands[0])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m18.Err
+			failure := __gp_m21.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m18.Value
+			value := __gp_m21.Value
 			reason = term.Tuple(term.MustAtom("try_clause"), value)
 		default:
 			panic("goplus: impossible enum value in match")

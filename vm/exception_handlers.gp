@@ -56,13 +56,13 @@ func executeExceptionSetup(machine *Machine, instruction beam.Instruction) resul
 		return result.Err[instructionOutcome, Failure](failure)
 	case result.Ok(MachineMutated):
 	}
-	machine.handlers = append(machine.handlers, exceptionHandler{
+	machine.handlers.Append(exceptionHandler{
 		token: token,
 		kind: kind,
 		image: machine.current,
 		codeLeave: machine.currentCodeLeave,
 		pc: handlerPC,
-		returnDepth: len(machine.returnPCs),
+		returnDepth: machine.returns.Len(),
 		yDepth: machine.y.Len(),
 		active: true,
 		pending: option.None[pendingException](),
@@ -89,7 +89,7 @@ func (machine *Machine) handlerToken(operand beam.Operand) result.Result[uint64,
 }
 
 func (machine *Machine) topHandler(operand beam.Operand) result.Result[exceptionHandler, Failure] {
-	if len(machine.handlers) == 0 {
+	if machine.handlers.Len() == 0 {
 		return result.Err[exceptionHandler, Failure](InvalidProgram("exception handler stack is empty"))
 	}
 	var token uint64
@@ -99,7 +99,7 @@ func (machine *Machine) topHandler(operand beam.Operand) result.Result[exception
 	case result.Ok(value):
 		token = value
 	}
-	handler := machine.handlers[len(machine.handlers) - 1]
+	var handler exceptionHandler; match machine.handlers.At(machine.handlers.Len()-1) { case option.None: return result.Err[exceptionHandler, Failure](InvalidProgram("exception handler stack is empty")); case option.Some(found): handler = found }
 	if handler.token != token {
 		return result.Err[exceptionHandler, Failure](InvalidProgram("exception handler token is not stack top"))
 	}
@@ -127,7 +127,7 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 			return result.Err[instructionOutcome, Failure](InvalidProgram("try handler cannot use catch_end"))
 		}
 	}
-	machine.handlers = machine.handlers[:len(machine.handlers) - 1]
+	machine.handlers.Remove(machine.handlers.Len()-1)
 	if instruction.Opcode.Name == "catch_end" {
 		match handler.pending {
 		case option.None:
@@ -160,8 +160,8 @@ func executeExceptionCleanup(machine *Machine, instruction beam.Instruction) res
 }
 
 func (machine *Machine) unwindException(class term.Term, reason term.Term) result.Result[bool, Failure] {
-	for index := len(machine.handlers) - 1; index >= 0; index-- {
-		handler := &machine.handlers[index]
+	for index := machine.handlers.Len() - 1; index >= 0; index-- {
+		var handler exceptionHandler; match machine.handlers.At(index) { case option.None: continue; case option.Some(found): handler = found }
 		if !handler.active {
 			continue
 		}
@@ -186,12 +186,10 @@ func (machine *Machine) unwindException(class term.Term, reason term.Term) resul
 			reason: term.Clone(reason),
 			trace: term.List(),
 		})
-		machine.handlers = machine.handlers[:index + 1]
+		machine.handlers.Set(index, handler); machine.handlers.Truncate(index+1)
 		if machine.current != handler.image { machine.leaveCurrentCode() }
-		for depth := len(machine.returnCodeLeaves) - 1; depth > handler.returnDepth; depth-- { if machine.returnCodeLeaves[depth] != nil { machine.returnCodeLeaves[depth]() } }
-		machine.returnPCs = machine.returnPCs[:handler.returnDepth]
-		machine.returnImages = machine.returnImages[:handler.returnDepth]
-		machine.returnCodeLeaves = machine.returnCodeLeaves[:handler.returnDepth]
+		for depth := machine.returns.Len() - 1; depth > handler.returnDepth; depth-- { match machine.returns.At(depth) { case option.Some(frame): if frame.codeLeave != nil { frame.codeLeave() }; case option.None: } }
+		machine.returns.Truncate(handler.returnDepth)
 		if machine.y.Len() > handler.yDepth {
 			machine.y.Truncate(handler.yDepth)
 		}
