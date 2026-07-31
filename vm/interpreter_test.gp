@@ -85,7 +85,7 @@ func TestMachineBoundsInfiniteControlFlow(t *testing.T) {
 func TestMachineRejectsUnsupportedOpcode(t *testing.T) {
 	program := []beam.Instruction{
 		instruction("label", label(1)),
-		instruction("bif0"),
+		instruction("definitely_unsupported"),
 	}
 	match NewMachine(program, MachineConfig{}) {
 	case result.Err(failure):

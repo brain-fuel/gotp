@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"goforge.dev/goplus/std/memory"
+	"goforge.dev/gotp/term"
 )
 
 type Failure enum {
+	RaisedException(Class term.Term, Reason term.Term)
 	InvalidConfiguration(Detail string)
 	ImmediateOutOfRange(Value int64)
 	HeapIndexOutOfRange(Index int, Words int)
@@ -22,6 +24,8 @@ type Failure enum {
 
 func (failure Failure) Error() string {
 	match failure {
+	case RaisedException(class, reason):
+		return fmt.Sprintf("gotp/vm: exception %v:%v", class, reason)
 	case InvalidConfiguration(detail):
 		return "gotp/vm: invalid configuration: " + detail
 	case ImmediateOutOfRange(value):

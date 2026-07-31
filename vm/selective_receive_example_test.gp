@@ -37,7 +37,7 @@ func TestSelectiveReceiveWaitsAndResumes(t *testing.T) {
 			case result.Ok(slice):
 				var execution ExecutionSlice = slice
 				match execution {
-				case ExecutionWaiting(_):
+				case ExecutionWaiting(_), ExecutionRaised(_, _, _):
 				case _:
 					t.Fatal("empty receive did not wait")
 				}

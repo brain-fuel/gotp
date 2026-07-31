@@ -19,28 +19,31 @@ type MachineConfig struct {
 	Atoms         map[uint64]string
 	Literals      map[uint64]term.Term
 	Imports       map[uint64]ExternalFunction
+	Functions     map[uint64]beam.FunctionTemplate
 	ModuleName    string
 	Exports       map[ExternalFunction]uint64
 	LinkedModules map[string]ModuleImage
 }
 
 type ModuleImage struct {
-	Name     string
-	Program  []beam.Instruction
-	Atoms    map[uint64]string
-	Literals map[uint64]term.Term
-	Imports  map[uint64]ExternalFunction
-	Exports  map[ExternalFunction]uint64
+	Name      string
+	Program   []beam.Instruction
+	Atoms     map[uint64]string
+	Literals  map[uint64]term.Term
+	Imports   map[uint64]ExternalFunction
+	Functions map[uint64]beam.FunctionTemplate
+	Exports   map[ExternalFunction]uint64
 }
 
 type machineImage struct {
-	name     string
-	program  []beam.Instruction
-	labels   map[uint64]int
-	atoms    map[uint64]string
-	literals map[uint64]term.Term
-	imports  map[uint64]ExternalFunction
-	exports  map[ExternalFunction]uint64
+	name      string
+	program   []beam.Instruction
+	labels    map[uint64]int
+	atoms     map[uint64]string
+	literals  map[uint64]term.Term
+	imports   map[uint64]ExternalFunction
+	functions map[uint64]beam.FunctionTemplate
+	exports   map[ExternalFunction]uint64
 }
 
 type RunResult struct {
@@ -112,11 +115,14 @@ type Machine struct {
 	atoms        map[uint64]string
 	literals     map[uint64]term.Term
 	imports      map[uint64]ExternalFunction
+	functions    map[uint64]beam.FunctionTemplate
 	returnPCs    []int
 	returnImages []*machineImage
 	current      *machineImage
 	root         *machineImage
 	modules      map[string]*machineImage
+	handlers     []exceptionHandler
+	nextHandler  uint64
 	pc           int
 	steps        int
 	stepLimit    int
@@ -175,13 +181,14 @@ func NewMachine(
 		moduleName = "$root"
 	}
 	root := &machineImage{
-		name:     moduleName,
-		program:  append([]beam.Instruction(nil), program...),
-		labels:   labels,
-		atoms:    cloneAtomPool(config.Atoms),
-		literals: cloneLiteralPool(config.Literals),
-		imports:  cloneImportPool(config.Imports),
-		exports:  cloneExportPool(config.Exports),
+		name:      moduleName,
+		program:   append([]beam.Instruction(nil), program...),
+		labels:    labels,
+		atoms:     cloneAtomPool(config.Atoms),
+		literals:  cloneLiteralPool(config.Literals),
+		imports:   cloneImportPool(config.Imports),
+		functions: cloneFunctionPool(config.Functions),
+		exports:   cloneExportPool(config.Exports),
 	}
 	switch __gp_m1 := any(validateImageExports(root)).(type) {
 	case result.Err[bool, Failure]:
@@ -222,6 +229,7 @@ func NewMachine(
 		atoms:     root.atoms,
 		literals:  root.literals,
 		imports:   root.imports,
+		functions: root.functions,
 		current:   root,
 		root:      root,
 		modules:   modules,
@@ -273,6 +281,11 @@ func (machine *Machine) Run(entryLabel uint64) result.Result[RunResult, Failure]
 			case ExecutionWaiting:
 
 				return result.Err[RunResult, Failure]{Err: InvalidProgram{Detail: "execution waited without a process scheduler"}}
+			case ExecutionRaised:
+				class := __gp_m5.Class
+				reason := __gp_m5.Reason
+
+				return result.Err[RunResult, Failure]{Err: RaisedException{Class: class, Reason: reason}}
 			case ExecutionCompleted:
 				value := __gp_m5.Value
 
@@ -695,6 +708,14 @@ func cloneImportPool(source map[uint64]ExternalFunction) map[uint64]ExternalFunc
 	return cloned
 }
 
+func cloneFunctionPool(source map[uint64]beam.FunctionTemplate) map[uint64]beam.FunctionTemplate {
+	cloned := make(map[uint64]beam.FunctionTemplate, len(source))
+	for index, function := range source {
+		cloned[index] = function
+	}
+	return cloned
+}
+
 func cloneExportPool(source map[ExternalFunction]uint64) map[ExternalFunction]uint64 {
 	cloned := make(map[ExternalFunction]uint64, len(source))
 	for target, label := range source {
@@ -750,13 +771,14 @@ func newMachineImage(config ModuleImage) result.Result[*machineImage, Failure] {
 		labels := __gp_m24.Value
 
 		image := &machineImage{
-			name:     config.Name,
-			program:  append([]beam.Instruction(nil), config.Program...),
-			labels:   labels,
-			atoms:    cloneAtomPool(config.Atoms),
-			literals: cloneLiteralPool(config.Literals),
-			imports:  cloneImportPool(config.Imports),
-			exports:  cloneExportPool(config.Exports),
+			name:      config.Name,
+			program:   append([]beam.Instruction(nil), config.Program...),
+			labels:    labels,
+			atoms:     cloneAtomPool(config.Atoms),
+			literals:  cloneLiteralPool(config.Literals),
+			imports:   cloneImportPool(config.Imports),
+			functions: cloneFunctionPool(config.Functions),
+			exports:   cloneExportPool(config.Exports),
 		}
 		switch __gp_m25 := any(validateImageExports(image)).(type) {
 		case result.Err[bool, Failure]:
@@ -793,6 +815,7 @@ func (machine *Machine) activate(image *machineImage) {
 	machine.atoms = image.atoms
 	machine.literals = image.literals
 	machine.imports = image.imports
+	machine.functions = image.functions
 }
 
 func (machine *Machine) pushReturn(pc int) {

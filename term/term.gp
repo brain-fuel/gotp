@@ -27,6 +27,7 @@ type Kind enum {
 	MapKind()
 	PIDKind()
 	ReferenceKind()
+	FunKind()
 	PortKind()
 }
 
@@ -94,6 +95,25 @@ type MapEntry struct {
 	Value Term
 }
 
+type FunForm enum {
+	LocalClosure()
+	OldClosure()
+	NewClosure(Digest [16]byte, NewIndex uint32, OldIndex uint32)
+	ExportedFunction()
+}
+
+type Fun struct {
+	Form        FunForm
+	Module      string
+	Function    string
+	Arity       uint32
+	Label       uint64
+	Index       uint32
+	Unique      uint32
+	Creator     PID
+	Environment []Term
+}
+
 //goplus:derive off
 type Term enum {
 	InvalidTerm()
@@ -107,6 +127,7 @@ type Term enum {
 	MapTerm(Entries []MapEntry)
 	PIDTerm(Value PID)
 	ReferenceTerm(Value Reference)
+	FunTerm(Value Fun)
 	PortTerm(Value Port)
 }
 
@@ -236,6 +257,15 @@ func ReferenceValue(reference Reference) Term {
 	return ReferenceTerm(reference)
 }
 
+// assayxport:unit gotp.term.fun
+func Function(value Fun) Term {
+	if value.Form == nil {
+		value.Form = LocalClosure()
+	}
+	value.Environment = cloneTerms(value.Environment)
+	return FunTerm(value)
+}
+
 func PortValue(port Port) Term {
 	return PortTerm(port)
 }
@@ -267,6 +297,8 @@ func (value Term) Kind() Kind {
 		return PIDKind()
 	case ReferenceTerm(_):
 		return ReferenceKind()
+	case FunTerm(_):
+		return FunKind()
 	case PortTerm(_):
 		return PortKind()
 	}
@@ -412,6 +444,19 @@ func (value Term) PortValue() option.Option[Port] {
 	}
 }
 
+func (value Term) FunValue() option.Option[Fun] {
+	if value == nil {
+		return option.None[Fun]
+	}
+	match value {
+	case FunTerm(function):
+		function.Environment = cloneTerms(function.Environment)
+		return option.Some(function)
+	case _:
+		return option.None[Fun]
+	}
+}
+
 func (value Term) Clone() Term {
 	if value == nil {
 		return InvalidTerm()
@@ -443,6 +488,8 @@ func (value Term) Clone() Term {
 		return PIDTerm(pid)
 	case ReferenceTerm(reference):
 		return ReferenceTerm(reference)
+	case FunTerm(function):
+		return Function(function)
 	case PortTerm(port):
 		return PortTerm(port)
 	}
@@ -527,6 +574,21 @@ func (value Term) Equal(other Term) bool {
 		match other {
 		case ReferenceTerm(right):
 			return left == right
+		case _:
+			return false
+		}
+	case FunTerm(left):
+		match other {
+		case FunTerm(right):
+			return FunFormEqual(left.Form, right.Form) &&
+				left.Module == right.Module &&
+				left.Function == right.Function &&
+				left.Arity == right.Arity &&
+				left.Label == right.Label &&
+				left.Index == right.Index &&
+				left.Unique == right.Unique &&
+				left.Creator == right.Creator &&
+				equalTerms(left.Environment, right.Environment)
 		case _:
 			return false
 		}

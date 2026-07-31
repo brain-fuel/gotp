@@ -179,7 +179,7 @@ func ExampleLoadedModule_NewProcess() {
 				default:
 					panic("goplus: impossible enum value in match")
 				}
-			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 				panic("process did not complete")
 			default:
@@ -353,7 +353,7 @@ func TestLoadedLiteralExecutesAsRuntimeTerm(t *testing.T) {
 				if !term.Equal(value, want) {
 					t.Fatalf("literal value = %v", value)
 				}
-			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 				t.Fatalf("literal process state = %T", state)
 			default:
@@ -466,7 +466,7 @@ func TestPinnedOTPListsReverseFastPath(t *testing.T) {
 			if !term.Equal(value, want) || reductions != 1 || instructions != 9 {
 				t.Fatalf("reverse = %v, reductions = %d, instructions = %d", value, reductions, instructions)
 			}
-		case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+		case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 			t.Fatalf("reverse state = %T", state)
 		default:

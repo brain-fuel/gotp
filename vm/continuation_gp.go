@@ -50,11 +50,21 @@ type ExecutionCompleted struct {
 
 func (ExecutionCompleted) isExecutionSlice() {}
 
+//goplus:variant (ExecutionSlice) ExecutionRaised(Class term.Term, Reason term.Term, Progress ExecutionProgress)
+type ExecutionRaised struct {
+	Class    term.Term
+	Reason   term.Term
+	Progress ExecutionProgress
+}
+
+func (ExecutionRaised) isExecutionSlice() {}
+
 // ExecutionSliceCases selects one handler per ExecutionSlice variant for ExecutionSliceFold.
 type ExecutionSliceCases[R any] struct {
 	ExecutionSuspended func(Progress ExecutionProgress) R
 	ExecutionWaiting   func(Progress ExecutionProgress) R
 	ExecutionCompleted func(Value term.Term, Progress ExecutionProgress) R
+	ExecutionRaised    func(Class term.Term, Reason term.Term, Progress ExecutionProgress) R
 }
 
 // ExecutionSliceFold reduces ExecutionSlice by one-level case analysis.
@@ -66,6 +76,8 @@ func ExecutionSliceFold[R any](e ExecutionSlice, cs ExecutionSliceCases[R]) R {
 		return cs.ExecutionWaiting(m.Progress)
 	case ExecutionCompleted:
 		return cs.ExecutionCompleted(m.Value, m.Progress)
+	case ExecutionRaised:
+		return cs.ExecutionRaised(m.Class, m.Reason, m.Progress)
 	default:
 		panic("goplus: impossible enum value in ExecutionSliceFold")
 	}
@@ -77,6 +89,7 @@ type ExecutionSliceEqOverrides struct {
 	ExecutionSuspended func(x, y ExecutionSuspended) (eq, handled bool)
 	ExecutionWaiting   func(x, y ExecutionWaiting) (eq, handled bool)
 	ExecutionCompleted func(x, y ExecutionCompleted) (eq, handled bool)
+	ExecutionRaised    func(x, y ExecutionRaised) (eq, handled bool)
 }
 
 // ExecutionSliceEqualWith reports structural equality of a and b under ov.
@@ -130,6 +143,26 @@ func ExecutionSliceEqualWith(a, b ExecutionSlice, ov ExecutionSliceEqOverrides) 
 			return false
 		}
 		return true
+	case ExecutionRaised:
+		y, ok := any(b).(ExecutionRaised)
+		if !ok {
+			return false
+		}
+		if ov.ExecutionRaised != nil {
+			if eq, handled := ov.ExecutionRaised(x, y); handled {
+				return eq
+			}
+		}
+		if x.Class != y.Class {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		if x.Progress != y.Progress {
+			return false
+		}
+		return true
 	}
 	return false
 }
@@ -157,15 +190,15 @@ type instructionHalts struct{}
 
 func (instructionHalts) isInstructionOutcome() {}
 
-// instructionOutcomeCases selects one handler per instructionOutcome variant for fold.
+// instructionOutcomeCases selects one handler per instructionOutcome variant for instructionOutcomeFold.
 type instructionOutcomeCases[R any] struct {
 	InstructionContinues func() R
 	InstructionWaits     func() R
 	InstructionHalts     func() R
 }
 
-// fold reduces instructionOutcome by one-level case analysis.
-func fold[R any](i instructionOutcome, cs instructionOutcomeCases[R]) R {
+// instructionOutcomeFold reduces instructionOutcome by one-level case analysis.
+func instructionOutcomeFold[R any](i instructionOutcome, cs instructionOutcomeCases[R]) R {
 	switch any(i).(type) {
 	case instructionContinues:
 		return cs.InstructionContinues()
@@ -174,7 +207,7 @@ func fold[R any](i instructionOutcome, cs instructionOutcomeCases[R]) R {
 	case instructionHalts:
 		return cs.InstructionHalts()
 	default:
-		panic("goplus: impossible enum value in fold")
+		panic("goplus: impossible enum value in instructionOutcomeFold")
 	}
 }
 
@@ -336,7 +369,7 @@ func VMReductionBudgetValue(budget VMReductionBudget) int {
 
 func OpcodeReductionClass(name string) ReductionClass {
 	switch name {
-	case "call", "call_only", "call_last", "call_ext", "call_ext_only", "call_ext_last", "return", "send", "loop_rec_end":
+	case "call", "call_only", "call_last", "call_ext", "call_ext_only", "call_ext_last", "call_fun", "call_fun2", "return", "send", "loop_rec_end":
 		return DispatchReduction{}
 	default:
 		return ReductionFree{}
@@ -362,9 +395,14 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 		return result.Err[*Continuation, Failure]{Err: MissingLabel{Label: entryLabel}}
 	}
 	machine.pc = entry + 1
+	if machine.pc < len(machine.program) && machine.program[machine.pc].Opcode.Name == "func_info" {
+		machine.pc++
+	}
 	machine.steps = 0
 	machine.returnPCs = machine.returnPCs[:0]
 	machine.returnImages = machine.returnImages[:0]
+	machine.handlers = machine.handlers[:0]
+	machine.nextHandler = 0
 	if machine.root != nil {
 		machine.activate(machine.root)
 	}
@@ -426,7 +464,37 @@ func (continuation *Continuation) ResumeWithHost(
 		case result.Err[instructionOutcome, Failure]:
 			failure := __gp_m1.Err
 
-			return result.Err[ExecutionSlice, Failure]{Err: failure}
+			var checked Failure = failure
+			switch __gp_m2 := any(checked).(type) {
+			case RaisedException:
+				class := __gp_m2.Class
+				reason := __gp_m2.Reason
+
+				switch __gp_m3 := any(machine.unwindException(class, reason)).(type) {
+				case result.Err[bool, Failure]:
+					unwindFailure := __gp_m3.Err
+
+					return result.Err[ExecutionSlice, Failure]{Err: unwindFailure}
+				case result.Ok[bool, Failure]:
+					caught := __gp_m3.Value
+
+					if caught {
+						continue
+					}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				return result.Ok[ExecutionSlice, Failure]{Value: ExecutionRaised{Class: term.Clone(class), Reason: term.Clone(reason), Progress: ExecutionProgress{
+					Reductions:        reductions,
+					Instructions:      instructions,
+					TotalInstructions: machine.steps,
+				}}}
+			case InvalidConfiguration, ImmediateOutOfRange, HeapIndexOutOfRange, MemoryFailure, InvalidProgram, RegisterOutOfRange, UninitializedRegister, MissingConstant, MissingLabel, StepLimitExceeded, UnsupportedOpcode:
+
+				return result.Err[ExecutionSlice, Failure]{Err: failure}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
 		case result.Ok[instructionOutcome, Failure]:
 			outcome := __gp_m1.Value
 
@@ -444,13 +512,13 @@ func (continuation *Continuation) ResumeWithHost(
 			case instructionHalts:
 
 				continuation.completed = true
-				switch __gp_m3 := any(machine.X(0)).(type) {
+				switch __gp_m5 := any(machine.X(0)).(type) {
 				case result.Err[term.Term, Failure]:
-					failure := __gp_m3.Err
+					failure := __gp_m5.Err
 
 					return result.Err[ExecutionSlice, Failure]{Err: failure}
 				case result.Ok[term.Term, Failure]:
-					value := __gp_m3.Value
+					value := __gp_m5.Value
 
 					return result.Ok[ExecutionSlice, Failure]{Value: ExecutionCompleted{Value: value, Progress: ExecutionProgress{
 						Reductions:        reductions,
@@ -477,12 +545,14 @@ func executeInstruction(
 ) result.Result[instructionOutcome, Failure] {
 	next := machine.pc + 1
 	switch instruction.Opcode.Name {
-	case "label", "func_info":
+	case "label":
 		machine.pc = next
+	case "func_info":
+		return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("function_clause")}}
 	case "move":
-		switch __gp_m4 := any(machine.move(instruction)).(type) {
+		switch __gp_m6 := any(machine.move(instruction)).(type) {
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m4.Err
+			failure := __gp_m6.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[MachineMutation, Failure]:
@@ -492,34 +562,7 @@ func executeInstruction(
 			panic("goplus: impossible enum value in match")
 		}
 	case "jump":
-		switch __gp_m5 := any(machine.instructionLabel(instruction, 0)).(type) {
-		case result.Ok[int, Failure]:
-			target := __gp_m5.Value
-
-			machine.pc = target
-		case result.Err[int, Failure]:
-			failure := __gp_m5.Err
-
-			return result.Err[instructionOutcome, Failure]{Err: failure}
-		default:
-			panic("goplus: impossible enum value in match")
-		}
-	case "call":
-		switch __gp_m6 := any(machine.instructionLabel(instruction, 1)).(type) {
-		case result.Ok[int, Failure]:
-			target := __gp_m6.Value
-
-			machine.pushReturn(next)
-			machine.pc = target
-		case result.Err[int, Failure]:
-			failure := __gp_m6.Err
-
-			return result.Err[instructionOutcome, Failure]{Err: failure}
-		default:
-			panic("goplus: impossible enum value in match")
-		}
-	case "call_only":
-		switch __gp_m7 := any(machine.instructionLabel(instruction, 1)).(type) {
+		switch __gp_m7 := any(machine.instructionLabel(instruction, 0)).(type) {
 		case result.Ok[int, Failure]:
 			target := __gp_m7.Value
 
@@ -531,17 +574,21 @@ func executeInstruction(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-	case "call_last":
-		switch __gp_m8 := any(machine.deallocate(instruction, 2)).(type) {
-		case result.Err[MachineMutation, Failure]:
+	case "call":
+		switch __gp_m8 := any(machine.instructionLabel(instruction, 1)).(type) {
+		case result.Ok[int, Failure]:
+			target := __gp_m8.Value
+
+			machine.pushReturn(next)
+			machine.pc = target
+		case result.Err[int, Failure]:
 			failure := __gp_m8.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
-		case result.Ok[MachineMutation, Failure]:
-
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+	case "call_only":
 		switch __gp_m9 := any(machine.instructionLabel(instruction, 1)).(type) {
 		case result.Ok[int, Failure]:
 			target := __gp_m9.Value
@@ -554,19 +601,58 @@ func executeInstruction(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+	case "call_last":
+		switch __gp_m10 := any(machine.deallocate(instruction, 2)).(type) {
+		case result.Err[MachineMutation, Failure]:
+			failure := __gp_m10.Err
+
+			return result.Err[instructionOutcome, Failure]{Err: failure}
+		case result.Ok[MachineMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m11 := any(machine.instructionLabel(instruction, 1)).(type) {
+		case result.Ok[int, Failure]:
+			target := __gp_m11.Value
+
+			machine.pc = target
+		case result.Err[int, Failure]:
+			failure := __gp_m11.Err
+
+			return result.Err[instructionOutcome, Failure]{Err: failure}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	case "call_ext":
 		return executeExternalCall(machine, instruction, host, false, false)
 	case "call_ext_only":
 		return executeExternalCall(machine, instruction, host, true, false)
 	case "call_ext_last":
 		return executeExternalCall(machine, instruction, host, true, true)
+	case "bif0", "bif1", "bif2", "gc_bif1", "gc_bif2", "gc_bif3":
+		return executeBIFInstruction(machine, instruction, host)
+	case "is_lt", "is_ge":
+		return executeTermOrderInstruction(machine, instruction)
+	case "make_fun3":
+		return executeMakeFun3(machine, instruction)
+	case "call_fun", "call_fun2":
+		return executeCallFun(machine, instruction)
+	case "is_function", "is_function2":
+		return executeFunctionTest(machine, instruction)
+	case "catch", "try":
+		return executeExceptionSetup(machine, instruction)
+	case "catch_end", "try_end", "try_case":
+		return executeExceptionCleanup(machine, instruction)
+	case "raise", "case_end", "badmatch", "if_end", "badrecord", "try_case_end":
+		return executeExceptionRaise(machine, instruction)
 	case "allocate", "allocate_zero":
-		switch __gp_m10 := any(machine.allocate(instruction, 0)).(type) {
+		switch __gp_m12 := any(machine.allocate(instruction, 0)).(type) {
 		case result.Ok[MachineMutation, Failure]:
 
 			machine.pc = next
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m10.Err
+			failure := __gp_m12.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		default:
@@ -579,33 +665,33 @@ func executeInstruction(
 		"put_list", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim":
 		return executeCoreTermInstruction(machine, instruction)
 	case "deallocate":
-		switch __gp_m11 := any(machine.deallocate(instruction, 0)).(type) {
+		switch __gp_m13 := any(machine.deallocate(instruction, 0)).(type) {
 		case result.Ok[MachineMutation, Failure]:
 
 			machine.pc = next
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m11.Err
+			failure := __gp_m13.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	case "send":
-		switch __gp_m12 := any(machine.X(0)).(type) {
+		switch __gp_m14 := any(machine.X(0)).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m12.Err
+			failure := __gp_m14.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			destination := __gp_m12.Value
+			destination := __gp_m14.Value
 
-			switch __gp_m13 := any(machine.X(1)).(type) {
+			switch __gp_m15 := any(machine.X(1)).(type) {
 			case result.Err[term.Term, Failure]:
-				failure := __gp_m13.Err
+				failure := __gp_m15.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[term.Term, Failure]:
-				message := __gp_m13.Value
+				message := __gp_m15.Value
 
 				var sendCapability SendCapability = host.Send
 				switch any(sendCapability).(type) {
@@ -619,17 +705,17 @@ func executeInstruction(
 						return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "send capability effect is nil"}}
 					}
 					var outcome SendOutcome = effect(destination, message)
-					switch __gp_m15 := any(outcome).(type) {
+					switch __gp_m17 := any(outcome).(type) {
 					case SendRejected:
-						detail := __gp_m15.Detail
+						detail := __gp_m17.Detail
 
 						return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "send rejected: " + detail}}
 					case MessageSent:
-						value := __gp_m15.Value
+						value := __gp_m17.Value
 
-						switch __gp_m16 := any(machine.SetX(0, value)).(type) {
+						switch __gp_m18 := any(machine.SetX(0, value)).(type) {
 						case result.Err[MachineMutation, Failure]:
-							failure := __gp_m16.Err
+							failure := __gp_m18.Err
 
 							return result.Err[instructionOutcome, Failure]{Err: failure}
 						case result.Ok[MachineMutation, Failure]:
@@ -668,31 +754,31 @@ func executeInstruction(
 				return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "receive peek effect is nil"}}
 			}
 			var outcome ReceiveOutcome = host.peek()
-			switch __gp_m18 := any(outcome).(type) {
+			switch __gp_m20 := any(outcome).(type) {
 			case ReceiveRejected:
-				detail := __gp_m18.Detail
+				detail := __gp_m20.Detail
 
 				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "receive rejected: " + detail}}
 			case ReceiveEmpty:
 
-				switch __gp_m19 := any(machine.instructionLabel(instruction, 0)).(type) {
+				switch __gp_m21 := any(machine.instructionLabel(instruction, 0)).(type) {
 				case result.Err[int, Failure]:
-					failure := __gp_m19.Err
+					failure := __gp_m21.Err
 
 					return result.Err[instructionOutcome, Failure]{Err: failure}
 				case result.Ok[int, Failure]:
-					target := __gp_m19.Value
+					target := __gp_m21.Value
 
 					machine.pc = target
 				default:
 					panic("goplus: impossible enum value in match")
 				}
 			case ReceiveMessage:
-				message := __gp_m18.Value
+				message := __gp_m20.Value
 
-				switch __gp_m20 := any(machine.assign(instruction.Operands[1], message)).(type) {
+				switch __gp_m22 := any(machine.assign(instruction.Operands[1], message)).(type) {
 				case result.Err[MachineMutation, Failure]:
-					failure := __gp_m20.Err
+					failure := __gp_m22.Err
 
 					return result.Err[instructionOutcome, Failure]{Err: failure}
 				case result.Ok[MachineMutation, Failure]:
@@ -712,20 +798,20 @@ func executeInstruction(
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "loop_rec_end requires an explicit receive capability"}}
 		}
 		var advanced AdvanceOutcome = host.advance()
-		switch __gp_m21 := any(advanced).(type) {
+		switch __gp_m23 := any(advanced).(type) {
 		case AdvanceRejected:
-			detail := __gp_m21.Detail
+			detail := __gp_m23.Detail
 
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "receive advance rejected: " + detail}}
 		case ReceiveCursorAdvanced:
 
-			switch __gp_m22 := any(machine.instructionLabel(instruction, 0)).(type) {
+			switch __gp_m24 := any(machine.instructionLabel(instruction, 0)).(type) {
 			case result.Err[int, Failure]:
-				failure := __gp_m22.Err
+				failure := __gp_m24.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[int, Failure]:
-				target := __gp_m22.Value
+				target := __gp_m24.Value
 
 				machine.pc = target
 			default:
@@ -739,9 +825,9 @@ func executeInstruction(
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "remove_message requires an explicit receive capability"}}
 		}
 		var removed RemoveOutcome = host.remove()
-		switch __gp_m23 := any(removed).(type) {
+		switch __gp_m25 := any(removed).(type) {
 		case RemoveRejected:
-			detail := __gp_m23.Detail
+			detail := __gp_m25.Detail
 
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "receive removal rejected: " + detail}}
 		case ReceiveMessageRemoved:
@@ -756,9 +842,9 @@ func executeInstruction(
 					return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "timer cancel effect is nil"}}
 				}
 				var cancelled TimerMutation = host.timerCancel()
-				switch __gp_m25 := any(cancelled).(type) {
+				switch __gp_m27 := any(cancelled).(type) {
 				case TimerMutationRejected:
-					detail := __gp_m25.Detail
+					detail := __gp_m27.Detail
 
 					return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "timer cancellation rejected: " + detail}}
 				case TimerChanged, TimerUnchanged:
@@ -785,9 +871,9 @@ func executeInstruction(
 				return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "timer finish effect is nil"}}
 			}
 			var finished TimerMutation = host.timerFinish()
-			switch __gp_m27 := any(finished).(type) {
+			switch __gp_m29 := any(finished).(type) {
 			case TimerMutationRejected:
-				detail := __gp_m27.Detail
+				detail := __gp_m29.Detail
 
 				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "timer completion rejected: " + detail}}
 			case TimerChanged, TimerUnchanged:
@@ -800,13 +886,13 @@ func executeInstruction(
 			panic("goplus: impossible enum value in match")
 		}
 	case "wait":
-		switch __gp_m28 := any(machine.instructionLabel(instruction, 0)).(type) {
+		switch __gp_m30 := any(machine.instructionLabel(instruction, 0)).(type) {
 		case result.Err[int, Failure]:
-			failure := __gp_m28.Err
+			failure := __gp_m30.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[int, Failure]:
-			target := __gp_m28.Value
+			target := __gp_m30.Value
 
 			machine.pc = target
 			return result.Ok[instructionOutcome, Failure]{Value: instructionWaits{}}
@@ -820,24 +906,24 @@ func executeInstruction(
 				len(instruction.Operands),
 			)}}
 		}
-		switch __gp_m29 := any(receiveTimeout(machine, instruction.Operands[1])).(type) {
+		switch __gp_m31 := any(receiveTimeout(machine, instruction.Operands[1])).(type) {
 		case result.Err[option.Option[time.Duration], Failure]:
-			failure := __gp_m29.Err
+			failure := __gp_m31.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[option.Option[time.Duration], Failure]:
-			timeout := __gp_m29.Value
+			timeout := __gp_m31.Value
 
-			switch __gp_m30 := any(timeout).(type) {
+			switch __gp_m32 := any(timeout).(type) {
 			case option.None[time.Duration]:
 
-				switch __gp_m31 := any(machine.instructionLabel(instruction, 0)).(type) {
+				switch __gp_m33 := any(machine.instructionLabel(instruction, 0)).(type) {
 				case result.Err[int, Failure]:
-					failure := __gp_m31.Err
+					failure := __gp_m33.Err
 
 					return result.Err[instructionOutcome, Failure]{Err: failure}
 				case result.Ok[int, Failure]:
-					target := __gp_m31.Value
+					target := __gp_m33.Value
 
 					machine.pc = target
 					return result.Ok[instructionOutcome, Failure]{Value: instructionWaits{}}
@@ -845,7 +931,7 @@ func executeInstruction(
 					panic("goplus: impossible enum value in match")
 				}
 			case option.Some[time.Duration]:
-				delay := __gp_m30.Value
+				delay := __gp_m32.Value
 
 				if delay == 0 {
 					machine.pc = next
@@ -862,9 +948,9 @@ func executeInstruction(
 						return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "timer wait effect is nil"}}
 					}
 					var waited TimerWaitOutcome = host.timerWait(delay)
-					switch __gp_m33 := any(waited).(type) {
+					switch __gp_m35 := any(waited).(type) {
 					case TimerRejected:
-						detail := __gp_m33.Detail
+						detail := __gp_m35.Detail
 
 						return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "timer wait rejected: " + detail}}
 					case TimerExpired:
@@ -872,13 +958,13 @@ func executeInstruction(
 						machine.pc = next
 					case TimerPending:
 
-						switch __gp_m34 := any(machine.instructionLabel(instruction, 0)).(type) {
+						switch __gp_m36 := any(machine.instructionLabel(instruction, 0)).(type) {
 						case result.Err[int, Failure]:
-							failure := __gp_m34.Err
+							failure := __gp_m36.Err
 
 							return result.Err[instructionOutcome, Failure]{Err: failure}
 						case result.Ok[int, Failure]:
-							target := __gp_m34.Value
+							target := __gp_m36.Value
 
 							machine.pc = target
 							return result.Ok[instructionOutcome, Failure]{Value: instructionWaits{}}
@@ -913,17 +999,17 @@ func receiveTimeout(
 	machine *Machine,
 	operand beam.Operand,
 ) result.Result[option.Option[time.Duration], Failure] {
-	switch __gp_m35 := any(machine.resolve(operand)).(type) {
+	switch __gp_m37 := any(machine.resolve(operand)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m35.Err
+		failure := __gp_m37.Err
 
 		return result.Err[option.Option[time.Duration], Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m35.Value
+		value := __gp_m37.Value
 
-		switch __gp_m36 := any(term.AtomName(value)).(type) {
+		switch __gp_m38 := any(term.AtomName(value)).(type) {
 		case option.Some[string]:
-			name := __gp_m36.Value
+			name := __gp_m38.Value
 
 			if name == "infinity" {
 				return result.Ok[option.Option[time.Duration], Failure]{Value: option.None[time.Duration]{}}
@@ -933,12 +1019,12 @@ func receiveTimeout(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-		switch __gp_m37 := any(term.IntegerValue(value)).(type) {
+		switch __gp_m39 := any(term.IntegerValue(value)).(type) {
 		case option.None[*big.Int]:
 
 			return result.Err[option.Option[time.Duration], Failure]{Err: InvalidProgram{Detail: "receive timeout must be a non-negative integer or infinity"}}
 		case option.Some[*big.Int]:
-			integer := __gp_m37.Value
+			integer := __gp_m39.Value
 
 			if !integer.IsInt64() {
 				return result.Err[option.Option[time.Duration], Failure]{Err: InvalidProgram{Detail: "receive timeout is out of range"}}

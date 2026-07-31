@@ -99,7 +99,7 @@ func ExampleContinuation_receiveTimeout() {
 		case result.Ok(slice):
 			var execution ExecutionSlice = slice
 			match execution {
-			case ExecutionWaiting(_):
+			case ExecutionWaiting(_), ExecutionRaised(_, _, _):
 				fmt.Println(waited)
 			case ExecutionSuspended(_), ExecutionCompleted(_, _):
 				panic("expected wait")
@@ -119,7 +119,7 @@ func ExampleContinuation_receiveTimeout() {
 				case option.None:
 					panic("expected integer")
 				}
-			case ExecutionSuspended(_), ExecutionWaiting(_):
+			case ExecutionSuspended(_), ExecutionWaiting(_), ExecutionRaised(_, _, _):
 				panic("expected completion")
 			}
 		}
@@ -158,7 +158,7 @@ func TestReceiveTimeoutDurationLaw(t *testing.T) {
 		case result.Ok(slice):
 			var execution ExecutionSlice = slice
 			match execution {
-			case ExecutionWaiting(_):
+			case ExecutionWaiting(_), ExecutionRaised(_, _, _):
 			case ExecutionSuspended(_), ExecutionCompleted(_, _):
 				return false
 			}
@@ -175,7 +175,7 @@ func TestReceiveTimeoutDurationLaw(t *testing.T) {
 			match execution {
 			case ExecutionCompleted(_, _):
 				return finishes == 1
-			case ExecutionSuspended(_), ExecutionWaiting(_):
+			case ExecutionSuspended(_), ExecutionWaiting(_), ExecutionRaised(_, _, _):
 				return false
 			}
 		}

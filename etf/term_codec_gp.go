@@ -269,6 +269,10 @@ func (encoder canonicalEncoder) encodeTerm(value term.Term, depth int) result.Re
 		reference := __gp_m5.Value
 
 		return encoder.reference(reference)
+	case term.FunTerm:
+		function := __gp_m5.Value
+
+		return encoder.function(function, depth)
 	case term.PortTerm:
 		port := __gp_m5.Value
 
@@ -573,6 +577,12 @@ func (decoder *canonicalDecoder) decodeTerm(depth int) result.Result[term.Term, 
 
 func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result[term.Term, Failure] {
 	switch tag {
+	case canonicalOldFun:
+		return decoder.oldFunction(depth)
+	case canonicalNewFun:
+		return decoder.newFunction(depth)
+	case canonicalExport:
+		return decoder.exportedFunction(depth)
 	case canonicalSmallInteger:
 		switch __gp_m18 := any(decoder.byte()).(type) {
 		case result.Ok[byte, Failure]:

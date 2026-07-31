@@ -128,7 +128,7 @@ func ExampleContinuation_receiveTimeout() {
 
 			var execution ExecutionSlice = slice
 			switch any(execution).(type) {
-			case ExecutionWaiting:
+			case ExecutionWaiting, ExecutionRaised:
 
 				fmt.Println(waited)
 			case ExecutionSuspended, ExecutionCompleted:
@@ -165,7 +165,7 @@ func ExampleContinuation_receiveTimeout() {
 				default:
 					panic("goplus: impossible enum value in match")
 				}
-			case ExecutionSuspended, ExecutionWaiting:
+			case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
 
 				panic("expected completion")
 			default:
@@ -224,7 +224,7 @@ func TestReceiveTimeoutDurationLaw(t *testing.T) {
 
 			var execution ExecutionSlice = slice
 			switch any(execution).(type) {
-			case ExecutionWaiting:
+			case ExecutionWaiting, ExecutionRaised:
 
 			case ExecutionSuspended, ExecutionCompleted:
 
@@ -251,7 +251,7 @@ func TestReceiveTimeoutDurationLaw(t *testing.T) {
 			case ExecutionCompleted:
 
 				return finishes == 1
-			case ExecutionSuspended, ExecutionWaiting:
+			case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
 
 				return false
 			default:

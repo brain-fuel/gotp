@@ -22,6 +22,18 @@ type NilModule struct{}
 
 func (NilModule) isModuleLoadFailure() {}
 
+//goplus:variant (ModuleLoadFailure) NilModuleSet()
+type NilModuleSet struct{}
+
+func (NilModuleSet) isModuleLoadFailure() {}
+
+//goplus:variant (ModuleLoadFailure) InvocationArityOutOfRange(Arity int)
+type InvocationArityOutOfRange struct {
+	Arity int
+}
+
+func (InvocationArityOutOfRange) isModuleLoadFailure() {}
+
 //goplus:variant (ModuleLoadFailure) BeamLoadFailure(Cause beam.Failure)
 type BeamLoadFailure struct {
 	Cause beam.Failure
@@ -35,6 +47,13 @@ type LiteralLoadFailure struct {
 }
 
 func (LiteralLoadFailure) isModuleLoadFailure() {}
+
+//goplus:variant (ModuleLoadFailure) FunctionLoadFailure(Cause beam.FunctionFailure)
+type FunctionLoadFailure struct {
+	Cause beam.FunctionFailure
+}
+
+func (FunctionLoadFailure) isModuleLoadFailure() {}
 
 //goplus:variant (ModuleLoadFailure) MachineLoadFailure(Cause vm.Failure)
 type MachineLoadFailure struct {
@@ -66,6 +85,20 @@ type DuplicateModuleExport struct {
 
 func (DuplicateModuleExport) isModuleLoadFailure() {}
 
+//goplus:variant (ModuleLoadFailure) DuplicateLoadedModule(Name string)
+type DuplicateLoadedModule struct {
+	Name string
+}
+
+func (DuplicateLoadedModule) isModuleLoadFailure() {}
+
+//goplus:variant (ModuleLoadFailure) MissingModule(Name string)
+type MissingModule struct {
+	Name string
+}
+
+func (MissingModule) isModuleLoadFailure() {}
+
 //goplus:variant (ModuleLoadFailure) MissingExport(Function string, Arity uint32)
 type MissingExport struct {
 	Function string
@@ -85,15 +118,20 @@ func (ExportLabelMissing) isModuleLoadFailure() {}
 
 // ModuleLoadFailureCases selects one handler per ModuleLoadFailure variant for ModuleLoadFailureFold.
 type ModuleLoadFailureCases[R any] struct {
-	NilModule             func() R
-	BeamLoadFailure       func(Cause beam.Failure) R
-	LiteralLoadFailure    func(Cause beam.LiteralFailure) R
-	MachineLoadFailure    func(Cause vm.Failure) R
-	ProcessLoadFailure    func(Cause AdapterFailure) R
-	InvalidModuleAtom     func(Index uint64, Cause term.ValidationFailure) R
-	DuplicateModuleExport func(Function string, Arity uint32) R
-	MissingExport         func(Function string, Arity uint32) R
-	ExportLabelMissing    func(Function string, Arity uint32, Label uint64) R
+	NilModule                 func() R
+	NilModuleSet              func() R
+	InvocationArityOutOfRange func(Arity int) R
+	BeamLoadFailure           func(Cause beam.Failure) R
+	LiteralLoadFailure        func(Cause beam.LiteralFailure) R
+	FunctionLoadFailure       func(Cause beam.FunctionFailure) R
+	MachineLoadFailure        func(Cause vm.Failure) R
+	ProcessLoadFailure        func(Cause AdapterFailure) R
+	InvalidModuleAtom         func(Index uint64, Cause term.ValidationFailure) R
+	DuplicateModuleExport     func(Function string, Arity uint32) R
+	DuplicateLoadedModule     func(Name string) R
+	MissingModule             func(Name string) R
+	MissingExport             func(Function string, Arity uint32) R
+	ExportLabelMissing        func(Function string, Arity uint32, Label uint64) R
 }
 
 // ModuleLoadFailureFold reduces ModuleLoadFailure by one-level case analysis.
@@ -101,10 +139,16 @@ func ModuleLoadFailureFold[R any](m ModuleLoadFailure, cs ModuleLoadFailureCases
 	switch m := any(m).(type) {
 	case NilModule:
 		return cs.NilModule()
+	case NilModuleSet:
+		return cs.NilModuleSet()
+	case InvocationArityOutOfRange:
+		return cs.InvocationArityOutOfRange(m.Arity)
 	case BeamLoadFailure:
 		return cs.BeamLoadFailure(m.Cause)
 	case LiteralLoadFailure:
 		return cs.LiteralLoadFailure(m.Cause)
+	case FunctionLoadFailure:
+		return cs.FunctionLoadFailure(m.Cause)
 	case MachineLoadFailure:
 		return cs.MachineLoadFailure(m.Cause)
 	case ProcessLoadFailure:
@@ -113,6 +157,10 @@ func ModuleLoadFailureFold[R any](m ModuleLoadFailure, cs ModuleLoadFailureCases
 		return cs.InvalidModuleAtom(m.Index, m.Cause)
 	case DuplicateModuleExport:
 		return cs.DuplicateModuleExport(m.Function, m.Arity)
+	case DuplicateLoadedModule:
+		return cs.DuplicateLoadedModule(m.Name)
+	case MissingModule:
+		return cs.MissingModule(m.Name)
 	case MissingExport:
 		return cs.MissingExport(m.Function, m.Arity)
 	case ExportLabelMissing:
@@ -125,15 +173,20 @@ func ModuleLoadFailureFold[R any](m ModuleLoadFailure, cs ModuleLoadFailureCases
 // ModuleLoadFailureEqOverrides carries optional per-variant hooks for ModuleLoadFailureEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type ModuleLoadFailureEqOverrides struct {
-	NilModule             func(x, y NilModule) (eq, handled bool)
-	BeamLoadFailure       func(x, y BeamLoadFailure) (eq, handled bool)
-	LiteralLoadFailure    func(x, y LiteralLoadFailure) (eq, handled bool)
-	MachineLoadFailure    func(x, y MachineLoadFailure) (eq, handled bool)
-	ProcessLoadFailure    func(x, y ProcessLoadFailure) (eq, handled bool)
-	InvalidModuleAtom     func(x, y InvalidModuleAtom) (eq, handled bool)
-	DuplicateModuleExport func(x, y DuplicateModuleExport) (eq, handled bool)
-	MissingExport         func(x, y MissingExport) (eq, handled bool)
-	ExportLabelMissing    func(x, y ExportLabelMissing) (eq, handled bool)
+	NilModule                 func(x, y NilModule) (eq, handled bool)
+	NilModuleSet              func(x, y NilModuleSet) (eq, handled bool)
+	InvocationArityOutOfRange func(x, y InvocationArityOutOfRange) (eq, handled bool)
+	BeamLoadFailure           func(x, y BeamLoadFailure) (eq, handled bool)
+	LiteralLoadFailure        func(x, y LiteralLoadFailure) (eq, handled bool)
+	FunctionLoadFailure       func(x, y FunctionLoadFailure) (eq, handled bool)
+	MachineLoadFailure        func(x, y MachineLoadFailure) (eq, handled bool)
+	ProcessLoadFailure        func(x, y ProcessLoadFailure) (eq, handled bool)
+	InvalidModuleAtom         func(x, y InvalidModuleAtom) (eq, handled bool)
+	DuplicateModuleExport     func(x, y DuplicateModuleExport) (eq, handled bool)
+	DuplicateLoadedModule     func(x, y DuplicateLoadedModule) (eq, handled bool)
+	MissingModule             func(x, y MissingModule) (eq, handled bool)
+	MissingExport             func(x, y MissingExport) (eq, handled bool)
+	ExportLabelMissing        func(x, y ExportLabelMissing) (eq, handled bool)
 }
 
 // ModuleLoadFailureEqualWith reports structural equality of a and b under ov.
@@ -153,6 +206,32 @@ func ModuleLoadFailureEqualWith(a, b ModuleLoadFailure, ov ModuleLoadFailureEqOv
 			}
 		}
 		_ = y
+		return true
+	case NilModuleSet:
+		y, ok := any(b).(NilModuleSet)
+		if !ok {
+			return false
+		}
+		if ov.NilModuleSet != nil {
+			if eq, handled := ov.NilModuleSet(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case InvocationArityOutOfRange:
+		y, ok := any(b).(InvocationArityOutOfRange)
+		if !ok {
+			return false
+		}
+		if ov.InvocationArityOutOfRange != nil {
+			if eq, handled := ov.InvocationArityOutOfRange(x, y); handled {
+				return eq
+			}
+		}
+		if x.Arity != y.Arity {
+			return false
+		}
 		return true
 	case BeamLoadFailure:
 		y, ok := any(b).(BeamLoadFailure)
@@ -175,6 +254,20 @@ func ModuleLoadFailureEqualWith(a, b ModuleLoadFailure, ov ModuleLoadFailureEqOv
 		}
 		if ov.LiteralLoadFailure != nil {
 			if eq, handled := ov.LiteralLoadFailure(x, y); handled {
+				return eq
+			}
+		}
+		if x.Cause != y.Cause {
+			return false
+		}
+		return true
+	case FunctionLoadFailure:
+		y, ok := any(b).(FunctionLoadFailure)
+		if !ok {
+			return false
+		}
+		if ov.FunctionLoadFailure != nil {
+			if eq, handled := ov.FunctionLoadFailure(x, y); handled {
 				return eq
 			}
 		}
@@ -244,6 +337,34 @@ func ModuleLoadFailureEqualWith(a, b ModuleLoadFailure, ov ModuleLoadFailureEqOv
 			return false
 		}
 		return true
+	case DuplicateLoadedModule:
+		y, ok := any(b).(DuplicateLoadedModule)
+		if !ok {
+			return false
+		}
+		if ov.DuplicateLoadedModule != nil {
+			if eq, handled := ov.DuplicateLoadedModule(x, y); handled {
+				return eq
+			}
+		}
+		if x.Name != y.Name {
+			return false
+		}
+		return true
+	case MissingModule:
+		y, ok := any(b).(MissingModule)
+		if !ok {
+			return false
+		}
+		if ov.MissingModule != nil {
+			if eq, handled := ov.MissingModule(x, y); handled {
+				return eq
+			}
+		}
+		if x.Name != y.Name {
+			return false
+		}
+		return true
 	case MissingExport:
 		y, ok := any(b).(MissingExport)
 		if !ok {
@@ -296,6 +417,13 @@ func ModuleLoadFailureError(failure ModuleLoadFailure) string {
 	case NilModule:
 
 		return "gotp/erts: BEAM module is nil"
+	case NilModuleSet:
+
+		return "gotp/erts: module set is nil"
+	case InvocationArityOutOfRange:
+		arity := __gp_m0.Arity
+
+		return fmt.Sprintf("gotp/erts: invocation arity %d exceeds uint32", arity)
 	case BeamLoadFailure:
 		cause := __gp_m0.Cause
 
@@ -304,6 +432,10 @@ func ModuleLoadFailureError(failure ModuleLoadFailure) string {
 		cause := __gp_m0.Cause
 
 		return "gotp/erts: load BEAM literals: " + beam.LiteralFailureError(cause)
+	case FunctionLoadFailure:
+		cause := __gp_m0.Cause
+
+		return "gotp/erts: load BEAM functions: " + beam.FunctionFailureError(cause)
 	case MachineLoadFailure:
 		cause := __gp_m0.Cause
 
@@ -322,6 +454,14 @@ func ModuleLoadFailureError(failure ModuleLoadFailure) string {
 		arity := __gp_m0.Arity
 
 		return fmt.Sprintf("gotp/erts: duplicate export %s/%d", function, arity)
+	case DuplicateLoadedModule:
+		name := __gp_m0.Name
+
+		return fmt.Sprintf("gotp/erts: duplicate loaded module %s", name)
+	case MissingModule:
+		name := __gp_m0.Name
+
+		return fmt.Sprintf("gotp/erts: missing loaded module %s", name)
 	case MissingExport:
 		function := __gp_m0.Function
 		arity := __gp_m0.Arity
@@ -339,10 +479,11 @@ func ModuleLoadFailureError(failure ModuleLoadFailure) string {
 }
 
 type ModuleLoaderConfig struct {
-	CodeLimits    beam.CodeDecodeLimits
-	LiteralLimits beam.LiteralDecodeLimits
-	XRegisters    int
-	StepLimit     int
+	CodeLimits     beam.CodeDecodeLimits
+	LiteralLimits  beam.LiteralDecodeLimits
+	FunctionLimits beam.FunctionDecodeLimits
+	XRegisters     int
+	StepLimit      int
 }
 
 type ExportKey struct {
@@ -356,6 +497,102 @@ type LoadedModule struct {
 	instructions []beam.Instruction
 	config       vm.MachineConfig
 	exports      map[ExportKey]uint64
+}
+
+type ModuleSet struct {
+	modules map[string]*LoadedModule
+}
+
+func (module *LoadedModule) image() vm.ModuleImage {
+	return vm.ModuleImage{
+		Name:      module.name,
+		Program:   module.instructions,
+		Atoms:     module.config.Atoms,
+		Literals:  module.config.Literals,
+		Imports:   module.config.Imports,
+		Functions: module.config.Functions,
+		Exports:   module.config.Exports,
+	}
+}
+
+// assayxport:unit gotp.erts.module-set
+func NewModuleSet(modules []*LoadedModule) result.Result[*ModuleSet, ModuleLoadFailure] {
+	indexed := make(map[string]*LoadedModule, len(modules))
+	for _, module := range modules {
+		if module == nil {
+			return result.Err[*ModuleSet, ModuleLoadFailure]{Err: NilModule{}}
+		}
+		if _, duplicate := indexed[module.name]; duplicate {
+			return result.Err[*ModuleSet, ModuleLoadFailure]{Err: DuplicateLoadedModule{Name: module.name}}
+		}
+		indexed[module.name] = module
+	}
+	return result.Ok[*ModuleSet, ModuleLoadFailure]{Value: &ModuleSet{modules: indexed}}
+}
+
+func (modules *ModuleSet) NewProcess(
+	moduleName string,
+	function string,
+	arity uint32,
+	source clock.Clock,
+	registry *CallRegistry,
+) result.Result[*VMProcess, ModuleLoadFailure] {
+	if modules == nil {
+		return result.Err[*VMProcess, ModuleLoadFailure]{Err: NilModuleSet{}}
+	}
+	root, present := modules.modules[moduleName]
+	switch __gp_m1 := any(option.Of(root, present)).(type) {
+	case option.None[*LoadedModule]:
+
+		return result.Err[*VMProcess, ModuleLoadFailure]{Err: MissingModule{Name: moduleName}}
+	case option.Some[*LoadedModule]:
+		module := __gp_m1.Value
+
+		switch __gp_m2 := any(module.Entry(function, arity)).(type) {
+		case result.Err[uint64, ModuleLoadFailure]:
+			failure := __gp_m2.Err
+
+			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
+		case result.Ok[uint64, ModuleLoadFailure]:
+			entry := __gp_m2.Value
+
+			linked := make(map[string]vm.ModuleImage, len(modules.modules)-1)
+			for name, candidate := range modules.modules {
+				if name != moduleName {
+					linked[name] = candidate.image()
+				}
+			}
+			config := module.config
+			config.LinkedModules = linked
+			switch __gp_m3 := any(vm.NewMachine(module.instructions, config)).(type) {
+			case result.Err[*vm.Machine, vm.Failure]:
+				failure := __gp_m3.Err
+
+				return result.Err[*VMProcess, ModuleLoadFailure]{Err: MachineLoadFailure{Cause: failure}}
+			case result.Ok[*vm.Machine, vm.Failure]:
+				machine := __gp_m3.Value
+
+				switch __gp_m4 := any(NewVMProcessWithRegistry(machine, entry, source, registry)).(type) {
+				case result.Err[*VMProcess, AdapterFailure]:
+					failure := __gp_m4.Err
+
+					return result.Err[*VMProcess, ModuleLoadFailure]{Err: ProcessLoadFailure{Cause: failure}}
+				case result.Ok[*VMProcess, AdapterFailure]:
+					process := __gp_m4.Value
+
+					return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 }
 
 func (module *LoadedModule) Name() string {
@@ -372,12 +609,12 @@ func (module *LoadedModule) LiteralCount() int {
 
 func (module *LoadedModule) Entry(function string, arity uint32) result.Result[uint64, ModuleLoadFailure] {
 	label, present := module.exports[ExportKey{Function: function, Arity: arity}]
-	switch __gp_m1 := any(option.Of(label, present)).(type) {
+	switch __gp_m5 := any(option.Of(label, present)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[uint64, ModuleLoadFailure]{Err: MissingExport{Function: function, Arity: arity}}
 	case option.Some[uint64]:
-		entry := __gp_m1.Value
+		entry := __gp_m5.Value
 
 		return result.Ok[uint64, ModuleLoadFailure]{Value: entry}
 	default:
@@ -386,13 +623,13 @@ func (module *LoadedModule) Entry(function string, arity uint32) result.Result[u
 }
 
 func (module *LoadedModule) NewMachine() result.Result[*vm.Machine, ModuleLoadFailure] {
-	switch __gp_m2 := any(vm.NewMachine(module.instructions, module.config)).(type) {
+	switch __gp_m6 := any(vm.NewMachine(module.instructions, module.config)).(type) {
 	case result.Err[*vm.Machine, vm.Failure]:
-		failure := __gp_m2.Err
+		failure := __gp_m6.Err
 
 		return result.Err[*vm.Machine, ModuleLoadFailure]{Err: MachineLoadFailure{Cause: failure}}
 	case result.Ok[*vm.Machine, vm.Failure]:
-		machine := __gp_m2.Value
+		machine := __gp_m6.Value
 
 		return result.Ok[*vm.Machine, ModuleLoadFailure]{Value: machine}
 	default:
@@ -405,29 +642,29 @@ func (module *LoadedModule) NewProcess(
 	arity uint32,
 	source clock.Clock,
 ) result.Result[*VMProcess, ModuleLoadFailure] {
-	switch __gp_m3 := any(module.Entry(function, arity)).(type) {
+	switch __gp_m7 := any(module.Entry(function, arity)).(type) {
 	case result.Err[uint64, ModuleLoadFailure]:
-		failure := __gp_m3.Err
+		failure := __gp_m7.Err
 
 		return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 	case result.Ok[uint64, ModuleLoadFailure]:
-		entry := __gp_m3.Value
+		entry := __gp_m7.Value
 
-		switch __gp_m4 := any(module.NewMachine()).(type) {
+		switch __gp_m8 := any(module.NewMachine()).(type) {
 		case result.Err[*vm.Machine, ModuleLoadFailure]:
-			failure := __gp_m4.Err
+			failure := __gp_m8.Err
 
 			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 		case result.Ok[*vm.Machine, ModuleLoadFailure]:
-			machine := __gp_m4.Value
+			machine := __gp_m8.Value
 
-			switch __gp_m5 := any(NewVMProcessWithClock(machine, entry, source)).(type) {
+			switch __gp_m9 := any(NewVMProcessWithClock(machine, entry, source)).(type) {
 			case result.Err[*VMProcess, AdapterFailure]:
-				failure := __gp_m5.Err
+				failure := __gp_m9.Err
 
 				return result.Err[*VMProcess, ModuleLoadFailure]{Err: ProcessLoadFailure{Cause: failure}}
 			case result.Ok[*VMProcess, AdapterFailure]:
-				process := __gp_m5.Value
+				process := __gp_m9.Value
 
 				return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
 			default:
@@ -447,29 +684,29 @@ func (module *LoadedModule) NewLinkedProcess(
 	source clock.Clock,
 	registry *CallRegistry,
 ) result.Result[*VMProcess, ModuleLoadFailure] {
-	switch __gp_m6 := any(module.Entry(function, arity)).(type) {
+	switch __gp_m10 := any(module.Entry(function, arity)).(type) {
 	case result.Err[uint64, ModuleLoadFailure]:
-		failure := __gp_m6.Err
+		failure := __gp_m10.Err
 
 		return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 	case result.Ok[uint64, ModuleLoadFailure]:
-		entry := __gp_m6.Value
+		entry := __gp_m10.Value
 
-		switch __gp_m7 := any(module.NewMachine()).(type) {
+		switch __gp_m11 := any(module.NewMachine()).(type) {
 		case result.Err[*vm.Machine, ModuleLoadFailure]:
-			failure := __gp_m7.Err
+			failure := __gp_m11.Err
 
 			return result.Err[*VMProcess, ModuleLoadFailure]{Err: failure}
 		case result.Ok[*vm.Machine, ModuleLoadFailure]:
-			machine := __gp_m7.Value
+			machine := __gp_m11.Value
 
-			switch __gp_m8 := any(NewVMProcessWithRegistry(machine, entry, source, registry)).(type) {
+			switch __gp_m12 := any(NewVMProcessWithRegistry(machine, entry, source, registry)).(type) {
 			case result.Err[*VMProcess, AdapterFailure]:
-				failure := __gp_m8.Err
+				failure := __gp_m12.Err
 
 				return result.Err[*VMProcess, ModuleLoadFailure]{Err: ProcessLoadFailure{Cause: failure}}
 			case result.Ok[*VMProcess, AdapterFailure]:
-				process := __gp_m8.Value
+				process := __gp_m12.Value
 
 				return result.Ok[*VMProcess, ModuleLoadFailure]{Value: process}
 			default:
@@ -488,13 +725,13 @@ func DecodeModule(
 	data []byte,
 	config ModuleLoaderConfig,
 ) result.Result[*LoadedModule, ModuleLoadFailure] {
-	switch __gp_m9 := any(beam.Parse(data)).(type) {
+	switch __gp_m13 := any(beam.Parse(data)).(type) {
 	case result.Err[*beam.Module, beam.Failure]:
-		failure := __gp_m9.Err
+		failure := __gp_m13.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[*beam.Module, beam.Failure]:
-		module := __gp_m9.Value
+		module := __gp_m13.Value
 
 		return LoadModule(module, config)
 	default:
@@ -507,13 +744,13 @@ func LoadModuleFile(
 	path string,
 	config ModuleLoaderConfig,
 ) result.Result[*LoadedModule, ModuleLoadFailure] {
-	switch __gp_m10 := any(beam.Load(capability, path)).(type) {
+	switch __gp_m14 := any(beam.Load(capability, path)).(type) {
 	case result.Err[*beam.Module, beam.Failure]:
-		failure := __gp_m10.Err
+		failure := __gp_m14.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[*beam.Module, beam.Failure]:
-		module := __gp_m10.Value
+		module := __gp_m14.Value
 
 		return LoadModule(module, config)
 	default:
@@ -529,25 +766,25 @@ func LoadModule(
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: NilModule{}}
 	}
 	var code []byte
-	switch __gp_m11 := any(module.Chunk("Code")).(type) {
+	switch __gp_m15 := any(module.Chunk("Code")).(type) {
 	case option.None[[]byte]:
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: beam.MissingChunk{ID: "Code"}}}
 	case option.Some[[]byte]:
-		chunk := __gp_m11.Value
+		chunk := __gp_m15.Value
 
 		code = chunk
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 	var decoded beam.DecodedCode
-	switch __gp_m12 := any(beam.DecodeCodeChunk(code, config.CodeLimits)).(type) {
+	switch __gp_m16 := any(beam.DecodeCodeChunk(code, config.CodeLimits)).(type) {
 	case result.Err[beam.DecodedCode, beam.Failure]:
-		failure := __gp_m12.Err
+		failure := __gp_m16.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: BeamLoadFailure{Cause: failure}}
 	case result.Ok[beam.DecodedCode, beam.Failure]:
-		value := __gp_m12.Value
+		value := __gp_m16.Value
 
 		decoded = value
 	default:
@@ -556,9 +793,9 @@ func LoadModule(
 	atoms := make(map[uint64]string, len(module.Atoms))
 	for offset, name := range module.Atoms {
 		index := uint64(offset + 1)
-		switch __gp_m13 := any(term.Atom(name)).(type) {
+		switch __gp_m17 := any(term.Atom(name)).(type) {
 		case result.Err[term.Term, term.ValidationFailure]:
-			failure := __gp_m13.Err
+			failure := __gp_m17.Err
 
 			return result.Err[*LoadedModule, ModuleLoadFailure]{Err: InvalidModuleAtom{Index: index, Cause: failure}}
 		case result.Ok[term.Term, term.ValidationFailure]:
@@ -569,15 +806,28 @@ func LoadModule(
 		}
 	}
 	var literals map[uint64]term.Term
-	switch __gp_m14 := any(beam.DecodeModuleLiterals(module, config.LiteralLimits)).(type) {
+	switch __gp_m18 := any(beam.DecodeModuleLiterals(module, config.LiteralLimits)).(type) {
 	case result.Err[map[uint64]term.Term, beam.LiteralFailure]:
-		failure := __gp_m14.Err
+		failure := __gp_m18.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: LiteralLoadFailure{Cause: failure}}
 	case result.Ok[map[uint64]term.Term, beam.LiteralFailure]:
-		values := __gp_m14.Value
+		values := __gp_m18.Value
 
 		literals = values
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	var functions map[uint64]beam.FunctionTemplate
+	switch __gp_m19 := any(beam.DecodeModuleFunctions(module, config.FunctionLimits)).(type) {
+	case result.Err[map[uint64]beam.FunctionTemplate, beam.FunctionFailure]:
+		failure := __gp_m19.Err
+
+		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: FunctionLoadFailure{Cause: failure}}
+	case result.Ok[map[uint64]beam.FunctionTemplate, beam.FunctionFailure]:
+		values := __gp_m19.Value
+
+		functions = values
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -594,11 +844,11 @@ func LoadModule(
 		if instruction.Opcode.Name != "label" || len(instruction.Operands) != 1 {
 			continue
 		}
-		switch __gp_m15 := any(beam.Uint64(instruction.Operands[0])).(type) {
+		switch __gp_m20 := any(beam.Uint64(instruction.Operands[0])).(type) {
 		case option.None[uint64]:
 
 		case option.Some[uint64]:
-			label := __gp_m15.Value
+			label := __gp_m20.Value
 
 			labels[label] = true
 		default:
@@ -628,12 +878,13 @@ func LoadModule(
 		Atoms:      atoms,
 		Literals:   literals,
 		Imports:    imports,
+		Functions:  functions,
 		ModuleName: module.Name,
 		Exports:    vmExports,
 	}
-	switch __gp_m16 := any(vm.NewMachine(decoded.Instructions, machineConfig)).(type) {
+	switch __gp_m21 := any(vm.NewMachine(decoded.Instructions, machineConfig)).(type) {
 	case result.Err[*vm.Machine, vm.Failure]:
-		failure := __gp_m16.Err
+		failure := __gp_m21.Err
 
 		return result.Err[*LoadedModule, ModuleLoadFailure]{Err: MachineLoadFailure{Cause: failure}}
 	case result.Ok[*vm.Machine, vm.Failure]:

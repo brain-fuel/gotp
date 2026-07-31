@@ -96,7 +96,7 @@ type TypedRegisterKind struct{}
 
 func (TypedRegisterKind) isOperandKind() {}
 
-// OperandKindCases selects one handler per OperandKind variant for Fold.
+// OperandKindCases selects one handler per OperandKind variant for OperandKindFold.
 type OperandKindCases[R any] struct {
 	UnsignedKind       func() R
 	IntegerKind        func() R
@@ -112,8 +112,8 @@ type OperandKindCases[R any] struct {
 	TypedRegisterKind  func() R
 }
 
-// Fold reduces OperandKind by one-level case analysis.
-func Fold[R any](o OperandKind, cs OperandKindCases[R]) R {
+// OperandKindFold reduces OperandKind by one-level case analysis.
+func OperandKindFold[R any](o OperandKind, cs OperandKindCases[R]) R {
 	switch any(o).(type) {
 	case UnsignedKind:
 		return cs.UnsignedKind()
@@ -140,7 +140,7 @@ func Fold[R any](o OperandKind, cs OperandKindCases[R]) R {
 	case TypedRegisterKind:
 		return cs.TypedRegisterKind()
 	default:
-		panic("goplus: impossible enum value in Fold")
+		panic("goplus: impossible enum value in OperandKindFold")
 	}
 }
 

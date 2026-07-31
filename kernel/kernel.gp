@@ -46,6 +46,7 @@ type ProcessInfo struct {
 	TrapExit      bool
 	MailboxLength int
 	Links         []term.PID
+	Aliases       []term.Reference
 	ExitReason    option.Option[term.Term]
 }
 
@@ -83,6 +84,11 @@ type MonitorRemoval enum {
 	MonitorAbsent()
 }
 
+type AliasRemoval enum {
+	AliasRemoved()
+	AliasAbsent()
+}
+
 type route struct {
 	from term.PID
 	to   term.PID
@@ -97,6 +103,7 @@ type process struct {
 	links       map[term.PID]struct{}
 	monitoring  map[term.Reference]term.PID
 	monitoredBy map[term.Reference]term.PID
+	aliases     map[term.Reference]struct{}
 	exitReason  option.Option[term.Term]
 }
 
@@ -108,7 +115,9 @@ type Kernel struct {
 	runQueue      []term.PID
 	queued        map[term.PID]bool
 	sequences     map[route]uint64
+	aliases       map[term.Reference]term.PID
 	wakeups       *wakeQueue
+	tracer        *Tracer
 }
 
 func New(config KernelConfig) *Kernel {
@@ -123,6 +132,7 @@ func New(config KernelConfig) *Kernel {
 		processes: make(map[term.PID]*process),
 		queued:    make(map[term.PID]bool),
 		sequences: make(map[route]uint64),
+		aliases:   make(map[term.Reference]term.PID),
 		wakeups: newWakeQueue(),
 	}
 }
@@ -157,10 +167,12 @@ func (kernel *Kernel) Spawn(
 		links: make(map[term.PID]struct{}),
 		monitoring: make(map[term.Reference]term.PID),
 		monitoredBy: make(map[term.Reference]term.PID),
+		aliases: make(map[term.Reference]struct{}),
 		exitReason: option.None[term.Term],
 	}
 	kernel.processes[pid] = current
 	kernel.enqueueRunnable(pid)
+	kernel.trace(ProcessSpawned(pid))
 	match link {
 	case option.None:
 	case option.Some(target):
@@ -198,6 +210,7 @@ func (kernel *Kernel) Link(
 		case option.Some(rightProcess):
 			leftProcess.links[right] = struct{}{}
 			rightProcess.links[left] = struct{}{}
+			kernel.trace(ProcessesLinked(left, right))
 			return result.Ok[KernelMutation, Failure](KernelMutated())
 		}
 	}
@@ -235,6 +248,7 @@ func (kernel *Kernel) Monitor(
 			watcherProcess.monitoring[reference] = target
 			targetProcess.monitoredBy[reference] = watcher
 		}
+		kernel.trace(ProcessMonitored(watcher, target, reference))
 		return result.Ok[term.Reference, Failure](reference)
 	}
 }
@@ -287,12 +301,79 @@ func (kernel *Kernel) SetTrapExit(
 	}
 }
 
+// assayxport:unit gotp.kernel.process-aliases
+func (kernel *Kernel) Alias(owner term.PID) result.Result[term.Reference, Failure] {
+	match kernel.liveProcess(owner) {
+	case option.None:
+		return result.Err[term.Reference, Failure](MissingProcess("alias owner", owner))
+	case option.Some(current):
+		reference := kernel.newReference()
+		current.aliases[reference] = struct{}{}
+		kernel.aliases[reference] = owner
+		return result.Ok[term.Reference, Failure](reference)
+	}
+}
+
+func (kernel *Kernel) Unalias(owner term.PID, reference term.Reference) AliasRemoval {
+	match kernel.liveProcess(owner) {
+	case option.None:
+		return AliasAbsent()
+	case option.Some(current):
+		_, owned := current.aliases[reference]
+		if !owned {
+			return AliasAbsent()
+		}
+		delete(current.aliases, reference)
+		delete(kernel.aliases, reference)
+		return AliasRemoved()
+	}
+}
+
+func (kernel *Kernel) SendAlias(
+	from term.PID,
+	reference term.Reference,
+	message term.Term,
+) Delivery {
+	owner, present := kernel.aliases[reference]
+	match option.Of(owner, present) {
+	case option.None:
+		return NoProcess()
+	case option.Some(target):
+		return kernel.enqueueSignal(target, UserSignal(from, 0, message.Clone()))
+	}
+}
+
 func (kernel *Kernel) Exit(pid term.PID, reason term.Term) Delivery {
 	match kernel.liveProcess(pid) {
 	case option.None:
 		return NoProcess()
 	case option.Some(current):
 		kernel.terminate(current, reason)
+		return Delivered()
+	}
+}
+
+// assayxport:unit gotp.kernel.process-signals
+func (kernel *Kernel) SendExit(
+	from term.PID,
+	to term.PID,
+	reason term.Term,
+) Delivery {
+	match kernel.liveProcess(to) {
+	case option.None:
+		return NoProcess()
+	case option.Some(target):
+		if isAtom(reason, "kill") {
+			kernel.terminate(target, term.MustAtom("killed"))
+			return Delivered()
+		}
+		if target.trapExit {
+			return kernel.enqueueSignal(to, ExitSignal(from, 0, reason.Clone(), to))
+		}
+		if isAtom(reason, "normal") && from != to {
+			return Delivered()
+		}
+		kernel.terminate(target, reason)
 		return Delivered()
 	}
 }
@@ -319,6 +400,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 				continue
 			}
 			context := &Context{kernel: kernel, process: current}
+			kernel.trace(ProcessScheduled(pid))
 			step := current.behavior(context)
 			reductions++
 			match current.status {
@@ -352,6 +434,13 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 		sort.Slice(links, func(left, right int) bool {
 			return links[left].Less(links[right])
 		})
+		aliases := make([]term.Reference, 0, len(found.aliases))
+		for reference := range found.aliases {
+			aliases = append(aliases, reference)
+		}
+		sort.Slice(aliases, func(left, right int) bool {
+			return aliases[left].Less(aliases[right])
+		})
 		var exitReason option.Option[term.Term] = option.None[term.Term]
 		match found.exitReason {
 		case option.Some(reason):
@@ -360,7 +449,8 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 		}
 		return option.Some[ProcessInfo](ProcessInfo{
 			PID: found.pid, Status: found.status, TrapExit: found.trapExit,
-			MailboxLength: found.mailbox.Len(), Links: links, ExitReason: exitReason,
+			MailboxLength: found.mailbox.Len(), Links: links, Aliases: aliases,
+			ExitReason: exitReason,
 		})
 	}
 }
@@ -398,7 +488,9 @@ func (kernel *Kernel) enqueueSignal(to term.PID, signal Signal) Delivery {
 	case option.Some(current):
 		key := route{from: signalFrom(signal), to: to}
 		kernel.sequences[key]++
-		current.mailbox.Push(withSequence(signal, kernel.sequences[key]))
+		queuedSignal := withSequence(signal, kernel.sequences[key])
+		current.mailbox.Push(queuedSignal)
+		kernel.traceSignal(to, queuedSignal)
 		match current.status {
 		case Waiting:
 			kernel.enqueueRunnable(to)
@@ -424,6 +516,7 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	}
 	current.status = Exited()
 	current.exitReason = option.Some[term.Term](reason.Clone())
+	kernel.trace(ProcessExited(current.pid, reason))
 
 	links := make([]term.PID, 0, len(current.links))
 	for linked := range current.links {
@@ -486,6 +579,10 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		}
 	}
 	current.monitoring = make(map[term.Reference]term.PID)
+	for reference := range current.aliases {
+		delete(kernel.aliases, reference)
+	}
+	current.aliases = make(map[term.Reference]struct{})
 }
 
 func (kernel *Kernel) report(reductions int) RunReport {
@@ -504,10 +601,14 @@ func (kernel *Kernel) report(reductions int) RunReport {
 }
 
 func isNormal(reason term.Term) bool {
-	match reason {
-	case term.AtomTerm(name):
-		return name == "normal"
-	case _:
+	return isAtom(reason, "normal")
+}
+
+func isAtom(value term.Term, expected string) bool {
+	match term.AtomName(value) {
+	case option.Some(name):
+		return name == expected
+	case option.None:
 		return false
 	}
 }
@@ -540,27 +641,41 @@ func (context *Context) ReceiveMessage(
 	accept func(term.Term) bool,
 ) option.Option[MessageEnvelope] {
 	received := context.process.mailbox.Receive(func(signal Signal) bool {
-		return acceptsMessage(signal, accept)
+		match signalMessage(signal) {
+		case option.None:
+			return false
+		case option.Some(envelope):
+			return accept == nil || accept(envelope.Message)
+		}
 	})
 	match received {
 	case option.None:
 		return option.None[MessageEnvelope]
 	case option.Some(signal):
-		match signal {
-		case UserSignal(from, _, message):
-			return option.Some[MessageEnvelope](MessageEnvelope{Message: message, From: from})
-		case _:
-			return option.None[MessageEnvelope]
-		}
+		return signalMessage(signal)
 	}
 }
 
-func acceptsMessage(signal Signal, accept func(term.Term) bool) bool {
+func signalMessage(signal Signal) option.Option[MessageEnvelope] {
 	match signal {
 	case UserSignal(_, _, message):
-		return accept == nil || accept(message)
-	case _:
-		return false
+		return option.Some[MessageEnvelope](MessageEnvelope{Message: message, From: signalFrom(signal)})
+	case ExitSignal(from, _, reason, _):
+		return option.Some[MessageEnvelope](MessageEnvelope{
+			Message: term.Tuple(term.MustAtom("EXIT"), term.PIDTerm(from), reason),
+			From: from,
+		})
+	case DownSignal(from, _, reason, reference, target):
+		return option.Some[MessageEnvelope](MessageEnvelope{
+			Message: term.Tuple(
+				term.MustAtom("DOWN"),
+				term.ReferenceTerm(reference),
+				term.MustAtom("process"),
+				term.PIDTerm(target),
+				reason,
+			),
+			From: from,
+		})
 	}
 }
 
@@ -590,9 +705,25 @@ func (context *Context) Demonitor(
 	return context.kernel.Demonitor(context.process.pid, reference, flush)
 }
 
+func (context *Context) Alias() result.Result[term.Reference, Failure] {
+	return context.kernel.Alias(context.process.pid)
+}
+
+func (context *Context) Unalias(reference term.Reference) AliasRemoval {
+	return context.kernel.Unalias(context.process.pid, reference)
+}
+
+func (context *Context) SendAlias(reference term.Reference, message term.Term) Delivery {
+	return context.kernel.SendAlias(context.process.pid, reference, message)
+}
+
 func (context *Context) SetTrapExit(enabled bool) KernelMutation {
 	context.process.trapExit = enabled
 	return KernelMutated()
+}
+
+func (context *Context) Exit(other term.PID, reason term.Term) Delivery {
+	return context.kernel.SendExit(context.process.pid, other, reason)
 }
 
 // Terminate is the capability held by a running behavior. Supervisor APIs

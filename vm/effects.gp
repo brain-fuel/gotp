@@ -39,8 +39,11 @@ type ExternalFunction struct {
 	Arity    uint32
 }
 
+// assayxport:unit gotp.vm.exception-propagation
 type ExternalCallOutcome enum {
+	ExternalCallUnbound()
 	ExternalCallReturned(Value term.Term)
+	ExternalCallRaised(Class term.Term, Reason term.Term)
 	ExternalCallRejected(Detail string)
 }
 

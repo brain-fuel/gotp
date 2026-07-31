@@ -76,12 +76,7 @@ func (registry *CallRegistry) Call(
 	implementation, present := registry.implementations[target]
 	match option.Of(implementation, present) {
 	case option.None:
-		return vm.ExternalCallRejected(fmt.Sprintf(
-			"unbound external function %s:%s/%d",
-			target.Module,
-			target.Function,
-			target.Arity,
-		))
+		return vm.ExternalCallUnbound()
 	case option.Some(call):
 		if len(arguments) != int(target.Arity) {
 			return vm.ExternalCallRejected(fmt.Sprintf(

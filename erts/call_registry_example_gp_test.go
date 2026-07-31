@@ -109,7 +109,7 @@ func TestLoadedImportExecutesThroughRegistry(t *testing.T) {
 				if !term.Equal(value, term.Integer(14)) {
 					t.Fatalf("external result = %v", value)
 				}
-			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+			case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 				t.Fatalf("external process state = %T", state)
 			default:
@@ -147,6 +147,33 @@ func TestCallRegistryRejectsDuplicateMFA(t *testing.T) {
 		case InvalidExternalFunction, NilExternalImplementation:
 
 			t.Fatalf("unexpected failure: %v", failure)
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestCallRegistryDistinguishesUnboundMFA(t *testing.T) {
+	switch __gp_m8 := any(NewCallRegistry(nil)).(type) {
+	case result.Err[*CallRegistry, CallRegistryFailure]:
+		failure := __gp_m8.Err
+
+		t.Fatal(failure)
+	case result.Ok[*CallRegistry, CallRegistryFailure]:
+		registry := __gp_m8.Value
+
+		var outcome vm.ExternalCallOutcome = registry.Call(
+			vm.ExternalFunction{Module: "demo", Function: "missing", Arity: 0},
+			nil,
+		)
+		switch any(outcome).(type) {
+		case vm.ExternalCallUnbound:
+
+		case vm.ExternalCallReturned, vm.ExternalCallRaised, vm.ExternalCallRejected:
+
+			t.Fatalf("unbound outcome = %T", outcome)
 		default:
 			panic("goplus: impossible enum value in match")
 		}

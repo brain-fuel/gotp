@@ -39,6 +39,7 @@ type VMProcessState enum {
 	VMProcessSuspended(TotalReductions int, TotalInstructions int)
 	VMProcessWaiting(TotalReductions int, TotalInstructions int)
 	VMProcessCompleted(Value term.Term, TotalReductions int, TotalInstructions int)
+	VMProcessRaised(Class term.Term, Reason term.Term, TotalReductions int, TotalInstructions int)
 	VMProcessFailed(Detail string, TotalReductions int, TotalInstructions int)
 }
 
@@ -138,6 +139,8 @@ func (process *VMProcess) Step(context *kernel.Context) kernel.StepResult {
 		return process.resume(context)
 	case VMProcessCompleted(_, _, _):
 		return kernel.Stop(term.MustAtom("normal"))
+	case VMProcessRaised(class, reason, _, _):
+		return kernel.Stop(vmExceptionReason(class, reason))
 	case VMProcessFailed(detail, _, _):
 		return kernel.Stop(vmFailureReason(detail))
 	}
@@ -149,14 +152,24 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 		Messaging: vm.MessagingEffects{
 		Send: func(destination term.Term, message term.Term) vm.SendOutcome {
 			match term.TermPIDValue(destination) {
-			case option.None:
-				return vm.SendRejected("destination is not a PID")
 			case option.Some(pid):
 				match context.Send(pid, message) {
 				case kernel.Delivered:
 					return vm.MessageSent(message)
 				case kernel.NoProcess:
 					return vm.MessageSent(message)
+				}
+			case option.None:
+				match term.TermReferenceValue(destination) {
+				case option.None:
+					return vm.SendRejected("destination is not a PID or alias")
+				case option.Some(reference):
+					match context.SendAlias(reference, message) {
+					case kernel.Delivered:
+						return vm.MessageSent(message)
+					case kernel.NoProcess:
+						return vm.MessageSent(message)
+					}
 				}
 			}
 		},
@@ -178,7 +191,9 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 		return process.fail(cause.Error())
 	case result.Ok(host):
 		if process.callRegistry != nil {
-			match vm.HostGrantExternalCalls(host, process.callRegistry.Call) {
+			match vm.HostGrantExternalCalls(host, func(target vm.ExternalFunction, arguments []term.Term) vm.ExternalCallOutcome {
+				return process.contextualCall(context, target, arguments)
+			}) {
 			case result.Err(cause):
 				return process.fail(cause.Error())
 			case result.Ok(granted):
@@ -191,7 +206,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 		)
 	match resumed {
 	case result.Err(cause):
-		return process.fail(cause.Error())
+		return process.failVM(cause)
 	case result.Ok(slice):
 		var execution vm.ExecutionSlice = slice
 		match execution {
@@ -213,6 +228,17 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			)
 			process.state = waiting
 			return kernel.Wait()
+		case vm.ExecutionRaised(class, reason, progress):
+			process.reductions += progress.Reductions
+			process.instructions = progress.TotalInstructions
+			var raised VMProcessState = VMProcessRaised(
+				term.Clone(class),
+				term.Clone(reason),
+				process.reductions,
+				progress.TotalInstructions,
+			)
+			process.state = raised
+			return kernel.Stop(vmExceptionReason(class, reason))
 		case vm.ExecutionCompleted(value, progress):
 			process.reductions += progress.Reductions
 			process.instructions = progress.TotalInstructions
@@ -226,6 +252,32 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 		}
 	}
 	}
+}
+
+// assayxport:unit gotp.erts.vm-process-exceptions
+func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
+	var checked vm.Failure = failure
+	match checked {
+	case vm.RaisedException(class, reason):
+		var raised VMProcessState = VMProcessRaised(
+			term.Clone(class),
+			term.Clone(reason),
+			process.reductions,
+			process.instructions,
+		)
+		process.state = raised
+		return kernel.Stop(vmExceptionReason(class, reason))
+	case vm.InvalidConfiguration(_), vm.ImmediateOutOfRange(_), vm.HeapIndexOutOfRange(_, _), vm.MemoryFailure(_), vm.InvalidProgram(_), vm.RegisterOutOfRange(_, _), vm.UninitializedRegister(_, _), vm.MissingConstant(_, _), vm.MissingLabel(_), vm.StepLimitExceeded(_), vm.UnsupportedOpcode(_, _, _):
+		return process.fail(failure.Error())
+	}
+}
+
+func vmExceptionReason(class term.Term, reason term.Term) term.Term {
+	return term.Tuple(
+		term.MustAtom("gotp_exception"),
+		term.Clone(class),
+		term.Clone(reason),
+	)
 }
 
 func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration) vm.TimerWaitOutcome {

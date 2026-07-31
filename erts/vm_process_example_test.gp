@@ -70,7 +70,7 @@ func TestKernelVMReductionPartitionProperty(t *testing.T) {
 				case VMProcessSuspended(_, _):
 				case VMProcessWaiting(_, _):
 					return false
-				case VMProcessFailed(_, _, _):
+				case VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 					return false
 				case VMProcessCompleted(value, reductions, _):
 					return totalKernelReductions == 3 && reductions == 3 &&

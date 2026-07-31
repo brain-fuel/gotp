@@ -150,7 +150,7 @@ func ExampleLoadedModule_NewProcess() {
 				case option.Some(integer):
 					fmt.Println(integer)
 				}
-			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 				panic("process did not complete")
 			}
 		}
@@ -262,7 +262,7 @@ func TestLoadedLiteralExecutesAsRuntimeTerm(t *testing.T) {
 				if !term.Equal(value, want) {
 					t.Fatalf("literal value = %v", value)
 				}
-			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 				t.Fatalf("literal process state = %T", state)
 			}
 		}
@@ -326,7 +326,7 @@ func TestPinnedOTPListsReverseFastPath(t *testing.T) {
 			if !term.Equal(value, want) || reductions != 1 || instructions != 9 {
 				t.Fatalf("reverse = %v, reductions = %d, instructions = %d", value, reductions, instructions)
 			}
-		case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+		case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 			t.Fatalf("reverse state = %T", state)
 		}
 	}

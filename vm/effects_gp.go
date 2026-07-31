@@ -306,8 +306,15 @@ type ExternalFunction struct {
 	Arity    uint32
 }
 
+// assayxport:unit gotp.vm.exception-propagation
+//
 //goplus:enum ExternalCallOutcome
 type ExternalCallOutcome interface{ isExternalCallOutcome() }
+
+//goplus:variant (ExternalCallOutcome) ExternalCallUnbound()
+type ExternalCallUnbound struct{}
+
+func (ExternalCallUnbound) isExternalCallOutcome() {}
 
 //goplus:variant (ExternalCallOutcome) ExternalCallReturned(Value term.Term)
 type ExternalCallReturned struct {
@@ -315,6 +322,14 @@ type ExternalCallReturned struct {
 }
 
 func (ExternalCallReturned) isExternalCallOutcome() {}
+
+//goplus:variant (ExternalCallOutcome) ExternalCallRaised(Class term.Term, Reason term.Term)
+type ExternalCallRaised struct {
+	Class  term.Term
+	Reason term.Term
+}
+
+func (ExternalCallRaised) isExternalCallOutcome() {}
 
 //goplus:variant (ExternalCallOutcome) ExternalCallRejected(Detail string)
 type ExternalCallRejected struct {
@@ -325,15 +340,21 @@ func (ExternalCallRejected) isExternalCallOutcome() {}
 
 // ExternalCallOutcomeCases selects one handler per ExternalCallOutcome variant for ExternalCallOutcomeFold.
 type ExternalCallOutcomeCases[R any] struct {
+	ExternalCallUnbound  func() R
 	ExternalCallReturned func(Value term.Term) R
+	ExternalCallRaised   func(Class term.Term, Reason term.Term) R
 	ExternalCallRejected func(Detail string) R
 }
 
 // ExternalCallOutcomeFold reduces ExternalCallOutcome by one-level case analysis.
 func ExternalCallOutcomeFold[R any](e ExternalCallOutcome, cs ExternalCallOutcomeCases[R]) R {
 	switch m := any(e).(type) {
+	case ExternalCallUnbound:
+		return cs.ExternalCallUnbound()
 	case ExternalCallReturned:
 		return cs.ExternalCallReturned(m.Value)
+	case ExternalCallRaised:
+		return cs.ExternalCallRaised(m.Class, m.Reason)
 	case ExternalCallRejected:
 		return cs.ExternalCallRejected(m.Detail)
 	default:
@@ -344,7 +365,9 @@ func ExternalCallOutcomeFold[R any](e ExternalCallOutcome, cs ExternalCallOutcom
 // ExternalCallOutcomeEqOverrides carries optional per-variant hooks for ExternalCallOutcomeEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type ExternalCallOutcomeEqOverrides struct {
+	ExternalCallUnbound  func(x, y ExternalCallUnbound) (eq, handled bool)
 	ExternalCallReturned func(x, y ExternalCallReturned) (eq, handled bool)
+	ExternalCallRaised   func(x, y ExternalCallRaised) (eq, handled bool)
 	ExternalCallRejected func(x, y ExternalCallRejected) (eq, handled bool)
 }
 
@@ -354,6 +377,18 @@ func ExternalCallOutcomeEqualWith(a, b ExternalCallOutcome, ov ExternalCallOutco
 		return a == nil && b == nil
 	}
 	switch x := any(a).(type) {
+	case ExternalCallUnbound:
+		y, ok := any(b).(ExternalCallUnbound)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallUnbound != nil {
+			if eq, handled := ov.ExternalCallUnbound(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
 	case ExternalCallReturned:
 		y, ok := any(b).(ExternalCallReturned)
 		if !ok {
@@ -365,6 +400,23 @@ func ExternalCallOutcomeEqualWith(a, b ExternalCallOutcome, ov ExternalCallOutco
 			}
 		}
 		if x.Value != y.Value {
+			return false
+		}
+		return true
+	case ExternalCallRaised:
+		y, ok := any(b).(ExternalCallRaised)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallRaised != nil {
+			if eq, handled := ov.ExternalCallRaised(x, y); handled {
+				return eq
+			}
+		}
+		if x.Class != y.Class {
+			return false
+		}
+		if x.Reason != y.Reason {
 			return false
 		}
 		return true

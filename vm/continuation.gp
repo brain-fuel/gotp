@@ -26,6 +26,7 @@ type ExecutionSlice enum {
 	ExecutionSuspended(Progress ExecutionProgress)
 	ExecutionWaiting(Progress ExecutionProgress)
 	ExecutionCompleted(Value term.Term, Progress ExecutionProgress)
+	ExecutionRaised(Class term.Term, Reason term.Term, Progress ExecutionProgress)
 }
 
 type instructionOutcome enum {
@@ -61,7 +62,7 @@ func VMReductionBudgetValue(budget VMReductionBudget) int {
 
 func OpcodeReductionClass(name string) ReductionClass {
 	switch name {
-	case "call", "call_only", "call_last", "call_ext", "call_ext_only", "call_ext_last", "return", "send", "loop_rec_end":
+	case "call", "call_only", "call_last", "call_ext", "call_ext_only", "call_ext_last", "call_fun", "call_fun2", "return", "send", "loop_rec_end":
 		return DispatchReduction()
 	default:
 		return ReductionFree()
@@ -83,9 +84,14 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 		return result.Err[*Continuation, Failure](MissingLabel(entryLabel))
 	}
 	machine.pc = entry + 1
+	if machine.pc < len(machine.program) && machine.program[machine.pc].Opcode.Name == "func_info" {
+		machine.pc++
+	}
 	machine.steps = 0
 	machine.returnPCs = machine.returnPCs[:0]
 	machine.returnImages = machine.returnImages[:0]
+	machine.handlers = machine.handlers[:0]
+	machine.nextHandler = 0
 	if machine.root != nil {
 		machine.activate(machine.root)
 	}
@@ -147,7 +153,29 @@ func (continuation *Continuation) ResumeWithHost(
 		)
 		match executed {
 		case result.Err(failure):
-			return result.Err[ExecutionSlice, Failure](failure)
+			var checked Failure = failure
+			match checked {
+			case RaisedException(class, reason):
+				match machine.unwindException(class, reason) {
+				case result.Err(unwindFailure):
+					return result.Err[ExecutionSlice, Failure](unwindFailure)
+				case result.Ok(caught):
+					if caught {
+						continue
+					}
+				}
+				return result.Ok[ExecutionSlice, Failure](ExecutionRaised(
+					term.Clone(class),
+					term.Clone(reason),
+					ExecutionProgress{
+						Reductions: reductions,
+						Instructions: instructions,
+						TotalInstructions: machine.steps,
+					},
+				))
+			case InvalidConfiguration(_), ImmediateOutOfRange(_), HeapIndexOutOfRange(_, _), MemoryFailure(_), InvalidProgram(_), RegisterOutOfRange(_, _), UninitializedRegister(_, _), MissingConstant(_, _), MissingLabel(_), StepLimitExceeded(_), UnsupportedOpcode(_, _, _):
+				return result.Err[ExecutionSlice, Failure](failure)
+			}
 		case result.Ok(outcome):
 			var instructionState instructionOutcome = outcome
 			match instructionState {
@@ -186,8 +214,13 @@ func executeInstruction(
 ) result.Result[instructionOutcome, Failure] {
 	next := machine.pc + 1
 	switch instruction.Opcode.Name {
-	case "label", "func_info":
+	case "label":
 		machine.pc = next
+	case "func_info":
+		return result.Err[instructionOutcome, Failure](RaisedException(
+			term.MustAtom("error"),
+			term.MustAtom("function_clause"),
+		))
 	case "move":
 		match machine.move(instruction) {
 		case result.Err(failure):
@@ -235,6 +268,22 @@ func executeInstruction(
 		return executeExternalCall(machine, instruction, host, true, false)
 	case "call_ext_last":
 		return executeExternalCall(machine, instruction, host, true, true)
+	case "bif0", "bif1", "bif2", "gc_bif1", "gc_bif2", "gc_bif3":
+		return executeBIFInstruction(machine, instruction, host)
+	case "is_lt", "is_ge":
+		return executeTermOrderInstruction(machine, instruction)
+	case "make_fun3":
+		return executeMakeFun3(machine, instruction)
+	case "call_fun", "call_fun2":
+		return executeCallFun(machine, instruction)
+	case "is_function", "is_function2":
+		return executeFunctionTest(machine, instruction)
+	case "catch", "try":
+		return executeExceptionSetup(machine, instruction)
+	case "catch_end", "try_end", "try_case":
+		return executeExceptionCleanup(machine, instruction)
+	case "raise", "case_end", "badmatch", "if_end", "badrecord", "try_case_end":
+		return executeExceptionRaise(machine, instruction)
 	case "allocate", "allocate_zero":
 		match machine.allocate(instruction, 0) {
 		case result.Ok(MachineMutated):

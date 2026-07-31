@@ -16,6 +16,7 @@ type MachineConfig struct {
 	Atoms      map[uint64]string
 	Literals   map[uint64]term.Term
 	Imports    map[uint64]ExternalFunction
+	Functions  map[uint64]beam.FunctionTemplate
 	ModuleName string
 	Exports    map[ExternalFunction]uint64
 	LinkedModules map[string]ModuleImage
@@ -27,6 +28,7 @@ type ModuleImage struct {
 	Atoms    map[uint64]string
 	Literals map[uint64]term.Term
 	Imports  map[uint64]ExternalFunction
+	Functions map[uint64]beam.FunctionTemplate
 	Exports  map[ExternalFunction]uint64
 }
 
@@ -37,6 +39,7 @@ type machineImage struct {
 	atoms    map[uint64]string
 	literals map[uint64]term.Term
 	imports  map[uint64]ExternalFunction
+	functions map[uint64]beam.FunctionTemplate
 	exports  map[ExternalFunction]uint64
 }
 
@@ -57,11 +60,14 @@ type Machine struct {
 	atoms     map[uint64]string
 	literals  map[uint64]term.Term
 	imports   map[uint64]ExternalFunction
+	functions map[uint64]beam.FunctionTemplate
 	returnPCs []int
 	returnImages []*machineImage
 	current   *machineImage
 	root      *machineImage
 	modules   map[string]*machineImage
+	handlers  []exceptionHandler
+	nextHandler uint64
 	pc        int
 	steps     int
 	stepLimit int
@@ -121,6 +127,7 @@ func NewMachine(
 		atoms: cloneAtomPool(config.Atoms),
 		literals: cloneLiteralPool(config.Literals),
 		imports: cloneImportPool(config.Imports),
+		functions: cloneFunctionPool(config.Functions),
 		exports: cloneExportPool(config.Exports),
 	}
 	match validateImageExports(root) {
@@ -151,6 +158,7 @@ func NewMachine(
 		atoms: root.atoms,
 		literals: root.literals,
 		imports: root.imports,
+		functions: root.functions,
 		current: root,
 		root: root,
 		modules: modules,
@@ -194,6 +202,8 @@ func (machine *Machine) Run(entryLabel uint64) result.Result[RunResult, Failure]
 				return result.Err[RunResult, Failure](InvalidProgram(
 					"execution waited without a process scheduler",
 				))
+			case ExecutionRaised(class, reason, _):
+				return result.Err[RunResult, Failure](RaisedException(class, reason))
 			case ExecutionCompleted(value, _):
 				return result.Ok[RunResult, Failure](RunResult{Value: value, Steps: machine.steps})
 			}
@@ -505,6 +515,14 @@ func cloneImportPool(source map[uint64]ExternalFunction) map[uint64]ExternalFunc
 	return cloned
 }
 
+func cloneFunctionPool(source map[uint64]beam.FunctionTemplate) map[uint64]beam.FunctionTemplate {
+	cloned := make(map[uint64]beam.FunctionTemplate, len(source))
+	for index, function := range source {
+		cloned[index] = function
+	}
+	return cloned
+}
+
 func cloneExportPool(source map[ExternalFunction]uint64) map[ExternalFunction]uint64 {
 	cloned := make(map[ExternalFunction]uint64, len(source))
 	for target, label := range source {
@@ -557,6 +575,7 @@ func newMachineImage(config ModuleImage) result.Result[*machineImage, Failure] {
 			atoms: cloneAtomPool(config.Atoms),
 			literals: cloneLiteralPool(config.Literals),
 			imports: cloneImportPool(config.Imports),
+			functions: cloneFunctionPool(config.Functions),
 			exports: cloneExportPool(config.Exports),
 		}
 		match validateImageExports(image) {
@@ -587,6 +606,7 @@ func (machine *Machine) activate(image *machineImage) {
 	machine.atoms = image.atoms
 	machine.literals = image.literals
 	machine.imports = image.imports
+	machine.functions = image.functions
 }
 
 func (machine *Machine) pushReturn(pc int) {

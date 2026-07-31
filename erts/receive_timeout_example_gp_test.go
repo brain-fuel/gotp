@@ -99,7 +99,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 	switch any(waiting).(type) {
 	case VMProcessWaiting:
 
-	case VMProcessRunning, VMProcessSuspended, VMProcessCompleted, VMProcessFailed:
+	case VMProcessRunning, VMProcessSuspended, VMProcessCompleted, VMProcessRaised, VMProcessFailed:
 
 		t.Fatalf("expected waiting state, got %T", waiting)
 	default:
@@ -111,7 +111,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 	switch any(early).(type) {
 	case VMProcessWaiting:
 
-	case VMProcessRunning, VMProcessSuspended, VMProcessCompleted, VMProcessFailed:
+	case VMProcessRunning, VMProcessSuspended, VMProcessCompleted, VMProcessRaised, VMProcessFailed:
 
 		t.Fatalf("timer fired early: %T", early)
 	default:
@@ -127,7 +127,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 		if !term.Equal(value, term.Integer(42)) {
 			t.Fatalf("unexpected value: %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 		t.Fatalf("expected completed state, got %T", completed)
 	default:
@@ -175,7 +175,7 @@ func TestSelectedMessageCancelsReceiveTimeout(t *testing.T) {
 		if !term.Equal(value, term.Integer(7)) {
 			t.Fatalf("message branch returned %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 		t.Fatalf("message did not complete receive: %T", selected)
 	default:
@@ -191,7 +191,7 @@ func TestSelectedMessageCancelsReceiveTimeout(t *testing.T) {
 		if !term.Equal(value, term.Integer(7)) {
 			t.Fatalf("cancelled timeout changed result to %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessFailed:
+	case VMProcessRunning, VMProcessSuspended, VMProcessWaiting, VMProcessRaised, VMProcessFailed:
 
 		t.Fatalf("cancelled timeout resumed process: %T", afterDeadline)
 	default:

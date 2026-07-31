@@ -59,7 +59,7 @@ func ExampleContinuation_Resume() {
 					case ExecutionSuspended:
 
 						fmt.Println("suspended")
-					case ExecutionWaiting:
+					case ExecutionWaiting, ExecutionRaised:
 
 						fmt.Println("waiting")
 					case ExecutionCompleted:
@@ -150,7 +150,7 @@ func TestContinuationPartitionLaw(t *testing.T) {
 									switch __gp_m11 := any(execution).(type) {
 									case ExecutionSuspended:
 
-									case ExecutionWaiting:
+									case ExecutionWaiting, ExecutionRaised:
 
 										return false
 									case ExecutionCompleted:

@@ -128,7 +128,7 @@ func ExampleHostGrantExternalCalls() {
 				default:
 					panic("goplus: impossible enum value in match")
 				}
-			case ExecutionSuspended, ExecutionWaiting:
+			case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
 
 				panic("external tail call did not complete")
 			default:
@@ -195,7 +195,7 @@ func TestExternalCallAndReturnEachConsumeReduction(t *testing.T) {
 			if progress.Reductions != 1 {
 				t.Fatalf("external call reductions = %d", progress.Reductions)
 			}
-		case ExecutionWaiting, ExecutionCompleted:
+		case ExecutionWaiting, ExecutionRaised, ExecutionCompleted:
 
 			t.Fatal("external call did not suspend before return")
 		default:
@@ -221,7 +221,7 @@ func TestExternalCallAndReturnEachConsumeReduction(t *testing.T) {
 			if progress.Reductions != 1 || !term.Equal(value, term.Integer(14)) {
 				t.Fatalf("return = %v, reductions = %d", value, progress.Reductions)
 			}
-		case ExecutionSuspended, ExecutionWaiting:
+		case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
 
 			t.Fatal("return did not complete")
 		default:
@@ -277,7 +277,7 @@ func TestExternalTailCallDeallocatesFrame(t *testing.T) {
 				if !term.Equal(value, term.Integer(14)) {
 					t.Fatalf("tail result = %v", value)
 				}
-			case ExecutionSuspended, ExecutionWaiting:
+			case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
 
 				t.Fatal("tail call did not complete")
 			default:
@@ -288,5 +288,160 @@ func TestExternalTailCallDeallocatesFrame(t *testing.T) {
 		}
 	default:
 		panic("goplus: impossible enum value in match")
+	}
+}
+
+func linkedExternalMachine(tail bool) *Machine {
+	call := "call_ext"
+	if tail {
+		call = "call_ext_only"
+	}
+	root := []beam.Instruction{
+		externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(1)}),
+		externalCallInstruction(call, beam.UnsignedOperand{Value: big.NewInt(0)}, beam.UnsignedOperand{Value: big.NewInt(0)}),
+		externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+		externalCallInstruction("return"),
+	}
+	linkedTarget := ExternalFunction{Module: "linked", Function: "answer", Arity: 0}
+	linked := ModuleImage{
+		Name: "linked",
+		Program: []beam.Instruction{
+			externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(2)}),
+			externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+			externalCallInstruction("return"),
+		},
+		Atoms:   map[uint64]string{1: "linked"},
+		Exports: map[ExternalFunction]uint64{linkedTarget: 2},
+	}
+	switch __gp_m18 := any(NewMachine(root, MachineConfig{
+		XRegisters:    1,
+		StepLimit:     20,
+		Atoms:         map[uint64]string{1: "caller"},
+		Imports:       map[uint64]ExternalFunction{0: linkedTarget},
+		ModuleName:    "caller",
+		LinkedModules: map[string]ModuleImage{"linked": linked},
+	})).(type) {
+	case result.Err[*Machine, Failure]:
+		failure := __gp_m18.Err
+
+		panic(Error(failure))
+	case result.Ok[*Machine, Failure]:
+		machine := __gp_m18.Value
+
+		return machine
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func runLinkedExternalMachine(t *testing.T, machine *Machine, host HostCapabilities) term.Term {
+	var continuation *Continuation
+	switch __gp_m19 := any(machine.Start(1)).(type) {
+	case result.Err[*Continuation, Failure]:
+		failure := __gp_m19.Err
+
+		t.Fatal(failure)
+	case result.Ok[*Continuation, Failure]:
+		started := __gp_m19.Value
+
+		continuation = started
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m20 := any(NewVMReductionBudget(10)).(type) {
+	case result.Err[VMReductionBudget, Failure]:
+		failure := __gp_m20.Err
+
+		t.Fatal(failure)
+	case result.Ok[VMReductionBudget, Failure]:
+		budget := __gp_m20.Value
+
+		switch __gp_m21 := any(continuation.ResumeWithHost(budget, host)).(type) {
+		case result.Err[ExecutionSlice, Failure]:
+			failure := __gp_m21.Err
+
+			t.Fatal(failure)
+		case result.Ok[ExecutionSlice, Failure]:
+			slice := __gp_m21.Value
+
+			var execution ExecutionSlice = slice
+			switch __gp_m22 := any(execution).(type) {
+			case ExecutionCompleted:
+				value := __gp_m22.Value
+
+				return value
+			case ExecutionSuspended, ExecutionWaiting, ExecutionRaised:
+
+				t.Fatalf("linked execution = %T", execution)
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	panic("unreachable")
+}
+
+// assayxport:law gotp.vm.module-continuation-laws
+func TestLinkedCallRestoresCallerImage(t *testing.T) {
+	value := runLinkedExternalMachine(t, linkedExternalMachine(false), NoHostCapabilities())
+	if !term.Equal(value, term.MustAtom("caller")) {
+		t.Fatalf("ordinary linked result = %v", value)
+	}
+}
+
+func TestLinkedTailCallRetainsTargetImage(t *testing.T) {
+	value := runLinkedExternalMachine(t, linkedExternalMachine(true), NoHostCapabilities())
+	if !term.Equal(value, term.MustAtom("linked")) {
+		t.Fatalf("tail linked result = %v", value)
+	}
+}
+
+func TestNativeCallOverridesLinkedBeamExport(t *testing.T) {
+	hostResult := HostGrantExternalCalls(NoHostCapabilities(), func(_ ExternalFunction, _ []term.Term) ExternalCallOutcome {
+		return ExternalCallReturned{Value: term.MustAtom("native")}
+	})
+	var host HostCapabilities
+	switch __gp_m23 := any(hostResult).(type) {
+	case result.Err[HostCapabilities, Failure]:
+		failure := __gp_m23.Err
+
+		t.Fatal(failure)
+	case result.Ok[HostCapabilities, Failure]:
+		granted := __gp_m23.Value
+
+		host = granted
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	value := runLinkedExternalMachine(t, linkedExternalMachine(true), host)
+	if !term.Equal(value, term.MustAtom("native")) {
+		t.Fatalf("native override result = %v", value)
+	}
+}
+
+func TestUnboundNativeCallFallsBackToLinkedExport(t *testing.T) {
+	hostResult := HostGrantExternalCalls(NoHostCapabilities(), func(_ ExternalFunction, _ []term.Term) ExternalCallOutcome {
+		return ExternalCallUnbound{}
+	})
+	var host HostCapabilities
+	switch __gp_m24 := any(hostResult).(type) {
+	case result.Err[HostCapabilities, Failure]:
+		failure := __gp_m24.Err
+
+		t.Fatal(failure)
+	case result.Ok[HostCapabilities, Failure]:
+		granted := __gp_m24.Value
+
+		host = granted
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	value := runLinkedExternalMachine(t, linkedExternalMachine(true), host)
+	if !term.Equal(value, term.MustAtom("linked")) {
+		t.Fatalf("linked fallback result = %v", value)
 	}
 }

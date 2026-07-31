@@ -102,7 +102,7 @@ func TestKernelVMReductionPartitionProperty(t *testing.T) {
 				case VMProcessWaiting:
 
 					return false
-				case VMProcessFailed:
+				case VMProcessRaised, VMProcessFailed:
 
 					return false
 				case VMProcessCompleted:

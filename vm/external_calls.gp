@@ -37,7 +37,11 @@ func (machine *Machine) linkedFunction(target ExternalFunction) option.Option[li
 	if !labelPresent {
 		return option.None[linkedCallTarget]()
 	}
-	return option.Some(linkedCallTarget{image: image, pc: position + 1})
+	entry := position + 1
+	if entry < len(image.program) && image.program[entry].Opcode.Name == "func_info" {
+		entry++
+	}
+	return option.Some(linkedCallTarget{image: image, pc: entry})
 }
 
 func executeExternalCall(
@@ -107,20 +111,10 @@ func executeExternalCall(
 			arguments[index] = term.Clone(value)
 		}
 	}
-	match machine.linkedFunction(target) {
-	case option.Some(destination):
-		if !tail {
-			machine.pushReturn(machine.pc + 1)
-		}
-		machine.activate(destination.image)
-		machine.pc = destination.pc
-		return result.Ok[instructionOutcome, Failure](InstructionContinues())
-	case option.None:
-	}
 	var capability ExternalCallCapability = host.ExternalCalls
 	match capability {
 	case ExternalCallsUnavailable:
-		return result.Err[instructionOutcome, Failure](InvalidProgram("external call requires an explicit host capability"))
+		return machine.executeLinkedCall(target, tail)
 	case ExternalCallsAllowed:
 		if host.externalCall == nil {
 			return result.Err[instructionOutcome, Failure](InvalidConfiguration("external call capability effect is nil"))
@@ -128,6 +122,10 @@ func executeExternalCall(
 	}
 	var called ExternalCallOutcome = host.externalCall(target, arguments)
 	match called {
+	case ExternalCallUnbound:
+		return machine.executeLinkedCall(target, tail)
+	case ExternalCallRaised(class, reason):
+		return result.Err[instructionOutcome, Failure](RaisedException(term.Clone(class), term.Clone(reason)))
 	case ExternalCallRejected(detail):
 		return result.Err[instructionOutcome, Failure](InvalidProgram(
 			fmt.Sprintf("external call %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail),
@@ -147,4 +145,26 @@ func executeExternalCall(
 		return result.Ok[instructionOutcome, Failure](InstructionHalts())
 	}
 	return result.Ok[instructionOutcome, Failure](InstructionContinues())
+}
+
+func (machine *Machine) executeLinkedCall(
+	target ExternalFunction,
+	tail bool,
+) result.Result[instructionOutcome, Failure] {
+	match machine.linkedFunction(target) {
+	case option.None:
+		return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf(
+			"unbound external function %s:%s/%d",
+			target.Module,
+			target.Function,
+			target.Arity,
+		)))
+	case option.Some(destination):
+		if !tail {
+			machine.pushReturn(machine.pc + 1)
+		}
+		machine.activate(destination.image)
+		machine.pc = destination.pc
+		return result.Ok[instructionOutcome, Failure](InstructionContinues())
+	}
 }

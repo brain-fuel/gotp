@@ -108,6 +108,7 @@ func testTermKind(machine *Machine, instruction beam.Instruction) result.Result[
 			matched = instruction.Opcode.Name == "is_pid"
 		case term.ReferenceKind:
 			matched = instruction.Opcode.Name == "is_reference"
+		case term.FunKind:
 		case term.PortKind:
 			matched = instruction.Opcode.Name == "is_port"
 		}

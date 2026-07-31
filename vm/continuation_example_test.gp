@@ -39,7 +39,7 @@ func ExampleContinuation_Resume() {
 					match execution {
 					case ExecutionSuspended(_):
 						fmt.Println("suspended")
-					case ExecutionWaiting(_):
+					case ExecutionWaiting(_), ExecutionRaised(_, _, _):
 						fmt.Println("waiting")
 					case ExecutionCompleted(_, progress):
 						fmt.Println("completed", progress.Reductions, progress.Instructions)
@@ -98,7 +98,7 @@ func TestContinuationPartitionLaw(t *testing.T) {
 									var execution ExecutionSlice = slice
 									match execution {
 									case ExecutionSuspended(_):
-									case ExecutionWaiting(_):
+									case ExecutionWaiting(_), ExecutionRaised(_, _, _):
 										return false
 									case ExecutionCompleted(value, progress):
 										return operandInteger(value) == operandInteger(wholeRun.Value) &&

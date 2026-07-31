@@ -220,6 +220,16 @@ type VMProcessCompleted struct {
 
 func (VMProcessCompleted) isVMProcessState() {}
 
+//goplus:variant (VMProcessState) VMProcessRaised(Class term.Term, Reason term.Term, TotalReductions int, TotalInstructions int)
+type VMProcessRaised struct {
+	Class             term.Term
+	Reason            term.Term
+	TotalReductions   int
+	TotalInstructions int
+}
+
+func (VMProcessRaised) isVMProcessState() {}
+
 //goplus:variant (VMProcessState) VMProcessFailed(Detail string, TotalReductions int, TotalInstructions int)
 type VMProcessFailed struct {
 	Detail            string
@@ -235,6 +245,7 @@ type VMProcessStateCases[R any] struct {
 	VMProcessSuspended func(TotalReductions int, TotalInstructions int) R
 	VMProcessWaiting   func(TotalReductions int, TotalInstructions int) R
 	VMProcessCompleted func(Value term.Term, TotalReductions int, TotalInstructions int) R
+	VMProcessRaised    func(Class term.Term, Reason term.Term, TotalReductions int, TotalInstructions int) R
 	VMProcessFailed    func(Detail string, TotalReductions int, TotalInstructions int) R
 }
 
@@ -249,6 +260,8 @@ func VMProcessStateFold[R any](v VMProcessState, cs VMProcessStateCases[R]) R {
 		return cs.VMProcessWaiting(m.TotalReductions, m.TotalInstructions)
 	case VMProcessCompleted:
 		return cs.VMProcessCompleted(m.Value, m.TotalReductions, m.TotalInstructions)
+	case VMProcessRaised:
+		return cs.VMProcessRaised(m.Class, m.Reason, m.TotalReductions, m.TotalInstructions)
 	case VMProcessFailed:
 		return cs.VMProcessFailed(m.Detail, m.TotalReductions, m.TotalInstructions)
 	default:
@@ -263,6 +276,7 @@ type VMProcessStateEqOverrides struct {
 	VMProcessSuspended func(x, y VMProcessSuspended) (eq, handled bool)
 	VMProcessWaiting   func(x, y VMProcessWaiting) (eq, handled bool)
 	VMProcessCompleted func(x, y VMProcessCompleted) (eq, handled bool)
+	VMProcessRaised    func(x, y VMProcessRaised) (eq, handled bool)
 	VMProcessFailed    func(x, y VMProcessFailed) (eq, handled bool)
 }
 
@@ -329,6 +343,29 @@ func VMProcessStateEqualWith(a, b VMProcessState, ov VMProcessStateEqOverrides) 
 			}
 		}
 		if x.Value != y.Value {
+			return false
+		}
+		if x.TotalReductions != y.TotalReductions {
+			return false
+		}
+		if x.TotalInstructions != y.TotalInstructions {
+			return false
+		}
+		return true
+	case VMProcessRaised:
+		y, ok := any(b).(VMProcessRaised)
+		if !ok {
+			return false
+		}
+		if ov.VMProcessRaised != nil {
+			if eq, handled := ov.VMProcessRaised(x, y); handled {
+				return eq
+			}
+		}
+		if x.Class != y.Class {
+			return false
+		}
+		if x.Reason != y.Reason {
 			return false
 		}
 		if x.TotalReductions != y.TotalReductions {
@@ -479,6 +516,11 @@ func (process *VMProcess) Step(context *kernel.Context) kernel.StepResult {
 	case VMProcessCompleted:
 
 		return kernel.Stop{Reason: term.MustAtom("normal")}
+	case VMProcessRaised:
+		class := __gp_m3.Class
+		reason := __gp_m3.Reason
+
+		return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 	case VMProcessFailed:
 		detail := __gp_m3.Detail
 
@@ -494,9 +536,6 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			Messaging: vm.MessagingEffects{
 				Send: func(destination term.Term, message term.Term) vm.SendOutcome {
 					switch __gp_m4 := any(term.TermPIDValue(destination)).(type) {
-					case option.None[term.PID]:
-
-						return vm.SendRejected{Detail: "destination is not a PID"}
 					case option.Some[term.PID]:
 						pid := __gp_m4.Value
 
@@ -507,6 +546,28 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 						case kernel.NoProcess:
 
 							return vm.MessageSent{Value: message}
+						default:
+							panic("goplus: impossible enum value in match")
+						}
+					case option.None[term.PID]:
+
+						switch __gp_m6 := any(term.TermReferenceValue(destination)).(type) {
+						case option.None[term.Reference]:
+
+							return vm.SendRejected{Detail: "destination is not a PID or alias"}
+						case option.Some[term.Reference]:
+							reference := __gp_m6.Value
+
+							switch any(context.SendAlias(reference, message)).(type) {
+							case kernel.Delivered:
+
+								return vm.MessageSent{Value: message}
+							case kernel.NoProcess:
+
+								return vm.MessageSent{Value: message}
+							default:
+								panic("goplus: impossible enum value in match")
+							}
 						default:
 							panic("goplus: impossible enum value in match")
 						}
@@ -527,22 +588,24 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			},
 		},
 	)
-	switch __gp_m6 := any(checked).(type) {
+	switch __gp_m8 := any(checked).(type) {
 	case result.Err[vm.HostCapabilities, vm.Failure]:
-		cause := __gp_m6.Err
+		cause := __gp_m8.Err
 
 		return process.fail(vm.Error(cause))
 	case result.Ok[vm.HostCapabilities, vm.Failure]:
-		host := __gp_m6.Value
+		host := __gp_m8.Value
 
 		if process.callRegistry != nil {
-			switch __gp_m7 := any(vm.HostGrantExternalCalls(host, process.callRegistry.Call)).(type) {
+			switch __gp_m9 := any(vm.HostGrantExternalCalls(host, func(target vm.ExternalFunction, arguments []term.Term) vm.ExternalCallOutcome {
+				return process.contextualCall(context, target, arguments)
+			})).(type) {
 			case result.Err[vm.HostCapabilities, vm.Failure]:
-				cause := __gp_m7.Err
+				cause := __gp_m9.Err
 
 				return process.fail(vm.Error(cause))
 			case result.Ok[vm.HostCapabilities, vm.Failure]:
-				granted := __gp_m7.Value
+				granted := __gp_m9.Value
 
 				host = granted
 			default:
@@ -553,18 +616,18 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 			process.quantum,
 			host,
 		)
-		switch __gp_m8 := any(resumed).(type) {
+		switch __gp_m10 := any(resumed).(type) {
 		case result.Err[vm.ExecutionSlice, vm.Failure]:
-			cause := __gp_m8.Err
+			cause := __gp_m10.Err
 
-			return process.fail(vm.Error(cause))
+			return process.failVM(cause)
 		case result.Ok[vm.ExecutionSlice, vm.Failure]:
-			slice := __gp_m8.Value
+			slice := __gp_m10.Value
 
 			var execution vm.ExecutionSlice = slice
-			switch __gp_m9 := any(execution).(type) {
+			switch __gp_m11 := any(execution).(type) {
 			case vm.ExecutionSuspended:
-				progress := __gp_m9.Progress
+				progress := __gp_m11.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -572,16 +635,26 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.state = suspended
 				return kernel.Yield{}
 			case vm.ExecutionWaiting:
-				progress := __gp_m9.Progress
+				progress := __gp_m11.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
 				var waiting VMProcessState = VMProcessWaiting{TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
 				process.state = waiting
 				return kernel.Wait{}
+			case vm.ExecutionRaised:
+				class := __gp_m11.Class
+				reason := __gp_m11.Reason
+				progress := __gp_m11.Progress
+
+				process.reductions += progress.Reductions
+				process.instructions = progress.TotalInstructions
+				var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
+				process.state = raised
+				return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 			case vm.ExecutionCompleted:
-				value := __gp_m9.Value
-				progress := __gp_m9.Progress
+				value := __gp_m11.Value
+				progress := __gp_m11.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -597,6 +670,33 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 	default:
 		panic("goplus: impossible enum value in match")
 	}
+}
+
+// assayxport:unit gotp.erts.vm-process-exceptions
+func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
+	var checked vm.Failure = failure
+	switch __gp_m12 := any(checked).(type) {
+	case vm.RaisedException:
+		class := __gp_m12.Class
+		reason := __gp_m12.Reason
+
+		var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: process.instructions}
+		process.state = raised
+		return kernel.Stop{Reason: vmExceptionReason(class, reason)}
+	case vm.InvalidConfiguration, vm.ImmediateOutOfRange, vm.HeapIndexOutOfRange, vm.MemoryFailure, vm.InvalidProgram, vm.RegisterOutOfRange, vm.UninitializedRegister, vm.MissingConstant, vm.MissingLabel, vm.StepLimitExceeded, vm.UnsupportedOpcode:
+
+		return process.fail(vm.Error(failure))
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func vmExceptionReason(class term.Term, reason term.Term) term.Term {
+	return term.Tuple(
+		term.MustAtom("gotp_exception"),
+		term.Clone(class),
+		term.Clone(reason),
+	)
 }
 
 func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration) vm.TimerWaitOutcome {
@@ -616,13 +716,13 @@ func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m11 := any(context.WakeTimerAfter(process.clock, delay)).(type) {
+	switch __gp_m14 := any(context.WakeTimerAfter(process.clock, delay)).(type) {
 	case result.Err[*kernel.WakeTimer, kernel.Failure]:
-		failure := __gp_m11.Err
+		failure := __gp_m14.Err
 
 		return vm.TimerRejected{Detail: kernel.FailureError(failure)}
 	case result.Ok[*kernel.WakeTimer, kernel.Failure]:
-		timer := __gp_m11.Value
+		timer := __gp_m14.Value
 
 		process.timer = timer
 		return vm.TimerPending{}
@@ -660,12 +760,12 @@ func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome
 			process.receiveMessages[process.receiveCursor].Message,
 		)}
 	}
-	switch __gp_m12 := any(context.ReceiveMessage(nil)).(type) {
+	switch __gp_m15 := any(context.ReceiveMessage(nil)).(type) {
 	case option.None[kernel.MessageEnvelope]:
 
 		return vm.ReceiveEmpty{}
 	case option.Some[kernel.MessageEnvelope]:
-		envelope := __gp_m12.Value
+		envelope := __gp_m15.Value
 
 		stored := kernel.MessageEnvelope{
 			Message: term.Clone(envelope.Message),

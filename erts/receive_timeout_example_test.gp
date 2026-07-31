@@ -72,7 +72,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 	var waiting VMProcessState = process.State()
 	match waiting {
 	case VMProcessWaiting(_, _):
-	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessCompleted(_, _, _), VMProcessFailed(_, _, _):
+	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessCompleted(_, _, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 		t.Fatalf("expected waiting state, got %T", waiting)
 	}
 	source.Advance(10*time.Millisecond - time.Nanosecond)
@@ -80,7 +80,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 	var early VMProcessState = process.State()
 	match early {
 	case VMProcessWaiting(_, _):
-	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessCompleted(_, _, _), VMProcessFailed(_, _, _):
+	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessCompleted(_, _, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 		t.Fatalf("timer fired early: %T", early)
 	}
 	source.Advance(time.Nanosecond)
@@ -91,7 +91,7 @@ func TestReceiveTimeoutUsesInjectedClock(t *testing.T) {
 		if !term.Equal(value, term.Integer(42)) {
 			t.Fatalf("unexpected value: %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 		t.Fatalf("expected completed state, got %T", completed)
 	}
 }
@@ -122,7 +122,7 @@ func TestSelectedMessageCancelsReceiveTimeout(t *testing.T) {
 		if !term.Equal(value, term.Integer(7)) {
 			t.Fatalf("message branch returned %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 		t.Fatalf("message did not complete receive: %T", selected)
 	}
 	source.Advance(100 * time.Millisecond)
@@ -133,7 +133,7 @@ func TestSelectedMessageCancelsReceiveTimeout(t *testing.T) {
 		if !term.Equal(value, term.Integer(7)) {
 			t.Fatalf("cancelled timeout changed result to %v", value)
 		}
-	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+	case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 		t.Fatalf("cancelled timeout resumed process: %T", afterDeadline)
 	}
 }

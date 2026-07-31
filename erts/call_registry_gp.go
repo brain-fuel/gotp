@@ -208,12 +208,7 @@ func (registry *CallRegistry) Call(
 	switch __gp_m3 := any(option.Of(implementation, present)).(type) {
 	case option.None[ExternalImplementation]:
 
-		return vm.ExternalCallRejected{Detail: fmt.Sprintf(
-			"unbound external function %s:%s/%d",
-			target.Module,
-			target.Function,
-			target.Arity,
-		)}
+		return vm.ExternalCallUnbound{}
 	case option.Some[ExternalImplementation]:
 		call := __gp_m3.Value
 

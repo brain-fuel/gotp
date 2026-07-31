@@ -45,7 +45,11 @@ func (machine *Machine) linkedFunction(target ExternalFunction) option.Option[li
 	if !labelPresent {
 		return option.None[linkedCallTarget]{}
 	}
-	return option.Some[linkedCallTarget]{Value: linkedCallTarget{image: image, pc: position + 1}}
+	entry := position + 1
+	if entry < len(image.program) && image.program[entry].Opcode.Name == "func_info" {
+		entry++
+	}
+	return option.Some[linkedCallTarget]{Value: linkedCallTarget{image: image, pc: entry}}
 }
 
 func executeExternalCall(
@@ -142,26 +146,11 @@ func executeExternalCall(
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m6 := any(machine.linkedFunction(target)).(type) {
-	case option.Some[linkedCallTarget]:
-		destination := __gp_m6.Value
-
-		if !tail {
-			machine.pushReturn(machine.pc + 1)
-		}
-		machine.activate(destination.image)
-		machine.pc = destination.pc
-		return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
-	case option.None[linkedCallTarget]:
-
-	default:
-		panic("goplus: impossible enum value in match")
-	}
 	var capability ExternalCallCapability = host.ExternalCalls
 	switch any(capability).(type) {
 	case ExternalCallsUnavailable:
 
-		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "external call requires an explicit host capability"}}
+		return machine.executeLinkedCall(target, tail)
 	case ExternalCallsAllowed:
 
 		if host.externalCall == nil {
@@ -171,17 +160,25 @@ func executeExternalCall(
 		panic("goplus: impossible enum value in match")
 	}
 	var called ExternalCallOutcome = host.externalCall(target, arguments)
-	switch __gp_m8 := any(called).(type) {
+	switch __gp_m7 := any(called).(type) {
+	case ExternalCallUnbound:
+
+		return machine.executeLinkedCall(target, tail)
+	case ExternalCallRaised:
+		class := __gp_m7.Class
+		reason := __gp_m7.Reason
+
+		return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.Clone(class), Reason: term.Clone(reason)}}
 	case ExternalCallRejected:
-		detail := __gp_m8.Detail
+		detail := __gp_m7.Detail
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("external call %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)}}
 	case ExternalCallReturned:
-		value := __gp_m8.Value
+		value := __gp_m7.Value
 
-		switch __gp_m9 := any(machine.SetX(0, value)).(type) {
+		switch __gp_m8 := any(machine.SetX(0, value)).(type) {
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m9.Err
+			failure := __gp_m8.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[MachineMutation, Failure]:
@@ -200,4 +197,31 @@ func executeExternalCall(
 		return result.Ok[instructionOutcome, Failure]{Value: instructionHalts{}}
 	}
 	return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
+}
+
+func (machine *Machine) executeLinkedCall(
+	target ExternalFunction,
+	tail bool,
+) result.Result[instructionOutcome, Failure] {
+	switch __gp_m9 := any(machine.linkedFunction(target)).(type) {
+	case option.None[linkedCallTarget]:
+
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
+			"unbound external function %s:%s/%d",
+			target.Module,
+			target.Function,
+			target.Arity,
+		)}}
+	case option.Some[linkedCallTarget]:
+		destination := __gp_m9.Value
+
+		if !tail {
+			machine.pushReturn(machine.pc + 1)
+		}
+		machine.activate(destination.image)
+		machine.pc = destination.pc
+		return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 }

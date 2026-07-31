@@ -7,10 +7,19 @@ import (
 	"fmt"
 
 	"goforge.dev/goplus/std/memory"
+	"goforge.dev/gotp/term"
 )
 
 //goplus:enum Failure
 type Failure interface{ isFailure() }
+
+//goplus:variant (Failure) RaisedException(Class term.Term, Reason term.Term)
+type RaisedException struct {
+	Class  term.Term
+	Reason term.Term
+}
+
+func (RaisedException) isFailure() {}
 
 //goplus:variant (Failure) InvalidConfiguration(Detail string)
 type InvalidConfiguration struct {
@@ -97,6 +106,7 @@ func (UnsupportedOpcode) isFailure() {}
 
 // FailureCases selects one handler per Failure variant for FailureFold.
 type FailureCases[R any] struct {
+	RaisedException       func(Class term.Term, Reason term.Term) R
 	InvalidConfiguration  func(Detail string) R
 	ImmediateOutOfRange   func(Value int64) R
 	HeapIndexOutOfRange   func(Index int, Words int) R
@@ -113,6 +123,8 @@ type FailureCases[R any] struct {
 // FailureFold reduces Failure by one-level case analysis.
 func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 	switch m := any(f).(type) {
+	case RaisedException:
+		return cs.RaisedException(m.Class, m.Reason)
 	case InvalidConfiguration:
 		return cs.InvalidConfiguration(m.Detail)
 	case ImmediateOutOfRange:
@@ -143,6 +155,7 @@ func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 // FailureEqOverrides carries optional per-variant hooks for FailureEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type FailureEqOverrides struct {
+	RaisedException       func(x, y RaisedException) (eq, handled bool)
 	InvalidConfiguration  func(x, y InvalidConfiguration) (eq, handled bool)
 	ImmediateOutOfRange   func(x, y ImmediateOutOfRange) (eq, handled bool)
 	HeapIndexOutOfRange   func(x, y HeapIndexOutOfRange) (eq, handled bool)
@@ -162,6 +175,23 @@ func FailureEqualWith(a, b Failure, ov FailureEqOverrides) bool {
 		return a == nil && b == nil
 	}
 	switch x := any(a).(type) {
+	case RaisedException:
+		y, ok := any(b).(RaisedException)
+		if !ok {
+			return false
+		}
+		if ov.RaisedException != nil {
+			if eq, handled := ov.RaisedException(x, y); handled {
+				return eq
+			}
+		}
+		if x.Class != y.Class {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		return true
 	case InvalidConfiguration:
 		y, ok := any(b).(InvalidConfiguration)
 		if !ok {
@@ -346,6 +376,11 @@ func FailureEqual(a, b Failure) bool {
 //goplus:method (Failure) Error
 func Error(failure Failure) string {
 	switch __gp_m0 := any(failure).(type) {
+	case RaisedException:
+		class := __gp_m0.Class
+		reason := __gp_m0.Reason
+
+		return fmt.Sprintf("gotp/vm: exception %v:%v", class, reason)
 	case InvalidConfiguration:
 		detail := __gp_m0.Detail
 

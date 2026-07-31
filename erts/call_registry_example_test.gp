@@ -80,7 +80,7 @@ func TestLoadedImportExecutesThroughRegistry(t *testing.T) {
 				if !term.Equal(value, term.Integer(14)) {
 					t.Fatalf("external result = %v", value)
 				}
-			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessFailed(_, _, _):
+			case VMProcessRunning, VMProcessSuspended(_, _), VMProcessWaiting(_, _), VMProcessRaised(_, _, _, _), VMProcessFailed(_, _, _):
 				t.Fatalf("external process state = %T", state)
 			}
 		}
@@ -105,6 +105,23 @@ func TestCallRegistryRejectsDuplicateMFA(t *testing.T) {
 			}
 		case InvalidExternalFunction(_, _), NilExternalImplementation(_):
 			t.Fatalf("unexpected failure: %v", failure)
+		}
+	}
+}
+
+func TestCallRegistryDistinguishesUnboundMFA(t *testing.T) {
+	match NewCallRegistry(nil) {
+	case result.Err(failure):
+		t.Fatal(failure)
+	case result.Ok(registry):
+		var outcome vm.ExternalCallOutcome = registry.Call(
+			vm.ExternalFunction{Module: "demo", Function: "missing", Arity: 0},
+			nil,
+		)
+		match outcome {
+		case vm.ExternalCallUnbound:
+		case vm.ExternalCallReturned(_), vm.ExternalCallRaised(_, _), vm.ExternalCallRejected(_):
+			t.Fatalf("unbound outcome = %T", outcome)
 		}
 	}
 }

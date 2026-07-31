@@ -321,6 +321,7 @@ type ProcessInfo struct {
 	TrapExit      bool
 	MailboxLength int
 	Links         []term.PID
+	Aliases       []term.Reference
 	ExitReason    option.Option[term.Term]
 }
 
@@ -693,6 +694,83 @@ func MonitorRemovalEqual(a, b MonitorRemoval) bool {
 	return MonitorRemovalEqualWith(a, b, MonitorRemovalEqOverrides{})
 }
 
+//goplus:enum AliasRemoval
+type AliasRemoval interface{ isAliasRemoval() }
+
+//goplus:variant (AliasRemoval) AliasRemoved()
+type AliasRemoved struct{}
+
+func (AliasRemoved) isAliasRemoval() {}
+
+//goplus:variant (AliasRemoval) AliasAbsent()
+type AliasAbsent struct{}
+
+func (AliasAbsent) isAliasRemoval() {}
+
+// AliasRemovalCases selects one handler per AliasRemoval variant for AliasRemovalFold.
+type AliasRemovalCases[R any] struct {
+	AliasRemoved func() R
+	AliasAbsent  func() R
+}
+
+// AliasRemovalFold reduces AliasRemoval by one-level case analysis.
+func AliasRemovalFold[R any](a AliasRemoval, cs AliasRemovalCases[R]) R {
+	switch any(a).(type) {
+	case AliasRemoved:
+		return cs.AliasRemoved()
+	case AliasAbsent:
+		return cs.AliasAbsent()
+	default:
+		panic("goplus: impossible enum value in AliasRemovalFold")
+	}
+}
+
+// AliasRemovalEqOverrides carries optional per-variant hooks for AliasRemovalEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type AliasRemovalEqOverrides struct {
+	AliasRemoved func(x, y AliasRemoved) (eq, handled bool)
+	AliasAbsent  func(x, y AliasAbsent) (eq, handled bool)
+}
+
+// AliasRemovalEqualWith reports structural equality of a and b under ov.
+func AliasRemovalEqualWith(a, b AliasRemoval, ov AliasRemovalEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case AliasRemoved:
+		y, ok := any(b).(AliasRemoved)
+		if !ok {
+			return false
+		}
+		if ov.AliasRemoved != nil {
+			if eq, handled := ov.AliasRemoved(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case AliasAbsent:
+		y, ok := any(b).(AliasAbsent)
+		if !ok {
+			return false
+		}
+		if ov.AliasAbsent != nil {
+			if eq, handled := ov.AliasAbsent(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// AliasRemovalEqual reports structural equality of a and b.
+func AliasRemovalEqual(a, b AliasRemoval) bool {
+	return AliasRemovalEqualWith(a, b, AliasRemovalEqOverrides{})
+}
+
 type route struct {
 	from term.PID
 	to   term.PID
@@ -707,6 +785,7 @@ type process struct {
 	links       map[term.PID]struct{}
 	monitoring  map[term.Reference]term.PID
 	monitoredBy map[term.Reference]term.PID
+	aliases     map[term.Reference]struct{}
 	exitReason  option.Option[term.Term]
 }
 
@@ -718,7 +797,9 @@ type Kernel struct {
 	runQueue      []term.PID
 	queued        map[term.PID]bool
 	sequences     map[route]uint64
+	aliases       map[term.Reference]term.PID
 	wakeups       *wakeQueue
+	tracer        *Tracer
 }
 
 func New(config KernelConfig) *Kernel {
@@ -733,6 +814,7 @@ func New(config KernelConfig) *Kernel {
 		processes: make(map[term.PID]*process),
 		queued:    make(map[term.PID]bool),
 		sequences: make(map[route]uint64),
+		aliases:   make(map[term.Reference]term.PID),
 		wakeups:   newWakeQueue(),
 	}
 }
@@ -778,10 +860,12 @@ func (kernel *Kernel) Spawn(
 		links:       make(map[term.PID]struct{}),
 		monitoring:  make(map[term.Reference]term.PID),
 		monitoredBy: make(map[term.Reference]term.PID),
+		aliases:     make(map[term.Reference]struct{}),
 		exitReason:  option.None[term.Term]{},
 	}
 	kernel.processes[pid] = current
 	kernel.enqueueRunnable(pid)
+	kernel.trace(ProcessSpawned{PID: pid})
 	switch __gp_m3 := any(link).(type) {
 	case option.None[term.PID]:
 
@@ -835,6 +919,7 @@ func (kernel *Kernel) Link(
 
 			leftProcess.links[right] = struct{}{}
 			rightProcess.links[left] = struct{}{}
+			kernel.trace(ProcessesLinked{Left: left, Right: right})
 			return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
 		default:
 			panic("goplus: impossible enum value in match")
@@ -892,6 +977,7 @@ func (kernel *Kernel) Monitor(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+		kernel.trace(ProcessMonitored{Watcher: watcher, Target: target, Reference: reference})
 		return result.Ok[term.Reference, Failure]{Value: reference}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -964,15 +1050,102 @@ func (kernel *Kernel) SetTrapExit(
 	}
 }
 
+// assayxport:unit gotp.kernel.process-aliases
+func (kernel *Kernel) Alias(owner term.PID) result.Result[term.Reference, Failure] {
+	switch __gp_m15 := any(kernel.liveProcess(owner)).(type) {
+	case option.None[*process]:
+
+		return result.Err[term.Reference, Failure]{Err: MissingProcess{Role: "alias owner", PID: owner}}
+	case option.Some[*process]:
+		current := __gp_m15.Value
+
+		reference := kernel.newReference()
+		current.aliases[reference] = struct{}{}
+		kernel.aliases[reference] = owner
+		return result.Ok[term.Reference, Failure]{Value: reference}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) Unalias(owner term.PID, reference term.Reference) AliasRemoval {
+	switch __gp_m16 := any(kernel.liveProcess(owner)).(type) {
+	case option.None[*process]:
+
+		return AliasAbsent{}
+	case option.Some[*process]:
+		current := __gp_m16.Value
+
+		_, owned := current.aliases[reference]
+		if !owned {
+			return AliasAbsent{}
+		}
+		delete(current.aliases, reference)
+		delete(kernel.aliases, reference)
+		return AliasRemoved{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) SendAlias(
+	from term.PID,
+	reference term.Reference,
+	message term.Term,
+) Delivery {
+	owner, present := kernel.aliases[reference]
+	switch __gp_m17 := any(option.Of(owner, present)).(type) {
+	case option.None[term.PID]:
+
+		return NoProcess{}
+	case option.Some[term.PID]:
+		target := __gp_m17.Value
+
+		return kernel.enqueueSignal(target, UserSignal{From: from, Sequence: 0, Message: term.Clone(message)})
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (kernel *Kernel) Exit(pid term.PID, reason term.Term) Delivery {
-	switch __gp_m15 := any(kernel.liveProcess(pid)).(type) {
+	switch __gp_m18 := any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
 		return NoProcess{}
 	case option.Some[*process]:
-		current := __gp_m15.Value
+		current := __gp_m18.Value
 
 		kernel.terminate(current, reason)
+		return Delivered{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+// assayxport:unit gotp.kernel.process-signals
+func (kernel *Kernel) SendExit(
+	from term.PID,
+	to term.PID,
+	reason term.Term,
+) Delivery {
+	switch __gp_m19 := any(kernel.liveProcess(to)).(type) {
+	case option.None[*process]:
+
+		return NoProcess{}
+	case option.Some[*process]:
+		target := __gp_m19.Value
+
+		if isAtom(reason, "kill") {
+			kernel.terminate(target, term.MustAtom("killed"))
+			return Delivered{}
+		}
+		if target.trapExit {
+			return kernel.enqueueSignal(to, ExitSignal{From: from, Sequence: 0, Reason: term.Clone(reason), Target: to})
+		}
+		if isAtom(reason, "normal") && from != to {
+			return Delivered{}
+		}
+		kernel.terminate(target, reason)
 		return Delivered{}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -991,12 +1164,12 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 		kernel.runQueue = kernel.runQueue[:len(kernel.runQueue)-1]
 		kernel.queued[pid] = false
 
-		switch __gp_m16 := any(kernel.liveProcess(pid)).(type) {
+		switch __gp_m20 := any(kernel.liveProcess(pid)).(type) {
 		case option.None[*process]:
 
 			continue
 		case option.Some[*process]:
-			current := __gp_m16.Value
+			current := __gp_m20.Value
 
 			switch any(current.status).(type) {
 			case Runnable:
@@ -1006,6 +1179,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 				continue
 			}
 			context := &Context{kernel: kernel, process: current}
+			kernel.trace(ProcessScheduled{PID: pid})
 			step := current.behavior(context)
 			reductions++
 			switch any(current.status).(type) {
@@ -1015,7 +1189,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 			default:
 
 			}
-			switch __gp_m19 := any(step).(type) {
+			switch __gp_m23 := any(step).(type) {
 			case Yield:
 
 				kernel.enqueueRunnable(pid)
@@ -1023,7 +1197,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 
 				current.status = Waiting{}
 			case Stop:
-				reason := __gp_m19.Reason
+				reason := __gp_m23.Reason
 
 				kernel.terminate(current, reason)
 			default:
@@ -1038,12 +1212,12 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 
 func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 	current, present := kernel.processes[pid]
-	switch __gp_m20 := any(option.Of(current, present)).(type) {
+	switch __gp_m24 := any(option.Of(current, present)).(type) {
 	case option.None[*process]:
 
 		return option.None[ProcessInfo]{}
 	case option.Some[*process]:
-		found := __gp_m20.Value
+		found := __gp_m24.Value
 
 		links := make([]term.PID, 0, len(found.links))
 		for linked := range found.links {
@@ -1052,10 +1226,17 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 		sort.Slice(links, func(left, right int) bool {
 			return links[left].Less(links[right])
 		})
+		aliases := make([]term.Reference, 0, len(found.aliases))
+		for reference := range found.aliases {
+			aliases = append(aliases, reference)
+		}
+		sort.Slice(aliases, func(left, right int) bool {
+			return aliases[left].Less(aliases[right])
+		})
 		var exitReason option.Option[term.Term] = option.None[term.Term]{}
-		switch __gp_m21 := any(found.exitReason).(type) {
+		switch __gp_m25 := any(found.exitReason).(type) {
 		case option.Some[term.Term]:
-			reason := __gp_m21.Value
+			reason := __gp_m25.Value
 
 			exitReason = option.Some[term.Term]{Value: term.Clone(reason)}
 		case option.None[term.Term]:
@@ -1065,7 +1246,8 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 		}
 		return option.Some[ProcessInfo]{Value: ProcessInfo{
 			PID: found.pid, Status: found.status, TrapExit: found.trapExit,
-			MailboxLength: found.mailbox.Len(), Links: links, ExitReason: exitReason,
+			MailboxLength: found.mailbox.Len(), Links: links, Aliases: aliases,
+			ExitReason: exitReason,
 		}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -1088,11 +1270,11 @@ func (kernel *Kernel) liveProcess(pid term.PID) option.Option[*process] {
 }
 
 func (kernel *Kernel) enqueueRunnable(pid term.PID) {
-	switch __gp_m23 := any(kernel.liveProcess(pid)).(type) {
+	switch __gp_m27 := any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
 	case option.Some[*process]:
-		current := __gp_m23.Value
+		current := __gp_m27.Value
 
 		if kernel.queued[pid] {
 			return
@@ -1106,16 +1288,18 @@ func (kernel *Kernel) enqueueRunnable(pid term.PID) {
 }
 
 func (kernel *Kernel) enqueueSignal(to term.PID, signal Signal) Delivery {
-	switch __gp_m24 := any(kernel.liveProcess(to)).(type) {
+	switch __gp_m28 := any(kernel.liveProcess(to)).(type) {
 	case option.None[*process]:
 
 		return NoProcess{}
 	case option.Some[*process]:
-		current := __gp_m24.Value
+		current := __gp_m28.Value
 
 		key := route{from: signalFrom(signal), to: to}
 		kernel.sequences[key]++
-		current.mailbox.Push(withSequence(signal, kernel.sequences[key]))
+		queuedSignal := withSequence(signal, kernel.sequences[key])
+		current.mailbox.Push(queuedSignal)
+		kernel.traceSignal(to, queuedSignal)
 		switch any(current.status).(type) {
 		case Waiting:
 
@@ -1147,6 +1331,7 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	}
 	current.status = Exited{}
 	current.exitReason = option.Some[term.Term]{Value: term.Clone(reason)}
+	kernel.trace(ProcessExited{PID: current.pid, Reason: reason})
 
 	links := make([]term.PID, 0, len(current.links))
 	for linked := range current.links {
@@ -1157,11 +1342,11 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	})
 	current.links = make(map[term.PID]struct{})
 	for _, linkedPID := range links {
-		switch __gp_m27 := any(kernel.liveProcess(linkedPID)).(type) {
+		switch __gp_m31 := any(kernel.liveProcess(linkedPID)).(type) {
 		case option.None[*process]:
 
 		case option.Some[*process]:
-			linked := __gp_m27.Value
+			linked := __gp_m31.Value
 
 			delete(linked.links, current.pid)
 			if linked.trapExit {
@@ -1185,11 +1370,11 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	})
 	for _, reference := range references {
 		watcher := current.monitoredBy[reference]
-		switch __gp_m28 := any(kernel.liveProcess(watcher)).(type) {
+		switch __gp_m32 := any(kernel.liveProcess(watcher)).(type) {
 		case option.None[*process]:
 
 		case option.Some[*process]:
-			watcherProcess := __gp_m28.Value
+			watcherProcess := __gp_m32.Value
 
 			delete(watcherProcess.monitoring, reference)
 			kernel.enqueueSignal(watcher, DownSignal{From: current.pid, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: current.pid})
@@ -1208,9 +1393,9 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	})
 	for _, reference := range outgoing {
 		target := current.monitoring[reference]
-		switch __gp_m29 := any(kernel.liveProcess(target)).(type) {
+		switch __gp_m33 := any(kernel.liveProcess(target)).(type) {
 		case option.Some[*process]:
-			targetProcess := __gp_m29.Value
+			targetProcess := __gp_m33.Value
 
 			delete(targetProcess.monitoredBy, reference)
 		case option.None[*process]:
@@ -1220,6 +1405,10 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		}
 	}
 	current.monitoring = make(map[term.Reference]term.PID)
+	for reference := range current.aliases {
+		delete(kernel.aliases, reference)
+	}
+	current.aliases = make(map[term.Reference]struct{})
 }
 
 func (kernel *Kernel) report(reductions int) RunReport {
@@ -1243,14 +1432,20 @@ func (kernel *Kernel) report(reductions int) RunReport {
 }
 
 func isNormal(reason term.Term) bool {
-	switch __gp_m31 := any(reason).(type) {
-	case term.AtomTerm:
-		name := __gp_m31.Name
+	return isAtom(reason, "normal")
+}
 
-		return name == "normal"
-	default:
+func isAtom(value term.Term, expected string) bool {
+	switch __gp_m35 := any(term.AtomName(value)).(type) {
+	case option.Some[string]:
+		name := __gp_m35.Value
+
+		return name == expected
+	case option.None[string]:
 
 		return false
+	default:
+		panic("goplus: impossible enum value in match")
 	}
 }
 
@@ -1282,39 +1477,63 @@ func (context *Context) ReceiveMessage(
 	accept func(term.Term) bool,
 ) option.Option[MessageEnvelope] {
 	received := context.process.mailbox.Receive(func(signal Signal) bool {
-		return acceptsMessage(signal, accept)
+		switch __gp_m36 := any(signalMessage(signal)).(type) {
+		case option.None[MessageEnvelope]:
+
+			return false
+		case option.Some[MessageEnvelope]:
+			envelope := __gp_m36.Value
+
+			return accept == nil || accept(envelope.Message)
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	})
-	switch __gp_m32 := any(received).(type) {
+	switch __gp_m37 := any(received).(type) {
 	case option.None[Signal]:
 
 		return option.None[MessageEnvelope]{}
 	case option.Some[Signal]:
-		signal := __gp_m32.Value
+		signal := __gp_m37.Value
 
-		switch __gp_m33 := any(signal).(type) {
-		case UserSignal:
-			from := __gp_m33.From
-			message := __gp_m33.Message
-
-			return option.Some[MessageEnvelope]{Value: MessageEnvelope{Message: message, From: from}}
-		default:
-
-			return option.None[MessageEnvelope]{}
-		}
+		return signalMessage(signal)
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 }
 
-func acceptsMessage(signal Signal, accept func(term.Term) bool) bool {
-	switch __gp_m34 := any(signal).(type) {
+func signalMessage(signal Signal) option.Option[MessageEnvelope] {
+	switch __gp_m38 := any(signal).(type) {
 	case UserSignal:
-		message := __gp_m34.Message
+		message := __gp_m38.Message
 
-		return accept == nil || accept(message)
+		return option.Some[MessageEnvelope]{Value: MessageEnvelope{Message: message, From: signalFrom(signal)}}
+	case ExitSignal:
+		from := __gp_m38.From
+		reason := __gp_m38.Reason
+
+		return option.Some[MessageEnvelope]{Value: MessageEnvelope{
+			Message: term.Tuple(term.MustAtom("EXIT"), term.PIDTerm{Value: from}, reason),
+			From:    from,
+		}}
+	case DownSignal:
+		from := __gp_m38.From
+		reason := __gp_m38.Reason
+		reference := __gp_m38.Reference
+		target := __gp_m38.Target
+
+		return option.Some[MessageEnvelope]{Value: MessageEnvelope{
+			Message: term.Tuple(
+				term.MustAtom("DOWN"),
+				term.ReferenceTerm{Value: reference},
+				term.MustAtom("process"),
+				term.PIDTerm{Value: target},
+				reason,
+			),
+			From: from,
+		}}
 	default:
-
-		return false
+		panic("goplus: impossible enum value in match")
 	}
 }
 
@@ -1344,9 +1563,25 @@ func (context *Context) Demonitor(
 	return context.kernel.Demonitor(context.process.pid, reference, flush)
 }
 
+func (context *Context) Alias() result.Result[term.Reference, Failure] {
+	return context.kernel.Alias(context.process.pid)
+}
+
+func (context *Context) Unalias(reference term.Reference) AliasRemoval {
+	return context.kernel.Unalias(context.process.pid, reference)
+}
+
+func (context *Context) SendAlias(reference term.Reference, message term.Term) Delivery {
+	return context.kernel.SendAlias(context.process.pid, reference, message)
+}
+
 func (context *Context) SetTrapExit(enabled bool) KernelMutation {
 	context.process.trapExit = enabled
 	return KernelMutated{}
+}
+
+func (context *Context) Exit(other term.PID, reason term.Term) Delivery {
+	return context.kernel.SendExit(context.process.pid, other, reason)
 }
 
 // Terminate is the capability held by a running behavior. Supervisor APIs

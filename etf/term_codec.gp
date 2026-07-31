@@ -228,6 +228,8 @@ func (encoder canonicalEncoder) encodeTerm(value term.Term, depth int) result.Re
 		return encoder.pid(pid)
 	case term.ReferenceTerm(reference):
 		return encoder.reference(reference)
+	case term.FunTerm(function):
+		return encoder.function(function, depth)
 	case term.PortTerm(port):
 		return encoder.port(port)
 	case term.InvalidTerm:
@@ -478,6 +480,12 @@ func (decoder *canonicalDecoder) decodeTerm(depth int) result.Result[term.Term, 
 
 func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result[term.Term, Failure] {
 	switch tag {
+	case canonicalOldFun:
+		return decoder.oldFunction(depth)
+	case canonicalNewFun:
+		return decoder.newFunction(depth)
+	case canonicalExport:
+		return decoder.exportedFunction(depth)
 	case canonicalSmallInteger:
 		match decoder.byte() {
 		case result.Ok(value):

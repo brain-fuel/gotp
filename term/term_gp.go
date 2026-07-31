@@ -72,6 +72,11 @@ type ReferenceKind struct{}
 
 func (ReferenceKind) isKind() {}
 
+//goplus:variant (Kind) FunKind()
+type FunKind struct{}
+
+func (FunKind) isKind() {}
+
 //goplus:variant (Kind) PortKind()
 type PortKind struct{}
 
@@ -89,6 +94,7 @@ type KindCases[R any] struct {
 	MapKind       func() R
 	PIDKind       func() R
 	ReferenceKind func() R
+	FunKind       func() R
 	PortKind      func() R
 }
 
@@ -115,6 +121,8 @@ func KindFold[R any](k Kind, cs KindCases[R]) R {
 		return cs.PIDKind()
 	case ReferenceKind:
 		return cs.ReferenceKind()
+	case FunKind:
+		return cs.FunKind()
 	case PortKind:
 		return cs.PortKind()
 	default:
@@ -135,6 +143,7 @@ type KindEqOverrides struct {
 	MapKind       func(x, y MapKind) (eq, handled bool)
 	PIDKind       func(x, y PIDKind) (eq, handled bool)
 	ReferenceKind func(x, y ReferenceKind) (eq, handled bool)
+	FunKind       func(x, y FunKind) (eq, handled bool)
 	PortKind      func(x, y PortKind) (eq, handled bool)
 }
 
@@ -264,6 +273,18 @@ func KindEqualWith(a, b Kind, ov KindEqOverrides) bool {
 		}
 		_ = y
 		return true
+	case FunKind:
+		y, ok := any(b).(FunKind)
+		if !ok {
+			return false
+		}
+		if ov.FunKind != nil {
+			if eq, handled := ov.FunKind(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
 	case PortKind:
 		y, ok := any(b).(PortKind)
 		if !ok {
@@ -349,6 +370,149 @@ type MapEntry struct {
 	Value Term
 }
 
+//goplus:enum FunForm
+type FunForm interface{ isFunForm() }
+
+//goplus:variant (FunForm) LocalClosure()
+type LocalClosure struct{}
+
+func (LocalClosure) isFunForm() {}
+
+//goplus:variant (FunForm) OldClosure()
+type OldClosure struct{}
+
+func (OldClosure) isFunForm() {}
+
+//goplus:variant (FunForm) NewClosure(Digest [16]byte, NewIndex uint32, OldIndex uint32)
+type NewClosure struct {
+	Digest   [16]byte
+	NewIndex uint32
+	OldIndex uint32
+}
+
+func (NewClosure) isFunForm() {}
+
+//goplus:variant (FunForm) ExportedFunction()
+type ExportedFunction struct{}
+
+func (ExportedFunction) isFunForm() {}
+
+// FunFormCases selects one handler per FunForm variant for FunFormFold.
+type FunFormCases[R any] struct {
+	LocalClosure     func() R
+	OldClosure       func() R
+	NewClosure       func(Digest [16]byte, NewIndex uint32, OldIndex uint32) R
+	ExportedFunction func() R
+}
+
+// FunFormFold reduces FunForm by one-level case analysis.
+func FunFormFold[R any](f FunForm, cs FunFormCases[R]) R {
+	switch m := any(f).(type) {
+	case LocalClosure:
+		return cs.LocalClosure()
+	case OldClosure:
+		return cs.OldClosure()
+	case NewClosure:
+		return cs.NewClosure(m.Digest, m.NewIndex, m.OldIndex)
+	case ExportedFunction:
+		return cs.ExportedFunction()
+	default:
+		panic("goplus: impossible enum value in FunFormFold")
+	}
+}
+
+// FunFormEqOverrides carries optional per-variant hooks for FunFormEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type FunFormEqOverrides struct {
+	LocalClosure     func(x, y LocalClosure) (eq, handled bool)
+	OldClosure       func(x, y OldClosure) (eq, handled bool)
+	NewClosure       func(x, y NewClosure) (eq, handled bool)
+	ExportedFunction func(x, y ExportedFunction) (eq, handled bool)
+}
+
+// FunFormEqualWith reports structural equality of a and b under ov.
+func FunFormEqualWith(a, b FunForm, ov FunFormEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case LocalClosure:
+		y, ok := any(b).(LocalClosure)
+		if !ok {
+			return false
+		}
+		if ov.LocalClosure != nil {
+			if eq, handled := ov.LocalClosure(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case OldClosure:
+		y, ok := any(b).(OldClosure)
+		if !ok {
+			return false
+		}
+		if ov.OldClosure != nil {
+			if eq, handled := ov.OldClosure(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case NewClosure:
+		y, ok := any(b).(NewClosure)
+		if !ok {
+			return false
+		}
+		if ov.NewClosure != nil {
+			if eq, handled := ov.NewClosure(x, y); handled {
+				return eq
+			}
+		}
+		if x.Digest != y.Digest {
+			return false
+		}
+		if x.NewIndex != y.NewIndex {
+			return false
+		}
+		if x.OldIndex != y.OldIndex {
+			return false
+		}
+		return true
+	case ExportedFunction:
+		y, ok := any(b).(ExportedFunction)
+		if !ok {
+			return false
+		}
+		if ov.ExportedFunction != nil {
+			if eq, handled := ov.ExportedFunction(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// FunFormEqual reports structural equality of a and b.
+func FunFormEqual(a, b FunForm) bool {
+	return FunFormEqualWith(a, b, FunFormEqOverrides{})
+}
+
+type Fun struct {
+	Form        FunForm
+	Module      string
+	Function    string
+	Arity       uint32
+	Label       uint64
+	Index       uint32
+	Unique      uint32
+	Creator     PID
+	Environment []Term
+}
+
 //goplus:enum Term
 //goplus:derive off
 type Term interface{ isTerm() }
@@ -428,6 +592,13 @@ type ReferenceTerm struct {
 }
 
 func (ReferenceTerm) isTerm() {}
+
+//goplus:variant (Term) FunTerm(Value Fun)
+type FunTerm struct {
+	Value Fun
+}
+
+func (FunTerm) isTerm() {}
 
 //goplus:variant (Term) PortTerm(Value Port)
 type PortTerm struct {
@@ -734,6 +905,15 @@ func ReferenceValue(reference Reference) Term {
 	return ReferenceTerm{Value: reference}
 }
 
+// assayxport:unit gotp.term.fun
+func Function(value Fun) Term {
+	if value.Form == nil {
+		value.Form = LocalClosure{}
+	}
+	value.Environment = cloneTerms(value.Environment)
+	return FunTerm{Value: value}
+}
+
 func PortValue(port Port) Term {
 	return PortTerm{Value: port}
 }
@@ -777,6 +957,9 @@ func TermKind(value Term) Kind {
 	case ReferenceTerm:
 
 		return ReferenceKind{}
+	case FunTerm:
+
+		return FunKind{}
 	case PortTerm:
 
 		return PortKind{}
@@ -975,46 +1158,63 @@ func TermPortValue(value Term) option.Option[Port] {
 	}
 }
 
+//goplus:method (Term) FunValue
+func FunValue(value Term) option.Option[Fun] {
+	if value == nil {
+		return option.None[Fun]{}
+	}
+	switch __gp_m15 := any(value).(type) {
+	case FunTerm:
+		function := __gp_m15.Value
+
+		function.Environment = cloneTerms(function.Environment)
+		return option.Some[Fun]{Value: function}
+	default:
+
+		return option.None[Fun]{}
+	}
+}
+
 //goplus:method (Term) Clone
 func Clone(value Term) Term {
 	if value == nil {
 		return InvalidTerm{}
 	}
-	switch __gp_m15 := any(value).(type) {
+	switch __gp_m16 := any(value).(type) {
 	case InvalidTerm:
 
 		return InvalidTerm{}
 	case IntegerTerm:
-		integer := __gp_m15.Value
+		integer := __gp_m16.Value
 
 		return IntegerTerm{Value: new(big.Int).Set(integer)}
 	case FloatTerm:
-		bits := __gp_m15.Bits
+		bits := __gp_m16.Bits
 
 		return FloatTerm{Bits: bits}
 	case AtomTerm:
-		name := __gp_m15.Name
+		name := __gp_m16.Name
 
 		return AtomTerm{Name: name}
 	case BinaryTerm:
-		raw := __gp_m15.Bytes
+		raw := __gp_m16.Bytes
 
 		return BinaryTerm{Bytes: bytes.Clone(raw)}
 	case TupleTerm:
-		elements := __gp_m15.Elements
+		elements := __gp_m16.Elements
 
 		return TupleTerm{Elements: cloneTerms(elements)}
 	case ProperListTerm:
-		elements := __gp_m15.Elements
+		elements := __gp_m16.Elements
 
 		return ProperListTerm{Elements: cloneTerms(elements)}
 	case ImproperListTerm:
-		elements := __gp_m15.Elements
-		tail := __gp_m15.Tail
+		elements := __gp_m16.Elements
+		tail := __gp_m16.Tail
 
 		return ImproperListTerm{Elements: cloneTerms(elements), Tail: Clone(tail)}
 	case MapTerm:
-		entries := __gp_m15.Entries
+		entries := __gp_m16.Entries
 
 		copied := make([]MapEntry, len(entries))
 		for index, entry := range entries {
@@ -1022,15 +1222,19 @@ func Clone(value Term) Term {
 		}
 		return MapTerm{Entries: copied}
 	case PIDTerm:
-		pid := __gp_m15.Value
+		pid := __gp_m16.Value
 
 		return PIDTerm{Value: pid}
 	case ReferenceTerm:
-		reference := __gp_m15.Value
+		reference := __gp_m16.Value
 
 		return ReferenceTerm{Value: reference}
+	case FunTerm:
+		function := __gp_m16.Value
+
+		return Function(function)
 	case PortTerm:
-		port := __gp_m15.Value
+		port := __gp_m16.Value
 
 		return PortTerm{Value: port}
 	default:
@@ -1043,7 +1247,7 @@ func Equal(value Term, other Term) bool {
 	if value == nil || other == nil {
 		return value == nil && other == nil
 	}
-	switch __gp_m16 := any(value).(type) {
+	switch __gp_m17 := any(value).(type) {
 	case InvalidTerm:
 
 		switch any(other).(type) {
@@ -1055,11 +1259,11 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case IntegerTerm:
-		left := __gp_m16.Value
+		left := __gp_m17.Value
 
-		switch __gp_m18 := any(other).(type) {
+		switch __gp_m19 := any(other).(type) {
 		case IntegerTerm:
-			right := __gp_m18.Value
+			right := __gp_m19.Value
 
 			return left.Cmp(right) == 0
 		default:
@@ -1067,11 +1271,11 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case FloatTerm:
-		left := __gp_m16.Bits
+		left := __gp_m17.Bits
 
-		switch __gp_m19 := any(other).(type) {
+		switch __gp_m20 := any(other).(type) {
 		case FloatTerm:
-			right := __gp_m19.Bits
+			right := __gp_m20.Bits
 
 			return left == right
 		default:
@@ -1079,11 +1283,11 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case AtomTerm:
-		left := __gp_m16.Name
+		left := __gp_m17.Name
 
-		switch __gp_m20 := any(other).(type) {
+		switch __gp_m21 := any(other).(type) {
 		case AtomTerm:
-			right := __gp_m20.Name
+			right := __gp_m21.Name
 
 			return left == right
 		default:
@@ -1091,11 +1295,11 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case BinaryTerm:
-		left := __gp_m16.Bytes
+		left := __gp_m17.Bytes
 
-		switch __gp_m21 := any(other).(type) {
+		switch __gp_m22 := any(other).(type) {
 		case BinaryTerm:
-			right := __gp_m21.Bytes
+			right := __gp_m22.Bytes
 
 			return bytes.Equal(left, right)
 		default:
@@ -1103,22 +1307,10 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case TupleTerm:
-		left := __gp_m16.Elements
-
-		switch __gp_m22 := any(other).(type) {
-		case TupleTerm:
-			right := __gp_m22.Elements
-
-			return equalTerms(left, right)
-		default:
-
-			return false
-		}
-	case ProperListTerm:
-		left := __gp_m16.Elements
+		left := __gp_m17.Elements
 
 		switch __gp_m23 := any(other).(type) {
-		case ProperListTerm:
+		case TupleTerm:
 			right := __gp_m23.Elements
 
 			return equalTerms(left, right)
@@ -1126,14 +1318,26 @@ func Equal(value Term, other Term) bool {
 
 			return false
 		}
-	case ImproperListTerm:
-		left := __gp_m16.Elements
-		leftTail := __gp_m16.Tail
+	case ProperListTerm:
+		left := __gp_m17.Elements
 
 		switch __gp_m24 := any(other).(type) {
-		case ImproperListTerm:
+		case ProperListTerm:
 			right := __gp_m24.Elements
-			rightTail := __gp_m24.Tail
+
+			return equalTerms(left, right)
+		default:
+
+			return false
+		}
+	case ImproperListTerm:
+		left := __gp_m17.Elements
+		leftTail := __gp_m17.Tail
+
+		switch __gp_m25 := any(other).(type) {
+		case ImproperListTerm:
+			right := __gp_m25.Elements
+			rightTail := __gp_m25.Tail
 
 			return equalTerms(left, right) && Equal(leftTail, rightTail)
 		default:
@@ -1141,11 +1345,11 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case MapTerm:
-		left := __gp_m16.Entries
+		left := __gp_m17.Entries
 
-		switch __gp_m25 := any(other).(type) {
+		switch __gp_m26 := any(other).(type) {
 		case MapTerm:
-			right := __gp_m25.Entries
+			right := __gp_m26.Entries
 
 			return equalMaps(left, right)
 		default:
@@ -1153,22 +1357,10 @@ func Equal(value Term, other Term) bool {
 			return false
 		}
 	case PIDTerm:
-		left := __gp_m16.Value
-
-		switch __gp_m26 := any(other).(type) {
-		case PIDTerm:
-			right := __gp_m26.Value
-
-			return left == right
-		default:
-
-			return false
-		}
-	case ReferenceTerm:
-		left := __gp_m16.Value
+		left := __gp_m17.Value
 
 		switch __gp_m27 := any(other).(type) {
-		case ReferenceTerm:
+		case PIDTerm:
 			right := __gp_m27.Value
 
 			return left == right
@@ -1176,12 +1368,44 @@ func Equal(value Term, other Term) bool {
 
 			return false
 		}
-	case PortTerm:
-		left := __gp_m16.Value
+	case ReferenceTerm:
+		left := __gp_m17.Value
 
 		switch __gp_m28 := any(other).(type) {
-		case PortTerm:
+		case ReferenceTerm:
 			right := __gp_m28.Value
+
+			return left == right
+		default:
+
+			return false
+		}
+	case FunTerm:
+		left := __gp_m17.Value
+
+		switch __gp_m29 := any(other).(type) {
+		case FunTerm:
+			right := __gp_m29.Value
+
+			return FunFormEqual(left.Form, right.Form) &&
+				left.Module == right.Module &&
+				left.Function == right.Function &&
+				left.Arity == right.Arity &&
+				left.Label == right.Label &&
+				left.Index == right.Index &&
+				left.Unique == right.Unique &&
+				left.Creator == right.Creator &&
+				equalTerms(left.Environment, right.Environment)
+		default:
+
+			return false
+		}
+	case PortTerm:
+		left := __gp_m17.Value
+
+		switch __gp_m30 := any(other).(type) {
+		case PortTerm:
+			right := __gp_m30.Value
 
 			return left == right
 		default:

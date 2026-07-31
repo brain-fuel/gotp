@@ -52,7 +52,7 @@ func TestSelectiveReceiveWaitsAndResumes(t *testing.T) {
 
 				var execution ExecutionSlice = slice
 				switch any(execution).(type) {
-				case ExecutionWaiting:
+				case ExecutionWaiting, ExecutionRaised:
 
 				default:
 
