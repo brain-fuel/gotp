@@ -25,14 +25,18 @@ The ERTS resolver serves the `LoadedModule` image owned by that same generation.
 Typed `gen_server` callbacks expose atomic `code_change(OldVsn, State, Extra)`
 migration: failed callbacks preserve the prior state and successful callbacks
 publish the replacement state as one transition.
+The server processes sender-checked OTP system envelopes through selective
+receive. Suspension leaves ordinary calls, casts, and info messages queued;
+`change_code` is accepted only while suspended; resume restores normal mailbox
+dispatch after an acknowledged migration.
 
 ## Consequences
 
 The core two-version and soft-purge rules are total, deterministic, and free of
 ambient effects. Purging drops generation-owned VM images and literals after
-leases drain. The complete `sys` suspend/change/resume protocol, release
-handlers, application upgrade scripts, and emulator-level literal arenas remain
-explicit work under the partial `system.hot-code` ledger capability.
+leases drain. Generic `sys` status/state replacement, release handlers,
+application upgrade scripts, and emulator-level literal arenas remain explicit
+work under the partial `system.hot-code` ledger capability.
 
 ## Evidence
 
@@ -48,3 +52,7 @@ purge, one exit per affected process, and the OTP `killed` forced-purge reason.
 caller continuation, and exactly-once lease release for ordinary and tail
 calls. `test:gotp.otp.gen-server-code-change-laws` proves atomic typed state
 migration and rollback on callback failure.
+
+`test:gotp.otp.gen-server-system-laws` proves sender-checked acknowledgements,
+suspended selective receive, suspended-only migration, and post-resume queued
+event dispatch.

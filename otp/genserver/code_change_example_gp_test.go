@@ -18,8 +18,8 @@ func upgradeServer(t *testing.T, change CodeChangeHandler[int64]) *Server[int64,
 		HandleCall: func(*kernel.Context, int64, int64) result.Result[CallResult[int64, int64], Failure] {
 			return result.Ok[CallResult[int64, int64], Failure]{Value: ContinueCall[int64, int64]{ReplyValue: 0, StateValue: 0}}
 		},
-		HandleCast: func(*kernel.Context, int64, int64) result.Result[EventResult[int64], Failure] {
-			return result.Ok[EventResult[int64], Failure]{Value: ContinueEvent[int64]{StateValue: 0}}
+		HandleCast: func(_ *kernel.Context, value int64, state int64) result.Result[EventResult[int64], Failure] {
+			return result.Ok[EventResult[int64], Failure]{Value: ContinueEvent[int64]{StateValue: state + value}}
 		},
 	})).(type) {
 	case result.Err[*Server[int64, int64, int64, int64], Failure]:

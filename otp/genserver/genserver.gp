@@ -15,6 +15,9 @@ var (
 	replyTag         = term.MustAtom("$gen_reply")
 	callbackErrorTag = term.MustAtom("callback_error")
 	normalReason     = term.MustAtom("normal")
+	systemTag        = term.MustAtom("system")
+	okReply          = term.MustAtom("ok")
+	errorReply       = term.MustAtom("error")
 )
 
 type Failure enum {
@@ -129,6 +132,15 @@ type CodeChangeHandler[State any] func(
 	Extra term.Term,
 ) result.Result[State, Failure]
 
+type systemRequest enum {
+	SystemSuspend()
+	SystemResume()
+	SystemChangeCode(Module term.Term, OldVersion term.Term, Extra term.Term)
+	UnknownSystemRequest(Request term.Term)
+}
+
+type systemEnvelope struct { from term.PID; replyTo term.PID; tag term.Term; request systemRequest }
+
 type Config[State, Request, Reply, Cast any] struct {
 	InitialState State
 	RequestCodec Codec[Request]
@@ -149,6 +161,7 @@ type Server[State, Request, Reply, Cast any] struct {
 	handleCast   CastHandler[State, Cast]
 	handleInfo   InfoHandler[State]
 	codeChange   CodeChangeHandler[State]
+	suspended    bool
 }
 
 func New[State, Request, Reply, Cast any](
@@ -176,10 +189,13 @@ func New[State, Request, Reply, Cast any](
 
 func (server *Server[State, Request, Reply, Cast]) Behavior() kernel.Behavior {
 	return func(context *kernel.Context) kernel.StepResult {
-		match context.Receive(nil) {
+		var accept func(kernel.Signal) bool
+		if server.suspended { accept = func(signal kernel.Signal) bool { return option.IsSome(systemEnvelopeFromSignal(signal)) } }
+		match context.Receive(accept) {
 		case option.None:
 			return kernel.Wait()
 		case option.Some(signal):
+			match server.system(context, signal) { case option.Some(transition): return transition; case option.None: }
 			match signal {
 			case kernel.UserSignal(_, _, message):
 				match taggedTuple(message, "$gen_call", 4) {
@@ -202,6 +218,64 @@ func (server *Server[State, Request, Reply, Cast]) Behavior() kernel.Behavior {
 func (server *Server[State, Request, Reply, Cast]) State() State {
 	return server.state
 }
+
+func (server *Server[State, Request, Reply, Cast]) Suspended() bool { return server.suspended }
+
+// assayxport:unit gotp.otp.gen-server-system
+func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Context, signal kernel.Signal) option.Option[kernel.StepResult] {
+	match systemEnvelopeFromSignal(signal) {
+	case option.None: return option.None[kernel.StepResult]()
+	case option.Some(envelope):
+		var response term.Term = okReply
+		match envelope.request {
+		case SystemSuspend: server.suspended = true
+		case SystemResume: server.suspended = false
+		case SystemChangeCode(_, oldVersion, extra):
+			if !server.suspended { response = systemFailure("not_suspended") } else {
+				match server.ChangeCode(oldVersion, extra) { case result.Err(failure): response = term.Tuple(errorReply, term.Binary([]byte(failure.Error()))); case result.Ok(_): }
+			}
+		case UnknownSystemRequest(_): response = systemFailure("unknown_system_msg")
+		}
+		context.Send(envelope.replyTo, term.Tuple(envelope.tag.Clone(), response))
+		return option.Some[kernel.StepResult](kernel.Yield())
+	}
+}
+
+func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
+	match signal {
+	case kernel.UserSignal(from, _, message):
+		match message {
+		case term.TupleTerm(values):
+			if len(values) != 3 || !term.Equal(values[0], systemTag) { return option.None[systemEnvelope]() }
+			match values[1] {
+			case term.TupleTerm(reply):
+				if len(reply) != 2 { return option.None[systemEnvelope]() }
+				match reply[0] {
+				case term.PIDTerm(replyTo):
+					if replyTo != from { return option.None[systemEnvelope]() }
+					return option.Some(systemEnvelope{from: from, replyTo: replyTo, tag: reply[1].Clone(), request: systemRequestFromTerm(values[2])})
+				case _: return option.None[systemEnvelope]()
+				}
+			case _: return option.None[systemEnvelope]()
+			}
+		case _: return option.None[systemEnvelope]()
+		}
+	case _: return option.None[systemEnvelope]()
+	}
+}
+
+func systemRequestFromTerm(request term.Term) systemRequest {
+	match request {
+	case term.AtomTerm(name):
+		switch name { case "suspend": return SystemSuspend(); case "resume": return SystemResume() }
+	case term.TupleTerm(values):
+		if len(values) == 4 && term.Equal(values[0], term.MustAtom("change_code")) { return SystemChangeCode(values[1].Clone(), values[2].Clone(), values[3].Clone()) }
+	case _:
+	}
+	return UnknownSystemRequest(request.Clone())
+}
+
+func systemFailure(reason string) term.Term { return term.Tuple(errorReply, term.MustAtom(reason)) }
 
 // assayxport:unit gotp.otp.gen-server-code-change
 func (server *Server[State, Request, Reply, Cast]) ChangeCode(

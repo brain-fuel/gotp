@@ -26,21 +26,21 @@ type awaitPhase struct{}
 
 func (awaitPhase) isClientPhase() {}
 
-// clientPhaseCases selects one handler per clientPhase variant for fold.
+// clientPhaseCases selects one handler per clientPhase variant for clientPhaseFold.
 type clientPhaseCases[R any] struct {
 	SendPhase  func() R
 	AwaitPhase func() R
 }
 
-// fold reduces clientPhase by one-level case analysis.
-func fold[R any](v clientPhase, cs clientPhaseCases[R]) R {
+// clientPhaseFold reduces clientPhase by one-level case analysis.
+func clientPhaseFold[R any](v clientPhase, cs clientPhaseCases[R]) R {
 	switch any(v).(type) {
 	case sendPhase:
 		return cs.SendPhase()
 	case awaitPhase:
 		return cs.AwaitPhase()
 	default:
-		panic("goplus: impossible enum value in fold")
+		panic("goplus: impossible enum value in clientPhaseFold")
 	}
 }
 

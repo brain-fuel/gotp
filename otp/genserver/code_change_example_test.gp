@@ -13,7 +13,7 @@ func upgradeServer(t *testing.T, change CodeChangeHandler[int64]) *Server[int64,
 	match New(Config[int64, int64, int64, int64]{
 		InitialState: 7, RequestCodec: Int64Codec{}, ReplyCodec: Int64Codec{}, CastCodec: Int64Codec{}, CodeChange: change,
 		HandleCall: func(*kernel.Context, int64, int64) result.Result[CallResult[int64, int64], Failure] { return result.Ok[CallResult[int64, int64], Failure](ContinueCall(0, 0)) },
-		HandleCast: func(*kernel.Context, int64, int64) result.Result[EventResult[int64], Failure] { return result.Ok[EventResult[int64], Failure](ContinueEvent(0)) },
+		HandleCast: func(_ *kernel.Context, value int64, state int64) result.Result[EventResult[int64], Failure] { return result.Ok[EventResult[int64], Failure](ContinueEvent(state + value)) },
 	}) {
 	case result.Err(failure): t.Fatal(failure.Error()); return nil
 	case result.Ok(server): return server

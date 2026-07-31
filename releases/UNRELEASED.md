@@ -52,3 +52,5 @@ This document is not a release and does not authorize a tag or publication.
 - Added generation-leased VM linked calls that enter current code while return
   frames retain old code, plus atomic typed `gen_server` `code_change` state
   migration and purged-generation VM image reclamation.
+- Added sender-checked `gen_server` system suspend/change/resume handling with
+  selective mailbox dispatch and deterministic acknowledgements.
