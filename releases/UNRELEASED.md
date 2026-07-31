@@ -141,3 +141,15 @@ This document is not a release and does not authorize a tag or publication.
 - Added live-root copying collection and geometric heap growth over X/Y and
   pending exception roots, dropping unreachable construction roots and
   rebuilding off-heap binary ownership transactionally.
+
+### OTP stdlib execution
+
+- Replaced the bootstrap `lists.beam` fixture with the byte-identical module
+  from the official OTP 29.0.4 image.
+- Added deterministic OTP-oracle corpora covering every one of the module's 95
+  exports, including higher-order operations invoked with pinned BEAM closures.
+- Added the map instruction family, ordered comparison BIFs, and generic
+  `module_info/0,1` metadata required by the unmodified module.
+- Recorded the OTP VM-global export-table ordering boundary in ADR 0049. The 91
+  source-declared `lists` rows remain partial until their complete input domains
+  have differential or property evidence.

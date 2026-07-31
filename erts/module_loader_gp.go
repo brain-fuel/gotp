@@ -527,6 +527,7 @@ type LoadedModule struct {
 	instructions []beam.Instruction
 	config       vm.MachineConfig
 	exports      map[ExportKey]uint64
+	metadata     map[string]term.Term
 	literalArena *LiteralArena
 }
 
@@ -926,6 +927,7 @@ func LoadModule(
 			Arity:    exported.Arity,
 		}] = uint64(exported.Label)
 	}
+	metadata := decodeModuleMetadata(module)
 	machineConfig := vm.MachineConfig{
 		XRegisters: config.XRegisters,
 		StepLimit:  config.StepLimit,
@@ -985,6 +987,7 @@ func LoadModule(
 		instructions: append([]beam.Instruction(nil), decoded.Instructions...),
 		config:       machineConfig,
 		exports:      exports,
+		metadata:     metadata,
 		literalArena: literalArena,
 	}}
 }

@@ -23,6 +23,13 @@ type otpArithmeticOperation enum {
 	otpMultiply()
 }
 
+type otpComparisonOperation enum {
+	otpLess()
+	otpLessEqual()
+	otpGreater()
+	otpGreaterEqual()
+}
+
 func otpBadarg() vm.ExternalCallOutcome {
 	return vm.ExternalCallRejected("badarg")
 }
@@ -139,6 +146,23 @@ func otpArithmetic(arguments []term.Term, operation otpArithmeticOperation) vm.E
 		return vm.ExternalCallReturned(term.Float(leftFloat - rightFloat))
 	case otpMultiply:
 		return vm.ExternalCallReturned(term.Float(leftFloat * rightFloat))
+	}
+}
+
+func otpOrderedComparison(arguments []term.Term, operation otpComparisonOperation) vm.ExternalCallOutcome {
+	match term.Compare(arguments[0], arguments[1]) {
+	case result.Err(_): return otpBadarg()
+	case result.Ok(order):
+		matched := false
+		var checked term.Ordering = order
+		match operation {
+		case otpLess: match checked { case term.TermLess: matched = true; case term.TermEqual, term.TermGreater: }
+		case otpLessEqual: match checked { case term.TermLess, term.TermEqual: matched = true; case term.TermGreater: }
+		case otpGreater: match checked { case term.TermGreater: matched = true; case term.TermLess, term.TermEqual: }
+		case otpGreaterEqual: match checked { case term.TermGreater, term.TermEqual: matched = true; case term.TermLess: }
+		}
+		if matched { return vm.ExternalCallReturned(term.MustAtom("true")) }
+		return vm.ExternalCallReturned(term.MustAtom("false"))
 	}
 }
 
@@ -438,6 +462,10 @@ func otpSetElement(arguments []term.Term) vm.ExternalCallOutcome {
 // assayxport:unit gotp.erts.otp-pure-bifs
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "<", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpLess()) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "=<", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpLessEqual()) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: ">", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpGreater()) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: ">=", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpGreaterEqual()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "++", Arity: 2}, Implementation: otpListAppend},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "--", Arity: 2}, Implementation: otpListSubtract},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "-", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpArithmetic(arguments, otpSubtract()) }},

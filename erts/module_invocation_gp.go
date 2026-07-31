@@ -127,7 +127,7 @@ func (module *LoadedModule) Invoke(
 		module.config.XRegisters,
 		module.config.StepLimit,
 		source,
-		registry,
+		registryWithModuleInfo(registry, map[string]*LoadedModule{module.name: module}),
 	)
 }
 
@@ -174,7 +174,7 @@ func (modules *ModuleSet) Invoke(
 			module.config.XRegisters,
 			module.config.StepLimit,
 			source,
-			registry,
+			registryWithModuleInfo(registry, modules.modules),
 		)
 	default:
 		panic("goplus: impossible enum value in match")

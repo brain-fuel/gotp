@@ -97,6 +97,14 @@ func executeCoreTermInstruction(
 		return putList(machine, instruction)
 	case "get_tuple_element":
 		return getTupleElement(machine, instruction)
+	case "has_map_fields":
+		return hasMapFields(machine, instruction)
+	case "get_map_elements":
+		return getMapElements(machine, instruction)
+	case "put_map_assoc":
+		return putMap(machine, instruction, false)
+	case "put_map_exact":
+		return putMap(machine, instruction, true)
 	case "put_tuple2":
 		return putTuple(machine, instruction)
 	case "select_val":
@@ -119,17 +127,255 @@ func executeCoreTermInstruction(
 	return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
 }
 
+func hasMapFields(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 3 {
+		return malformedCoreInstruction(instruction)
+	}
+	var keys []beam.Operand
+	switch __gp_m6 := any(instruction.Operands[2]).(type) {
+	case beam.ListOperand:
+		found := __gp_m6.Items
+		keys = found
+	default:
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "has_map_fields keys are not a list operand"}}
+	}
+	switch __gp_m7 := any(machine.resolve(instruction.Operands[1])).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m7.Err
+		return result.Err[instructionOutcome, Failure]{Err: failure}
+	case result.Ok[term.Term, Failure]:
+		value := __gp_m7.Value
+
+		switch __gp_m8 := any(value).(type) {
+		case term.MapTerm:
+			entries := __gp_m8.Entries
+
+			for _, keyOperand := range keys {
+				var key term.Term
+				switch __gp_m9 := any(machine.resolve(keyOperand)).(type) {
+				case result.Err[term.Term, Failure]:
+					failure := __gp_m9.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[term.Term, Failure]:
+					found := __gp_m9.Value
+					key = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				present := false
+				for _, entry := range entries {
+					if term.Equal(entry.Key, key) {
+						present = true
+						break
+					}
+				}
+				if !present {
+					return branchOnTest(machine, instruction.Operands[0], false)
+				}
+			}
+			return branchOnTest(machine, instruction.Operands[0], true)
+		default:
+			return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func getMapElements(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 3 {
+		return malformedCoreInstruction(instruction)
+	}
+	var pairs []beam.Operand
+	switch __gp_m10 := any(instruction.Operands[2]).(type) {
+	case beam.ListOperand:
+		found := __gp_m10.Items
+		pairs = found
+	default:
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "get_map_elements pairs are not a list operand"}}
+	}
+	if len(pairs)%2 != 0 {
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "get_map_elements pairs are not key/destination pairs"}}
+	}
+	switch __gp_m11 := any(machine.resolve(instruction.Operands[1])).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m11.Err
+		return result.Err[instructionOutcome, Failure]{Err: failure}
+	case result.Ok[term.Term, Failure]:
+		source := __gp_m11.Value
+
+		switch __gp_m12 := any(source).(type) {
+		case term.MapTerm:
+			entries := __gp_m12.Entries
+
+			destinations := make([]beam.Operand, 0, len(pairs)/2)
+			values := make([]term.Term, 0, len(pairs)/2)
+			for index := 0; index < len(pairs); index += 2 {
+				var key term.Term
+				switch __gp_m13 := any(machine.resolve(pairs[index])).(type) {
+				case result.Err[term.Term, Failure]:
+					failure := __gp_m13.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[term.Term, Failure]:
+					found := __gp_m13.Value
+					key = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				found := false
+				for _, entry := range entries {
+					if term.Equal(entry.Key, key) {
+						destinations = append(destinations, pairs[index+1])
+						values = append(values, entry.Value)
+						found = true
+						break
+					}
+				}
+				if !found {
+					return branchOnTest(machine, instruction.Operands[0], false)
+				}
+			}
+			for index, destination := range destinations {
+				switch __gp_m14 := any(machine.assign(destination, values[index])).(type) {
+				case result.Err[MachineMutation, Failure]:
+					failure := __gp_m14.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[MachineMutation, Failure]:
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+			machine.pc++
+			return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
+		default:
+			return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func putMap(machine *Machine, instruction beam.Instruction, exact bool) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 5 {
+		return malformedCoreInstruction(instruction)
+	}
+	switch __gp_m15 := any(allocationCount(instruction, 3)).(type) {
+	case result.Err[int, Failure]:
+		failure := __gp_m15.Err
+		return result.Err[instructionOutcome, Failure]{Err: failure}
+	case result.Ok[int, Failure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	var pairs []beam.Operand
+	switch __gp_m16 := any(instruction.Operands[4]).(type) {
+	case beam.ListOperand:
+		found := __gp_m16.Items
+		pairs = found
+	default:
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "put_map pairs are not a list operand"}}
+	}
+	if len(pairs)%2 != 0 {
+		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "put_map pairs are not key/value pairs"}}
+	}
+	switch __gp_m17 := any(machine.resolve(instruction.Operands[1])).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m17.Err
+		return result.Err[instructionOutcome, Failure]{Err: failure}
+	case result.Ok[term.Term, Failure]:
+		source := __gp_m17.Value
+
+		switch __gp_m18 := any(source).(type) {
+		case term.MapTerm:
+			sourceEntries := __gp_m18.Entries
+
+			entries := append([]term.MapEntry(nil), sourceEntries...)
+			for index := 0; index < len(pairs); index += 2 {
+				var key term.Term
+				var value term.Term
+				switch __gp_m19 := any(machine.resolve(pairs[index])).(type) {
+				case result.Err[term.Term, Failure]:
+					failure := __gp_m19.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[term.Term, Failure]:
+					found := __gp_m19.Value
+					key = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				switch __gp_m20 := any(machine.resolve(pairs[index+1])).(type) {
+				case result.Err[term.Term, Failure]:
+					failure := __gp_m20.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[term.Term, Failure]:
+					found := __gp_m20.Value
+					value = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				position := -1
+				for candidate, entry := range entries {
+					if term.Equal(entry.Key, key) {
+						position = candidate
+						break
+					}
+				}
+				if position < 0 {
+					if exact {
+						return branchOnTest(machine, instruction.Operands[0], false)
+					}
+					entries = append(entries, term.MapEntry{Key: key, Value: value})
+				} else {
+					entries[position] = term.MapEntry{Key: key, Value: value}
+				}
+			}
+			switch __gp_m21 := any(term.Map(entries)).(type) {
+			case result.Err[term.Term, term.ValidationFailure]:
+				cause := __gp_m21.Err
+				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: term.Error(cause)}}
+			case result.Ok[term.Term, term.ValidationFailure]:
+				updated := __gp_m21.Value
+
+				switch __gp_m22 := any(machine.trackHeapTerm(updated, 3+2*len(entries))).(type) {
+				case result.Err[HeapMutation, Failure]:
+					failure := __gp_m22.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[HeapMutation, Failure]:
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+				switch __gp_m23 := any(machine.assign(instruction.Operands[2], updated)).(type) {
+				case result.Err[MachineMutation, Failure]:
+					failure := __gp_m23.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[MachineMutation, Failure]:
+					machine.pc++
+					return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func testTermKind(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
 	if len(instruction.Operands) != 2 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m6 := any(machine.resolve(instruction.Operands[1])).(type) {
+	switch __gp_m24 := any(machine.resolve(instruction.Operands[1])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m6.Err
+		failure := __gp_m24.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m6.Value
+		value := __gp_m24.Value
 
 		matched := false
 		var kind term.Kind = term.TermKind(value)
@@ -179,9 +425,9 @@ func testTermKind(machine *Machine, instruction beam.Instruction) result.Result[
 }
 
 func listKindMatches(name string, value term.Term) bool {
-	switch __gp_m8 := any(value).(type) {
+	switch __gp_m26 := any(value).(type) {
 	case term.ProperListTerm:
-		elements := __gp_m8.Elements
+		elements := __gp_m26.Elements
 
 		if name == "is_nil" {
 			return len(elements) == 0
@@ -191,7 +437,7 @@ func listKindMatches(name string, value term.Term) bool {
 		}
 		return name == "is_list"
 	case term.ImproperListTerm:
-		elements := __gp_m8.Elements
+		elements := __gp_m26.Elements
 
 		return (name == "is_list" || name == "is_nonempty_list") && len(elements) > 0
 	default:
@@ -201,12 +447,12 @@ func listKindMatches(name string, value term.Term) bool {
 }
 
 func isBooleanAtom(value term.Term) bool {
-	switch __gp_m9 := any(term.AtomName(value)).(type) {
+	switch __gp_m27 := any(term.AtomName(value)).(type) {
 	case option.None[string]:
 
 		return false
 	case option.Some[string]:
-		name := __gp_m9.Value
+		name := __gp_m27.Value
 
 		return name == "true" || name == "false"
 	default:
@@ -219,29 +465,29 @@ func testArity(machine *Machine, instruction beam.Instruction) result.Result[ins
 		return malformedCoreInstruction(instruction)
 	}
 	var wanted uint64
-	switch __gp_m10 := any(beam.Uint64(instruction.Operands[2])).(type) {
+	switch __gp_m28 := any(beam.Uint64(instruction.Operands[2])).(type) {
 	case option.None[uint64]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "test_arity arity is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m10.Value
+		value := __gp_m28.Value
 
 		wanted = value
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m11 := any(machine.resolve(instruction.Operands[1])).(type) {
+	switch __gp_m29 := any(machine.resolve(instruction.Operands[1])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m11.Err
+		failure := __gp_m29.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m11.Value
+		value := __gp_m29.Value
 
 		matched := false
-		switch __gp_m12 := any(value).(type) {
+		switch __gp_m30 := any(value).(type) {
 		case term.TupleTerm:
-			elements := __gp_m12.Elements
+			elements := __gp_m30.Elements
 
 			matched = uint64(len(elements)) == wanted
 		default:
@@ -258,37 +504,37 @@ func testTaggedTuple(machine *Machine, instruction beam.Instruction) result.Resu
 		return malformedCoreInstruction(instruction)
 	}
 	var wanted uint64
-	switch __gp_m13 := any(beam.Uint64(instruction.Operands[2])).(type) {
+	switch __gp_m31 := any(beam.Uint64(instruction.Operands[2])).(type) {
 	case option.None[uint64]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "is_tagged_tuple arity is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m13.Value
+		value := __gp_m31.Value
 
 		wanted = value
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m14 := any(machine.resolve(instruction.Operands[1])).(type) {
+	switch __gp_m32 := any(machine.resolve(instruction.Operands[1])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m14.Err
+		failure := __gp_m32.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m14.Value
+		value := __gp_m32.Value
 
-		switch __gp_m15 := any(machine.resolve(instruction.Operands[3])).(type) {
+		switch __gp_m33 := any(machine.resolve(instruction.Operands[3])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m15.Err
+			failure := __gp_m33.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			tag := __gp_m15.Value
+			tag := __gp_m33.Value
 
 			matched := false
-			switch __gp_m16 := any(value).(type) {
+			switch __gp_m34 := any(value).(type) {
 			case term.TupleTerm:
-				elements := __gp_m16.Elements
+				elements := __gp_m34.Elements
 
 				matched = uint64(len(elements)) == wanted && len(elements) > 0 && term.Equal(elements[0], tag)
 			default:
@@ -307,21 +553,21 @@ func testEquality(machine *Machine, instruction beam.Instruction) result.Result[
 	if len(instruction.Operands) != 3 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m17 := any(machine.resolve(instruction.Operands[1])).(type) {
+	switch __gp_m35 := any(machine.resolve(instruction.Operands[1])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m17.Err
+		failure := __gp_m35.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		left := __gp_m17.Value
+		left := __gp_m35.Value
 
-		switch __gp_m18 := any(machine.resolve(instruction.Operands[2])).(type) {
+		switch __gp_m36 := any(machine.resolve(instruction.Operands[2])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m18.Err
+			failure := __gp_m36.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			right := __gp_m18.Value
+			right := __gp_m36.Value
 
 			equal := term.Equal(left, right)
 			if instruction.Opcode.Name == "is_eq" || instruction.Opcode.Name == "is_ne" {
@@ -343,13 +589,13 @@ func numericOrExactEqual(left term.Term, right term.Term) bool {
 	if term.Equal(left, right) {
 		return true
 	}
-	switch __gp_m19 := any(term.IntegerValue(left)).(type) {
+	switch __gp_m37 := any(term.IntegerValue(left)).(type) {
 	case option.Some[*big.Int]:
-		integer := __gp_m19.Value
+		integer := __gp_m37.Value
 
-		switch __gp_m20 := any(term.FloatValue(right)).(type) {
+		switch __gp_m38 := any(term.FloatValue(right)).(type) {
 		case option.Some[float64]:
-			floating := __gp_m20.Value
+			floating := __gp_m38.Value
 
 			return integerFloatEqual(integer, floating)
 		case option.None[float64]:
@@ -362,13 +608,13 @@ func numericOrExactEqual(left term.Term, right term.Term) bool {
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m21 := any(term.FloatValue(left)).(type) {
+	switch __gp_m39 := any(term.FloatValue(left)).(type) {
 	case option.Some[float64]:
-		floating := __gp_m21.Value
+		floating := __gp_m39.Value
 
-		switch __gp_m22 := any(term.IntegerValue(right)).(type) {
+		switch __gp_m40 := any(term.IntegerValue(right)).(type) {
 		case option.Some[*big.Int]:
-			integer := __gp_m22.Value
+			integer := __gp_m40.Value
 
 			return integerFloatEqual(integer, floating)
 		case option.None[*big.Int]:
@@ -401,24 +647,24 @@ func getList(machine *Machine, instruction beam.Instruction, headOnly bool) resu
 	if len(instruction.Operands) != want {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m23 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m41 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m23.Err
+		failure := __gp_m41.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m23.Value
+		value := __gp_m41.Value
 
-		switch __gp_m24 := any(splitList(value)).(type) {
+		switch __gp_m42 := any(splitList(value)).(type) {
 		case option.None[listParts]:
 
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: instruction.Opcode.Name + " source is not a nonempty list"}}
 		case option.Some[listParts]:
-			parts := __gp_m24.Value
+			parts := __gp_m42.Value
 
-			switch __gp_m25 := any(machine.assign(instruction.Operands[1], parts.Head)).(type) {
+			switch __gp_m43 := any(machine.assign(instruction.Operands[1], parts.Head)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m25.Err
+				failure := __gp_m43.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -427,9 +673,9 @@ func getList(machine *Machine, instruction beam.Instruction, headOnly bool) resu
 				panic("goplus: impossible enum value in match")
 			}
 			if !headOnly {
-				switch __gp_m26 := any(machine.assign(instruction.Operands[2], parts.Tail)).(type) {
+				switch __gp_m44 := any(machine.assign(instruction.Operands[2], parts.Tail)).(type) {
 				case result.Err[MachineMutation, Failure]:
-					failure := __gp_m26.Err
+					failure := __gp_m44.Err
 
 					return result.Err[instructionOutcome, Failure]{Err: failure}
 				case result.Ok[MachineMutation, Failure]:
@@ -454,17 +700,17 @@ type listParts struct {
 }
 
 func splitList(value term.Term) option.Option[listParts] {
-	switch __gp_m27 := any(value).(type) {
+	switch __gp_m45 := any(value).(type) {
 	case term.ProperListTerm:
-		elements := __gp_m27.Elements
+		elements := __gp_m45.Elements
 
 		if len(elements) == 0 {
 			return option.None[listParts]{}
 		}
 		return option.Some[listParts]{Value: listParts{Head: term.Clone(elements[0]), Tail: term.List(elements[1:]...)}}
 	case term.ImproperListTerm:
-		elements := __gp_m27.Elements
-		tail := __gp_m27.Tail
+		elements := __gp_m45.Elements
+		tail := __gp_m45.Tail
 
 		if len(elements) == 0 {
 			return option.None[listParts]{}
@@ -484,24 +730,24 @@ func getListTail(machine *Machine, instruction beam.Instruction) result.Result[i
 	if len(instruction.Operands) != 2 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m28 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m46 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m28.Err
+		failure := __gp_m46.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m28.Value
+		value := __gp_m46.Value
 
-		switch __gp_m29 := any(splitList(value)).(type) {
+		switch __gp_m47 := any(splitList(value)).(type) {
 		case option.None[listParts]:
 
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "get_tl source is not a nonempty list"}}
 		case option.Some[listParts]:
-			parts := __gp_m29.Value
+			parts := __gp_m47.Value
 
-			switch __gp_m30 := any(machine.assign(instruction.Operands[1], parts.Tail)).(type) {
+			switch __gp_m48 := any(machine.assign(instruction.Operands[1], parts.Tail)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m30.Err
+				failure := __gp_m48.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -523,35 +769,35 @@ func putList(machine *Machine, instruction beam.Instruction) result.Result[instr
 	if len(instruction.Operands) != 3 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m31 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m49 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m31.Err
+		failure := __gp_m49.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		head := __gp_m31.Value
+		head := __gp_m49.Value
 
-		switch __gp_m32 := any(machine.resolve(instruction.Operands[1])).(type) {
+		switch __gp_m50 := any(machine.resolve(instruction.Operands[1])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m32.Err
+			failure := __gp_m50.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			tail := __gp_m32.Value
+			tail := __gp_m50.Value
 
 			value := prependList(head, tail)
-			switch __gp_m33 := any(machine.trackHeapTerm(value, 2)).(type) {
+			switch __gp_m51 := any(machine.trackHeapTerm(value, 2)).(type) {
 			case result.Err[HeapMutation, Failure]:
-				failure := __gp_m33.Err
+				failure := __gp_m51.Err
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[HeapMutation, Failure]:
 
 			default:
 				panic("goplus: impossible enum value in match")
 			}
-			switch __gp_m34 := any(machine.assign(instruction.Operands[2], value)).(type) {
+			switch __gp_m52 := any(machine.assign(instruction.Operands[2], value)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m34.Err
+				failure := __gp_m52.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -570,14 +816,14 @@ func putList(machine *Machine, instruction beam.Instruction) result.Result[instr
 }
 
 func prependList(head term.Term, tail term.Term) term.Term {
-	switch __gp_m35 := any(tail).(type) {
+	switch __gp_m53 := any(tail).(type) {
 	case term.ProperListTerm:
-		elements := __gp_m35.Elements
+		elements := __gp_m53.Elements
 
 		return term.List(append([]term.Term{term.Clone(head)}, elements...)...)
 	case term.ImproperListTerm:
-		elements := __gp_m35.Elements
-		improperTail := __gp_m35.Tail
+		elements := __gp_m53.Elements
+		improperTail := __gp_m53.Tail
 
 		return term.ImproperList(append([]term.Term{term.Clone(head)}, elements...), improperTail)
 	default:
@@ -591,35 +837,35 @@ func getTupleElement(machine *Machine, instruction beam.Instruction) result.Resu
 		return malformedCoreInstruction(instruction)
 	}
 	var index uint64
-	switch __gp_m36 := any(beam.Uint64(instruction.Operands[1])).(type) {
+	switch __gp_m54 := any(beam.Uint64(instruction.Operands[1])).(type) {
 	case option.None[uint64]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "tuple element index is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m36.Value
+		value := __gp_m54.Value
 
 		index = value
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m37 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m55 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m37.Err
+		failure := __gp_m55.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m37.Value
+		value := __gp_m55.Value
 
-		switch __gp_m38 := any(value).(type) {
+		switch __gp_m56 := any(value).(type) {
 		case term.TupleTerm:
-			elements := __gp_m38.Elements
+			elements := __gp_m56.Elements
 
 			if index >= uint64(len(elements)) {
 				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "tuple element index is out of range"}}
 			}
-			switch __gp_m39 := any(machine.assign(instruction.Operands[2], elements[index])).(type) {
+			switch __gp_m57 := any(machine.assign(instruction.Operands[2], elements[index])).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m39.Err
+				failure := __gp_m57.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -643,9 +889,9 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 		return malformedCoreInstruction(instruction)
 	}
 	var operands []beam.Operand
-	switch __gp_m40 := any(instruction.Operands[1]).(type) {
+	switch __gp_m58 := any(instruction.Operands[1]).(type) {
 	case beam.ListOperand:
-		items := __gp_m40.Items
+		items := __gp_m58.Items
 
 		operands = items
 	default:
@@ -654,13 +900,13 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 	}
 	elements := make([]term.Term, len(operands))
 	for index, operand := range operands {
-		switch __gp_m41 := any(machine.resolve(operand)).(type) {
+		switch __gp_m59 := any(machine.resolve(operand)).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m41.Err
+			failure := __gp_m59.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m41.Value
+			value := __gp_m59.Value
 
 			elements[index] = value
 		default:
@@ -668,18 +914,18 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 		}
 	}
 	value := term.Tuple(elements...)
-	switch __gp_m42 := any(machine.trackHeapTerm(value, len(elements)+1)).(type) {
+	switch __gp_m60 := any(machine.trackHeapTerm(value, len(elements)+1)).(type) {
 	case result.Err[HeapMutation, Failure]:
-		failure := __gp_m42.Err
+		failure := __gp_m60.Err
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[HeapMutation, Failure]:
 
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m43 := any(machine.assign(instruction.Operands[0], value)).(type) {
+	switch __gp_m61 := any(machine.assign(instruction.Operands[0], value)).(type) {
 	case result.Err[MachineMutation, Failure]:
-		failure := __gp_m43.Err
+		failure := __gp_m61.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[MachineMutation, Failure]:
@@ -805,25 +1051,25 @@ func heapWordCount(instruction beam.Instruction, operandIndex int) result.Result
 	if operandIndex < 0 || operandIndex >= len(instruction.Operands) {
 		return result.Err[int, Failure]{Err: InvalidProgram{Detail: "missing heap allocation operand"}}
 	}
-	switch __gp_m44 := any(instruction.Operands[operandIndex]).(type) {
+	switch __gp_m62 := any(instruction.Operands[operandIndex]).(type) {
 	case beam.UnsignedOperand:
 
 		return allocationCount(instruction, operandIndex)
 	case beam.AllocationListOperand:
-		raw := __gp_m44.Allocations
+		raw := __gp_m62.Allocations
 
 		words := uint64(0)
 		for _, entry := range raw {
-			switch __gp_m45 := any(classifyHeapAllocation(entry)).(type) {
+			switch __gp_m63 := any(classifyHeapAllocation(entry)).(type) {
 			case result.Err[heapAllocation, Failure]:
-				failure := __gp_m45.Err
+				failure := __gp_m63.Err
 				return result.Err[int, Failure]{Err: failure}
 			case result.Ok[heapAllocation, Failure]:
-				allocation := __gp_m45.Value
+				allocation := __gp_m63.Value
 
-				switch __gp_m46 := any(allocation).(type) {
+				switch __gp_m64 := any(allocation).(type) {
 				case heapWords:
-					count := __gp_m46.count
+					count := __gp_m64.count
 
 					if count > uint64(maxInt())-words {
 						return result.Err[int, Failure]{Err: InvalidProgram{Detail: "heap allocation count overflows int"}}
@@ -863,25 +1109,25 @@ func swapRegisters(machine *Machine, instruction beam.Instruction) result.Result
 	if len(instruction.Operands) != 2 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m47 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m65 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m47.Err
+		failure := __gp_m65.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		left := __gp_m47.Value
+		left := __gp_m65.Value
 
-		switch __gp_m48 := any(machine.resolve(instruction.Operands[1])).(type) {
+		switch __gp_m66 := any(machine.resolve(instruction.Operands[1])).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m48.Err
+			failure := __gp_m66.Err
 
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			right := __gp_m48.Value
+			right := __gp_m66.Value
 
-			switch __gp_m49 := any(machine.assign(instruction.Operands[0], right)).(type) {
+			switch __gp_m67 := any(machine.assign(instruction.Operands[0], right)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m49.Err
+				failure := __gp_m67.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -889,9 +1135,9 @@ func swapRegisters(machine *Machine, instruction beam.Instruction) result.Result
 			default:
 				panic("goplus: impossible enum value in match")
 			}
-			switch __gp_m50 := any(machine.assign(instruction.Operands[1], left)).(type) {
+			switch __gp_m68 := any(machine.assign(instruction.Operands[1], left)).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m50.Err
+				failure := __gp_m68.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -913,14 +1159,14 @@ func initializeYRegisters(machine *Machine, instruction beam.Instruction) result
 	if len(instruction.Operands) != 1 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m51 := any(instruction.Operands[0]).(type) {
+	switch __gp_m69 := any(instruction.Operands[0]).(type) {
 	case beam.ListOperand:
-		registers := __gp_m51.Items
+		registers := __gp_m69.Items
 
 		for _, register := range registers {
-			switch __gp_m52 := any(machine.assign(register, term.List())).(type) {
+			switch __gp_m70 := any(machine.assign(register, term.List())).(type) {
 			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m52.Err
+				failure := __gp_m70.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[MachineMutation, Failure]:
@@ -941,13 +1187,13 @@ func selectValue(machine *Machine, instruction beam.Instruction) result.Result[i
 	if len(instruction.Operands) != 3 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m53 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m71 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m53.Err
+		failure := __gp_m71.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m53.Value
+		value := __gp_m71.Value
 
 		return selectFromPairs(machine, value, instruction.Operands[1], instruction.Operands[2], false)
 	default:
@@ -959,17 +1205,17 @@ func selectTupleArity(machine *Machine, instruction beam.Instruction) result.Res
 	if len(instruction.Operands) != 3 {
 		return malformedCoreInstruction(instruction)
 	}
-	switch __gp_m54 := any(machine.resolve(instruction.Operands[0])).(type) {
+	switch __gp_m72 := any(machine.resolve(instruction.Operands[0])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m54.Err
+		failure := __gp_m72.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m54.Value
+		value := __gp_m72.Value
 
-		switch __gp_m55 := any(value).(type) {
+		switch __gp_m73 := any(value).(type) {
 		case term.TupleTerm:
-			elements := __gp_m55.Elements
+			elements := __gp_m73.Elements
 
 			return selectFromPairs(machine, term.Integer(int64(len(elements))), instruction.Operands[1], instruction.Operands[2], true)
 		default:
@@ -989,9 +1235,9 @@ func selectFromPairs(
 	unsignedKeys bool,
 ) result.Result[instructionOutcome, Failure] {
 	var pairs []beam.Operand
-	switch __gp_m56 := any(pairsOperand).(type) {
+	switch __gp_m74 := any(pairsOperand).(type) {
 	case beam.ListOperand:
-		items := __gp_m56.Items
+		items := __gp_m74.Items
 
 		pairs = items
 	default:
@@ -1004,25 +1250,25 @@ func selectFromPairs(
 	for index := 0; index < len(pairs); index += 2 {
 		var key term.Term
 		if unsignedKeys {
-			switch __gp_m57 := any(beam.Uint64(pairs[index])).(type) {
+			switch __gp_m75 := any(beam.Uint64(pairs[index])).(type) {
 			case option.None[uint64]:
 
 				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "tuple arity key is not uint64"}}
 			case option.Some[uint64]:
-				arity := __gp_m57.Value
+				arity := __gp_m75.Value
 
 				key = term.MustBigInteger(new(big.Int).SetUint64(arity))
 			default:
 				panic("goplus: impossible enum value in match")
 			}
 		} else {
-			switch __gp_m58 := any(machine.resolve(pairs[index])).(type) {
+			switch __gp_m76 := any(machine.resolve(pairs[index])).(type) {
 			case result.Err[term.Term, Failure]:
-				failure := __gp_m58.Err
+				failure := __gp_m76.Err
 
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[term.Term, Failure]:
-				resolved := __gp_m58.Value
+				resolved := __gp_m76.Value
 
 				key = resolved
 			default:
@@ -1049,20 +1295,20 @@ func branchOnTest(
 }
 
 func jumpToOperand(machine *Machine, operand beam.Operand) result.Result[instructionOutcome, Failure] {
-	switch __gp_m59 := any(labelIndex(operand)).(type) {
+	switch __gp_m77 := any(labelIndex(operand)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "branch destination is not a label"}}
 	case option.Some[uint64]:
-		label := __gp_m59.Value
+		label := __gp_m77.Value
 
 		target, present := machine.labels[label]
-		switch __gp_m60 := any(option.Of(target, present)).(type) {
+		switch __gp_m78 := any(option.Of(target, present)).(type) {
 		case option.None[int]:
 
 			return result.Err[instructionOutcome, Failure]{Err: MissingLabel{Label: label}}
 		case option.Some[int]:
-			position := __gp_m60.Value
+			position := __gp_m78.Value
 
 			machine.pc = position + 1
 			return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}

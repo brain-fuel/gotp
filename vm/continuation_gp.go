@@ -667,11 +667,11 @@ func executeInstruction(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-	case "allocate_heap", "get_hd", "get_list", "get_tl", "get_tuple_element", "init_yregs",
+	case "allocate_heap", "get_hd", "get_list", "get_map_elements", "get_tl", "get_tuple_element", "has_map_fields", "init_yregs",
 		"is_atom", "is_binary", "is_bitstr", "is_boolean", "is_eq", "is_eq_exact", "is_float",
 		"is_integer", "is_list", "is_map", "is_ne", "is_ne_exact", "is_nil", "is_nonempty_list",
 		"is_number", "is_pid", "is_port", "is_reference", "is_tagged_tuple", "is_tuple", "line",
-		"put_list", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim":
+		"put_list", "put_map_assoc", "put_map_exact", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim":
 		return executeCoreTermInstruction(machine, instruction)
 	case "deallocate":
 		switch __gp_m13 := any(machine.deallocate(instruction, 0)).(type) {

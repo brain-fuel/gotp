@@ -62,6 +62,14 @@ func executeCoreTermInstruction(
 		return putList(machine, instruction)
 	case "get_tuple_element":
 		return getTupleElement(machine, instruction)
+	case "has_map_fields":
+		return hasMapFields(machine, instruction)
+	case "get_map_elements":
+		return getMapElements(machine, instruction)
+	case "put_map_assoc":
+		return putMap(machine, instruction, false)
+	case "put_map_exact":
+		return putMap(machine, instruction, true)
 	case "put_tuple2":
 		return putTuple(machine, instruction)
 	case "select_val":
@@ -86,6 +94,106 @@ func executeCoreTermInstruction(
 		))
 	}
 	return result.Ok[instructionOutcome, Failure](InstructionContinues())
+}
+
+func hasMapFields(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 3 { return malformedCoreInstruction(instruction) }
+	var keys []beam.Operand
+	match instruction.Operands[2] {
+	case beam.ListOperand(found): keys = found
+	case _: return result.Err[instructionOutcome, Failure](InvalidProgram("has_map_fields keys are not a list operand"))
+	}
+	match machine.resolve(instruction.Operands[1]) {
+	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(value):
+		match value {
+		case term.MapTerm(entries):
+			for _, keyOperand := range keys {
+				var key term.Term
+				match machine.resolve(keyOperand) {
+				case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+				case result.Ok(found): key = found
+				}
+				present := false
+				for _, entry := range entries { if term.Equal(entry.Key, key) { present = true; break } }
+				if !present { return branchOnTest(machine, instruction.Operands[0], false) }
+			}
+			return branchOnTest(machine, instruction.Operands[0], true)
+		case _: return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	}
+}
+
+func getMapElements(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 3 { return malformedCoreInstruction(instruction) }
+	var pairs []beam.Operand
+	match instruction.Operands[2] {
+	case beam.ListOperand(found): pairs = found
+	case _: return result.Err[instructionOutcome, Failure](InvalidProgram("get_map_elements pairs are not a list operand"))
+	}
+	if len(pairs)%2 != 0 { return result.Err[instructionOutcome, Failure](InvalidProgram("get_map_elements pairs are not key/destination pairs")) }
+	match machine.resolve(instruction.Operands[1]) {
+	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(source):
+		match source {
+		case term.MapTerm(entries):
+			destinations := make([]beam.Operand, 0, len(pairs)/2)
+			values := make([]term.Term, 0, len(pairs)/2)
+			for index := 0; index < len(pairs); index += 2 {
+				var key term.Term
+				match machine.resolve(pairs[index]) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(found): key = found }
+				found := false
+				for _, entry := range entries {
+					if term.Equal(entry.Key, key) { destinations = append(destinations, pairs[index+1]); values = append(values, entry.Value); found = true; break }
+				}
+				if !found { return branchOnTest(machine, instruction.Operands[0], false) }
+			}
+			for index, destination := range destinations {
+				match machine.assign(destination, values[index]) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): }
+			}
+			machine.pc++
+			return result.Ok[instructionOutcome, Failure](InstructionContinues())
+		case _: return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	}
+}
+
+func putMap(machine *Machine, instruction beam.Instruction, exact bool) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 5 { return malformedCoreInstruction(instruction) }
+	match allocationCount(instruction, 3) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(_): }
+	var pairs []beam.Operand
+	match instruction.Operands[4] {
+	case beam.ListOperand(found): pairs = found
+	case _: return result.Err[instructionOutcome, Failure](InvalidProgram("put_map pairs are not a list operand"))
+	}
+	if len(pairs)%2 != 0 { return result.Err[instructionOutcome, Failure](InvalidProgram("put_map pairs are not key/value pairs")) }
+	match machine.resolve(instruction.Operands[1]) {
+	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(source):
+		match source {
+		case term.MapTerm(sourceEntries):
+			entries := append([]term.MapEntry(nil), sourceEntries...)
+			for index := 0; index < len(pairs); index += 2 {
+				var key term.Term
+				var value term.Term
+				match machine.resolve(pairs[index]) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(found): key = found }
+				match machine.resolve(pairs[index+1]) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(found): value = found }
+				position := -1
+				for candidate, entry := range entries { if term.Equal(entry.Key, key) { position = candidate; break } }
+				if position < 0 {
+					if exact { return branchOnTest(machine, instruction.Operands[0], false) }
+					entries = append(entries, term.MapEntry{Key: key, Value: value})
+				} else { entries[position] = term.MapEntry{Key: key, Value: value} }
+			}
+			match term.Map(entries) {
+			case result.Err(cause): return result.Err[instructionOutcome, Failure](InvalidProgram(cause.Error()))
+			case result.Ok(updated):
+				match machine.trackHeapTerm(updated, 3+2*len(entries)) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(HeapMutated): }
+				match machine.assign(instruction.Operands[2], updated) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): machine.pc++; return result.Ok[instructionOutcome, Failure](InstructionContinues()) }
+			}
+		case _: return branchOnTest(machine, instruction.Operands[0], false)
+		}
+	}
 }
 
 func testTermKind(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
