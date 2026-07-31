@@ -91,3 +91,12 @@ This document is not a release and does not authorize a tag or publication.
   incomplete; no OTP parity claim is made.
 - Added total raw high-level instruction decoding and a direct relup-delta to
   executable-script bridge; differential OTP ordering proof remains open.
+
+### Generation-owned literal memory
+
+- Added grouped reset/release and generic SoA layout primitives to Go+ std
+  memory, with property laws for invalidation, reuse, and AoS round trips.
+- Added an ERTS literal arena as a second consumer with secure generation reset
+  and immutable-copy reads.
+- Loader and hot-code purge integration remain open; no ERTS parity claim is
+  made.
