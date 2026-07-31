@@ -49,6 +49,7 @@ explicit result and leaves no partially installed replacement.
 
 - Decision: `adr:0050-process-owned-runtime-buffers`.
 - Std code: `goplus.std.memory-buffer`.
+- Released std dependency: `goforge.dev/goplus/std@v0.210.0`.
 - Std laws: `test:goplus.std.memory-buffer-laws`.
 - Consumer code: `gotp.erts.vm-process`.
 - Consumer laws: `test:gotp.erts.selective-receive-laws`.
