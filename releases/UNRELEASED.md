@@ -153,3 +153,9 @@ This document is not a release and does not authorize a tag or publication.
 - Recorded the OTP VM-global export-table ordering boundary in ADR 0049. The 91
   source-declared `lists` rows remain partial until their complete input domains
   have differential or property evidence.
+- Added byte-identical pinned fixtures for `maps`, `proplists`, `ordsets`,
+  `queue`, `gb_sets`, and `gb_trees` from the same official OTP image.
+- Executed all 37 `maps.beam` exports, including higher-order operations with
+  BEAM closures, through deterministic OTP-oracle corpora.
+- Added the native immutable map BIF surface, native and ordered map iteration,
+  total-term comparison, integer remainder, and exported-function dispatch.

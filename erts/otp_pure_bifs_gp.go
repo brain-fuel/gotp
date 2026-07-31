@@ -960,6 +960,380 @@ func otpSetElement(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpMapSize(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m42 := any(arguments[0]).(type) {
+	case term.MapTerm:
+		entries := __gp_m42.Entries
+		return vm.ExternalCallReturned{Value: term.Integer(int64(len(entries)))}
+	default:
+		return otpBadarg()
+	}
+}
+
+func otpMapNext(arguments []term.Term) vm.ExternalCallOutcome {
+	var entries []term.MapEntry
+	switch __gp_m43 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		found := __gp_m43.Entries
+		entries = found
+	default:
+		return otpBadarg()
+	}
+	iteratorMode := term.Equal(arguments[2], term.MustAtom("iterator"))
+	if !iteratorMode {
+		switch any(arguments[2]).(type) {
+		case term.ProperListTerm:
+		case term.ImproperListTerm:
+		default:
+			return otpBadarg()
+		}
+	}
+	switch __gp_m45 := any(arguments[0]).(type) {
+	case term.IntegerTerm:
+		path := __gp_m45.Value
+
+		if path.Sign() < 0 || !path.IsInt64() || path.Int64() > int64(len(entries)) {
+			return otpBadarg()
+		}
+		if iteratorMode {
+			return vm.ExternalCallReturned{Value: otpMapIterator(entries, arguments[1])}
+		}
+		return vm.ExternalCallReturned{Value: otpMapAssociationList(entries, arguments[2])}
+	case term.ProperListTerm:
+		keys := __gp_m45.Elements
+
+		if !iteratorMode {
+			return otpBadarg()
+		}
+		ordered := make([]term.MapEntry, 0, len(keys))
+		for _, key := range keys {
+			found := false
+			for _, entry := range entries {
+				if term.Equal(key, entry.Key) {
+					ordered = append(ordered, entry)
+					found = true
+					break
+				}
+			}
+			if !found {
+				return otpBadarg()
+			}
+		}
+		return vm.ExternalCallReturned{Value: otpMapIterator(ordered, arguments[1])}
+	default:
+		return otpBadarg()
+	}
+}
+
+func otpMapIterator(entries []term.MapEntry, mapValue term.Term) term.Term {
+	var next term.Term = term.MustAtom("none")
+	for index := len(entries) - 1; index >= 0; index-- {
+		next = term.Tuple(term.Clone(entries[index].Key), term.Clone(entries[index].Value), next)
+	}
+	return next
+}
+
+func otpMapAssociationList(entries []term.MapEntry, accumulator term.Term) term.Term {
+	values := make([]term.Term, len(entries))
+	for index, entry := range entries {
+		values[index] = term.Tuple(term.Clone(entry.Key), term.Clone(entry.Value))
+	}
+	switch __gp_m46 := any(accumulator).(type) {
+	case term.ProperListTerm:
+		tail := __gp_m46.Elements
+		return term.List(append(values, tail...)...)
+	case term.ImproperListTerm:
+		tail := __gp_m46.Elements
+		end := __gp_m46.Tail
+		return term.ImproperList(append(values, tail...), end)
+	default:
+		return accumulator
+	}
+}
+
+func otpBadmap(value term.Term) vm.ExternalCallOutcome {
+	return vm.ExternalCallRaised{Class: term.MustAtom("error"), Reason: term.Tuple(term.MustAtom("badmap"), term.Clone(value))}
+}
+
+func otpBadkey(key term.Term) vm.ExternalCallOutcome {
+	return vm.ExternalCallRaised{Class: term.MustAtom("error"), Reason: term.Tuple(term.MustAtom("badkey"), term.Clone(key))}
+}
+
+func otpMapEntry(entries []term.MapEntry, key term.Term) (int, bool) {
+	for index, entry := range entries {
+		if term.Equal(entry.Key, key) {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
+func otpMapGet(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m47 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		entries := __gp_m47.Entries
+
+		index, found := otpMapEntry(entries, arguments[0])
+		if !found {
+			return otpBadkey(arguments[0])
+		}
+		return vm.ExternalCallReturned{Value: term.Clone(entries[index].Value)}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpMapFind(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m48 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		entries := __gp_m48.Entries
+
+		index, found := otpMapEntry(entries, arguments[0])
+		if !found {
+			return vm.ExternalCallReturned{Value: term.MustAtom("error")}
+		}
+		return vm.ExternalCallReturned{Value: term.Tuple(term.MustAtom("ok"), term.Clone(entries[index].Value))}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpMapFromList(arguments []term.Term) vm.ExternalCallOutcome {
+	var values []term.Term
+	switch __gp_m49 := any(arguments[0]).(type) {
+	case term.ProperListTerm:
+		found := __gp_m49.Elements
+		values = found
+	default:
+		return otpBadarg()
+	}
+	entries := make([]term.MapEntry, 0, len(values))
+	for _, value := range values {
+		switch __gp_m50 := any(value).(type) {
+		case term.TupleTerm:
+			parts := __gp_m50.Elements
+
+			if len(parts) != 2 {
+				return otpBadarg()
+			}
+			index, found := otpMapEntry(entries, parts[0])
+			if found {
+				entries[index].Value = term.Clone(parts[1])
+			} else {
+				entries = append(entries, term.MapEntry{Key: term.Clone(parts[0]), Value: term.Clone(parts[1])})
+			}
+		default:
+			return otpBadarg()
+		}
+	}
+	return vm.ExternalCallReturned{Value: term.MapTerm{Entries: entries}}
+}
+
+func otpMapFromKeys(arguments []term.Term) vm.ExternalCallOutcome {
+	var keys []term.Term
+	switch __gp_m51 := any(arguments[0]).(type) {
+	case term.ProperListTerm:
+		found := __gp_m51.Elements
+		keys = found
+	default:
+		return otpBadarg()
+	}
+	entries := make([]term.MapEntry, 0, len(keys))
+	for _, key := range keys {
+		if _, found := otpMapEntry(entries, key); !found {
+			entries = append(entries, term.MapEntry{Key: term.Clone(key), Value: term.Clone(arguments[1])})
+		}
+	}
+	return vm.ExternalCallReturned{Value: term.MapTerm{Entries: entries}}
+}
+
+func otpMapIsKey(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m52 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		entries := __gp_m52.Entries
+		_, found := otpMapEntry(entries, arguments[0])
+		if found {
+			return vm.ExternalCallReturned{Value: term.MustAtom("true")}
+		}
+		return vm.ExternalCallReturned{Value: term.MustAtom("false")}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpMapKeys(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m53 := any(arguments[0]).(type) {
+	case term.MapTerm:
+		entries := __gp_m53.Entries
+		values := make([]term.Term, len(entries))
+		for index, entry := range entries {
+			values[index] = term.Clone(entry.Key)
+		}
+		return vm.ExternalCallReturned{Value: term.List(values...)}
+	default:
+		return otpBadmap(arguments[0])
+	}
+}
+
+func otpMapValues(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m54 := any(arguments[0]).(type) {
+	case term.MapTerm:
+		entries := __gp_m54.Entries
+		values := make([]term.Term, len(entries))
+		for index, entry := range entries {
+			values[index] = term.Clone(entry.Value)
+		}
+		return vm.ExternalCallReturned{Value: term.List(values...)}
+	default:
+		return otpBadmap(arguments[0])
+	}
+}
+
+func otpMapPut(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m55 := any(arguments[2]).(type) {
+	case term.MapTerm:
+		entries := __gp_m55.Entries
+
+		updated := append([]term.MapEntry(nil), entries...)
+		index, found := otpMapEntry(updated, arguments[0])
+		if found {
+			updated[index].Value = term.Clone(arguments[1])
+		} else {
+			updated = append(updated, term.MapEntry{Key: term.Clone(arguments[0]), Value: term.Clone(arguments[1])})
+		}
+		return vm.ExternalCallReturned{Value: term.MapTerm{Entries: updated}}
+	default:
+		return otpBadmap(arguments[2])
+	}
+}
+
+func otpMapUpdate(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m56 := any(arguments[2]).(type) {
+	case term.MapTerm:
+		entries := __gp_m56.Entries
+
+		index, found := otpMapEntry(entries, arguments[0])
+		if !found {
+			return otpBadkey(arguments[0])
+		}
+		updated := append([]term.MapEntry(nil), entries...)
+		updated[index].Value = term.Clone(arguments[1])
+		return vm.ExternalCallReturned{Value: term.MapTerm{Entries: updated}}
+	default:
+		return otpBadmap(arguments[2])
+	}
+}
+
+func otpMapRemove(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m57 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		entries := __gp_m57.Entries
+
+		index, found := otpMapEntry(entries, arguments[0])
+		if !found {
+			return vm.ExternalCallReturned{Value: term.Clone(arguments[1])}
+		}
+		updated := append([]term.MapEntry(nil), entries[:index]...)
+		updated = append(updated, entries[index+1:]...)
+		return vm.ExternalCallReturned{Value: term.MapTerm{Entries: updated}}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpMapTake(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m58 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		entries := __gp_m58.Entries
+
+		index, found := otpMapEntry(entries, arguments[0])
+		if !found {
+			return vm.ExternalCallReturned{Value: term.MustAtom("error")}
+		}
+		updated := append([]term.MapEntry(nil), entries[:index]...)
+		updated = append(updated, entries[index+1:]...)
+		return vm.ExternalCallReturned{Value: term.Tuple(term.Clone(entries[index].Value), term.MapTerm{Entries: updated})}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpMapMerge(arguments []term.Term) vm.ExternalCallOutcome {
+	var left []term.MapEntry
+	switch __gp_m59 := any(arguments[0]).(type) {
+	case term.MapTerm:
+		entries := __gp_m59.Entries
+		left = entries
+	default:
+		return otpBadmap(arguments[0])
+	}
+	switch __gp_m60 := any(arguments[1]).(type) {
+	case term.MapTerm:
+		right := __gp_m60.Entries
+
+		merged := append([]term.MapEntry(nil), left...)
+		for _, entry := range right {
+			index, found := otpMapEntry(merged, entry.Key)
+			if found {
+				merged[index].Value = term.Clone(entry.Value)
+			} else {
+				merged = append(merged, term.MapEntry{Key: term.Clone(entry.Key), Value: term.Clone(entry.Value)})
+			}
+		}
+		return vm.ExternalCallReturned{Value: term.MapTerm{Entries: merged}}
+	default:
+		return otpBadmap(arguments[1])
+	}
+}
+
+func otpIntegerRemainder(arguments []term.Term) vm.ExternalCallOutcome {
+	var left *big.Int
+	switch __gp_m61 := any(term.IntegerValue(arguments[0])).(type) {
+	case option.None[*big.Int]:
+		return otpBadarith()
+	case option.Some[*big.Int]:
+		value := __gp_m61.Value
+		left = value
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m62 := any(term.IntegerValue(arguments[1])).(type) {
+	case option.None[*big.Int]:
+		return otpBadarith()
+	case option.Some[*big.Int]:
+		right := __gp_m62.Value
+
+		if right.Sign() == 0 {
+			return otpBadarith()
+		}
+		return vm.ExternalCallReturned{Value: term.MustBigInteger(new(big.Int).Rem(left, right))}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
+	switch __gp_m63 := any(term.Compare(arguments[0], arguments[1])).(type) {
+	case result.Err[term.Ordering, term.OrderFailure]:
+		return otpBadarg()
+	case result.Ok[term.Ordering, term.OrderFailure]:
+		order := __gp_m63.Value
+
+		switch any(order).(type) {
+		case term.TermLess:
+			return vm.ExternalCallReturned{Value: term.Integer(-1)}
+		case term.TermEqual:
+			return vm.ExternalCallReturned{Value: term.Integer(0)}
+		case term.TermGreater:
+			return vm.ExternalCallReturned{Value: term.Integer(1)}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 // assayxport:unit gotp.erts.otp-pure-bifs
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
@@ -977,6 +1351,22 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "--", Arity: 2}, Implementation: otpListSubtract},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "-", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpArithmetic(arguments, otpSubtract{}) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_size", Arity: 1}, Implementation: otpMapSize},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "rem", Arity: 2}, Implementation: otpIntegerRemainder},
+		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "map_next", Arity: 3}, Implementation: otpMapNext},
+		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "cmp_term", Arity: 2}, Implementation: otpCompareTerm},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "get", Arity: 2}, Implementation: otpMapGet},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "find", Arity: 2}, Implementation: otpMapFind},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "from_list", Arity: 1}, Implementation: otpMapFromList},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "from_keys", Arity: 2}, Implementation: otpMapFromKeys},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "is_key", Arity: 2}, Implementation: otpMapIsKey},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "keys", Arity: 1}, Implementation: otpMapKeys},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "merge", Arity: 2}, Implementation: otpMapMerge},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "put", Arity: 3}, Implementation: otpMapPut},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "remove", Arity: 2}, Implementation: otpMapRemove},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "take", Arity: 2}, Implementation: otpMapTake},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "update", Arity: 3}, Implementation: otpMapUpdate},
+		{Target: vm.ExternalFunction{Module: "maps", Function: "values", Arity: 1}, Implementation: otpMapValues},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "=:=", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome {
 			if term.Equal(arguments[0], arguments[1]) {
 				return vm.ExternalCallReturned{Value: term.MustAtom("true")}

@@ -72,7 +72,7 @@ func executeMakeFun3(machine *Machine, instruction beam.Instruction) result.Resu
 	}
 }
 
-func executeCallFun(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+func executeCallFun(machine *Machine, instruction beam.Instruction, host HostCapabilities) result.Result[instructionOutcome, Failure] {
 	var arity uint64
 	var functionOperand beam.Operand
 	switch instruction.Opcode.Name {
@@ -119,6 +119,24 @@ func executeCallFun(machine *Machine, instruction beam.Instruction) result.Resul
 			arity,
 			function.Arity,
 		)))
+	}
+	match function.Form {
+	case term.ExportedFunction:
+		arguments := make([]term.Term, int(arity))
+		for index := range arguments { match machine.X(index) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): arguments[index] = term.Clone(value) } }
+		target := ExternalFunction{Module: function.Module, Function: function.Function, Arity: function.Arity}
+		match host.ExternalCalls {
+		case ExternalCallsUnavailable: return machine.executeLinkedCall(target, false, host)
+		case ExternalCallsAllowed: if host.externalCall == nil { return result.Err[instructionOutcome, Failure](InvalidConfiguration("external call capability effect is nil")) }
+		}
+		match host.externalCall(target, arguments) {
+		case ExternalCallUnbound: return machine.executeLinkedCall(target, false, host)
+		case ExternalCallRaised(class, reason): return result.Err[instructionOutcome, Failure](RaisedException(term.Clone(class), term.Clone(reason)))
+		case ExternalCallRejected(detail): return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("external function %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)))
+		case ExternalCallReturned(value):
+			match machine.SetX(0, value) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(MachineMutated): machine.pc++; return result.Ok[instructionOutcome, Failure](InstructionContinues()) }
+		}
+	case term.LocalClosure, term.OldClosure, term.NewClosure(_, _, _):
 	}
 	image, present := machine.modules[function.Module]
 	if !present {

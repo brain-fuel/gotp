@@ -278,7 +278,7 @@ func executeInstruction(
 	case "make_fun3":
 		return executeMakeFun3(machine, instruction)
 	case "call_fun", "call_fun2":
-		return executeCallFun(machine, instruction)
+		return executeCallFun(machine, instruction, host)
 	case "is_function", "is_function2":
 		return executeFunctionTest(machine, instruction)
 	case "catch", "try":

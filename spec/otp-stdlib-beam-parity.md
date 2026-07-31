@@ -33,7 +33,22 @@ semantic parity.
 - `gotp.erts.otp29-lists-differential`
 - `gotp.erts.otp29-lists-callback-differential`
 - `gotp.erts.otp29-lists-export-coverage`
+- `gotp.erts.otp29-maps-differential`
+- `gotp.erts.otp29-maps-callback-differential`
+- `gotp.erts.otp29-maps-export-coverage`
+
+## Maps evidence
+
+The unmodified OTP `maps.beam` supplies all higher-level algorithms. GoTP
+provides the emulator-owned native map operations, `erts_internal:map_next/3`,
+`erts_internal:cmp_term/2`, and exported-fun dispatch expected by that module.
+
+- `maps.beam` SHA-256: `15be7e753bb0b3e7d7a21d4cc058a7e7ea6755581e3a4886a559f006ebc1d7b6`
+- Non-callback corpus SHA-256: `084d493eab49d0bdda7e060ae61a55ccbb7b7eb31cbc79b9b1fe82d997641d47`
+- Callback corpus SHA-256: `d0f78ba67c2d41f5804a520e79d8951c03553a3b2679c25fb4119dd905ad3d63`
+- Callback module SHA-256: `a4ce72a1e9497adc7b3c8edfde74788ca6cbb4a4f1190363170366a4163eef78`
 
 ## Decision
 
-See ADR `0049-vm-global-export-metadata`.
+See ADRs `0049-vm-global-export-metadata` and
+`0050-exported-functions-use-external-dispatch`.

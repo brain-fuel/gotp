@@ -101,7 +101,7 @@ func executeMakeFun3(machine *Machine, instruction beam.Instruction) result.Resu
 	}
 }
 
-func executeCallFun(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+func executeCallFun(machine *Machine, instruction beam.Instruction, host HostCapabilities) result.Result[instructionOutcome, Failure] {
 	var arity uint64
 	var functionOperand beam.Operand
 	switch instruction.Opcode.Name {
@@ -170,6 +170,64 @@ func executeCallFun(machine *Machine, instruction beam.Instruction) result.Resul
 			function.Arity,
 		)}}
 	}
+	switch any(function.Form).(type) {
+	case term.ExportedFunction:
+
+		arguments := make([]term.Term, int(arity))
+		for index := range arguments {
+			switch __gp_m10 := any(machine.X(index)).(type) {
+			case result.Err[term.Term, Failure]:
+				failure := __gp_m10.Err
+				return result.Err[instructionOutcome, Failure]{Err: failure}
+			case result.Ok[term.Term, Failure]:
+				value := __gp_m10.Value
+				arguments[index] = term.Clone(value)
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		}
+		target := ExternalFunction{Module: function.Module, Function: function.Function, Arity: function.Arity}
+		switch any(host.ExternalCalls).(type) {
+		case ExternalCallsUnavailable:
+			return machine.executeLinkedCall(target, false, host)
+		case ExternalCallsAllowed:
+			if host.externalCall == nil {
+				return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "external call capability effect is nil"}}
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m12 := any(host.externalCall(target, arguments)).(type) {
+		case ExternalCallUnbound:
+			return machine.executeLinkedCall(target, false, host)
+		case ExternalCallRaised:
+			class := __gp_m12.Class
+			reason := __gp_m12.Reason
+			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.Clone(class), Reason: term.Clone(reason)}}
+		case ExternalCallRejected:
+			detail := __gp_m12.Detail
+			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("external function %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)}}
+		case ExternalCallReturned:
+			value := __gp_m12.Value
+
+			switch __gp_m13 := any(machine.SetX(0, value)).(type) {
+			case result.Err[MachineMutation, Failure]:
+				failure := __gp_m13.Err
+				return result.Err[instructionOutcome, Failure]{Err: failure}
+			case result.Ok[MachineMutation, Failure]:
+				machine.pc++
+				return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	case term.LocalClosure, term.OldClosure, term.NewClosure:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	image, present := machine.modules[function.Module]
 	if !present {
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "function module is not linked: " + function.Module}}
@@ -199,36 +257,36 @@ func executeFunctionTest(machine *Machine, instruction beam.Instruction) result.
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("%s has %d operands", instruction.Opcode.Name, len(instruction.Operands))}}
 	}
 	valid := false
-	switch __gp_m9 := any(machine.resolve(instruction.Operands[1])).(type) {
+	switch __gp_m14 := any(machine.resolve(instruction.Operands[1])).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m9.Err
+		failure := __gp_m14.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m9.Value
+		value := __gp_m14.Value
 
-		switch __gp_m10 := any(term.FunValue(value)).(type) {
+		switch __gp_m15 := any(term.FunValue(value)).(type) {
 		case option.None[term.Fun]:
 
 		case option.Some[term.Fun]:
-			function := __gp_m10.Value
+			function := __gp_m15.Value
 
 			if instruction.Opcode.Name == "is_function" {
 				valid = true
 			} else {
-				switch __gp_m11 := any(machine.resolve(instruction.Operands[2])).(type) {
+				switch __gp_m16 := any(machine.resolve(instruction.Operands[2])).(type) {
 				case result.Err[term.Term, Failure]:
-					failure := __gp_m11.Err
+					failure := __gp_m16.Err
 
 					return result.Err[instructionOutcome, Failure]{Err: failure}
 				case result.Ok[term.Term, Failure]:
-					arityTerm := __gp_m11.Value
+					arityTerm := __gp_m16.Value
 
-					switch __gp_m12 := any(term.IntegerValue(arityTerm)).(type) {
+					switch __gp_m17 := any(term.IntegerValue(arityTerm)).(type) {
 					case option.None[*big.Int]:
 
 					case option.Some[*big.Int]:
-						arity := __gp_m12.Value
+						arity := __gp_m17.Value
 
 						valid = arity.Sign() >= 0 && arity.IsUint64() && arity.Uint64() == uint64(function.Arity)
 					default:
@@ -248,13 +306,13 @@ func executeFunctionTest(machine *Machine, instruction beam.Instruction) result.
 		machine.pc++
 		return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
 	}
-	switch __gp_m13 := any(machine.instructionLabel(instruction, 0)).(type) {
+	switch __gp_m18 := any(machine.instructionLabel(instruction, 0)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m13.Err
+		failure := __gp_m18.Err
 
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		target := __gp_m13.Value
+		target := __gp_m18.Value
 
 		machine.pc = target
 		return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
