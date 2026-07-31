@@ -80,3 +80,12 @@ This document is not a release and does not authorize a tag or publication.
   added, and removed applications and emulator restart placement.
 - `systools_rc` translation and the remaining `systools_relup` surface are not
   complete; no OTP parity claim is made.
+
+### Typed systools release compiler
+
+- Added sealed high-level release instructions and deterministic compilation to
+  executable transactional release scripts.
+- Added application lifecycle expansion, module dependency validation,
+  upgrade/downgrade ordering, object-code merging, and restart canonicalization.
+- Raw Erlang instruction decoding and differential `systools_rc` parity remain
+  incomplete; no OTP parity claim is made.
