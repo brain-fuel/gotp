@@ -33,7 +33,9 @@ terms are cloned so callers cannot mutate parsed specifications.
 - Oracle: official `erlang:29.0.4-alpine` image at manifest digest
   `sha256:a6e2d0c34adb0038f98953d89d82a501a26b8905027a8e840bf8851531de75d8`.
 - Corpus: `otp/release/testdata/otp-29.0.4-systools-relup.corpus` at
-  `sha256:077d7cb7a3ec3df4f9addaf269e31606a0874906289464277b66453d92af3bd7`.
+  `sha256:5afc27ca1ad58bd470440a64b28234e74f20f117c7371da4eaeb3c3dd646082e`.
+- Regex engine: MIT-licensed `github.com/dlclark/regexp2` v1.12.0, with a
+  Go+-authored PCRE possessive-quantifier normalization layer.
 
 ## Remaining obligations
 
@@ -42,4 +44,6 @@ high-level dependency graph and low-level translation, release/application file
 discovery, warning compatibility, pre-R15 SASL handling, canonical Erlang-term
 serialization, and complete Erlang regular-expression compatibility remain
 open. The checked-in corpus proves exact/regex ordering, whole-match behavior,
-Unicode versions, malformed-entry skipping, invalid-regex failure, and misses.
+Unicode versions and categories, malformed-entry skipping, invalid-regex
+failure, misses, backreferences, lookaround, atomic groups, and possessive
+quantifiers over literals, escapes, classes, groups, and bounded repeats.

@@ -1,0 +1,4 @@
+github.com/dlclark/regexp2 v1.12.0 h1:0j4c5qQmnC6XOWNjP3PIXURXN2gWx76rd3KvgdPkCz8=
+github.com/dlclark/regexp2 v1.12.0/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
+goforge.dev/goplus v0.140.1/go.mod h1:CklVikk0gL9Pkk3A0h7f4gPTPfn0fOquW/beuOC8CCw=
+goforge.dev/goplus/std v0.207.0/go.mod h1:kr7uOTXhg4p16dGLzGTBnVBsteQnUo3e/5XU055m1PM=

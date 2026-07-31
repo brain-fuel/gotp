@@ -25,4 +25,4 @@ parity remains required before either declaration can be conformant.
 - Oracle: official `erlang:29.0.4-alpine` image at manifest digest
   `sha256:a6e2d0c34adb0038f98953d89d82a501a26b8905027a8e840bf8851531de75d8`.
 - Corpus: `otp/release/testdata/otp-29.0.4-systools-relup.corpus` at
-  `sha256:077d7cb7a3ec3df4f9addaf269e31606a0874906289464277b66453d92af3bd7`.
+  `sha256:5afc27ca1ad58bd470440a64b28234e74f20f117c7371da4eaeb3c3dd646082e`.

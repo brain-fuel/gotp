@@ -4,10 +4,11 @@
 package release
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
+	"github.com/dlclark/regexp2"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/term"
@@ -178,7 +179,7 @@ func VersionSelectorEqual(a, b VersionSelector) bool {
 type AppupEntry struct {
 	Selector     VersionSelector
 	Instructions []term.Term
-	pattern      *regexp.Regexp
+	pattern      *regexp2.Regexp
 }
 
 type Appup struct {
@@ -205,6 +206,14 @@ type InvalidVersionPattern struct {
 
 func (InvalidVersionPattern) isAppupFailure() {}
 
+//goplus:variant (AppupFailure) VersionPatternFailure(Pattern string, Detail string)
+type VersionPatternFailure struct {
+	Pattern string
+	Detail  string
+}
+
+func (VersionPatternFailure) isAppupFailure() {}
+
 //goplus:variant (AppupFailure) MissingVersionScript(Direction AppupDirection, Version string)
 type MissingVersionScript struct {
 	Direction AppupDirection
@@ -217,6 +226,7 @@ func (MissingVersionScript) isAppupFailure() {}
 type AppupFailureCases[R any] struct {
 	InvalidAppup          func(Detail string) R
 	InvalidVersionPattern func(Pattern string, Detail string) R
+	VersionPatternFailure func(Pattern string, Detail string) R
 	MissingVersionScript  func(Direction AppupDirection, Version string) R
 }
 
@@ -227,6 +237,8 @@ func AppupFailureFold[R any](a AppupFailure, cs AppupFailureCases[R]) R {
 		return cs.InvalidAppup(m.Detail)
 	case InvalidVersionPattern:
 		return cs.InvalidVersionPattern(m.Pattern, m.Detail)
+	case VersionPatternFailure:
+		return cs.VersionPatternFailure(m.Pattern, m.Detail)
 	case MissingVersionScript:
 		return cs.MissingVersionScript(m.Direction, m.Version)
 	default:
@@ -239,6 +251,7 @@ func AppupFailureFold[R any](a AppupFailure, cs AppupFailureCases[R]) R {
 type AppupFailureEqOverrides struct {
 	InvalidAppup          func(x, y InvalidAppup) (eq, handled bool)
 	InvalidVersionPattern func(x, y InvalidVersionPattern) (eq, handled bool)
+	VersionPatternFailure func(x, y VersionPatternFailure) (eq, handled bool)
 	MissingVersionScript  func(x, y MissingVersionScript) (eq, handled bool)
 }
 
@@ -269,6 +282,23 @@ func AppupFailureEqualWith(a, b AppupFailure, ov AppupFailureEqOverrides) bool {
 		}
 		if ov.InvalidVersionPattern != nil {
 			if eq, handled := ov.InvalidVersionPattern(x, y); handled {
+				return eq
+			}
+		}
+		if x.Pattern != y.Pattern {
+			return false
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	case VersionPatternFailure:
+		y, ok := any(b).(VersionPatternFailure)
+		if !ok {
+			return false
+		}
+		if ov.VersionPatternFailure != nil {
+			if eq, handled := ov.VersionPatternFailure(x, y); handled {
 				return eq
 			}
 		}
@@ -315,6 +345,10 @@ func AppupFailureError(failure AppupFailure) string {
 		pattern := __gp_m0.Pattern
 		detail := __gp_m0.Detail
 		return "gotp/release: invalid appup version pattern " + pattern + ": " + detail
+	case VersionPatternFailure:
+		pattern := __gp_m0.Pattern
+		detail := __gp_m0.Detail
+		return "gotp/release: appup version pattern " + pattern + " failed: " + detail
 	case MissingVersionScript:
 		version := __gp_m0.Version
 		return "gotp/release: no appup script for version " + version
@@ -382,7 +416,20 @@ func (appup Appup) Select(direction AppupDirection, baseVersion string) result.R
 			version := __gp_m6.Version
 			matched = version == baseVersion
 		case VersionPattern:
-			matched = entry.pattern != nil && entry.pattern.FindString(baseVersion) == baseVersion
+			pattern := __gp_m6.Pattern
+
+			if entry.pattern != nil {
+				switch __gp_m7 := any(versionPatternMatches(entry.pattern, pattern, baseVersion)).(type) {
+				case result.Err[bool, AppupFailure]:
+					failure := __gp_m7.Err
+					return result.Err[[]term.Term, AppupFailure]{Err: failure}
+				case result.Ok[bool, AppupFailure]:
+					found := __gp_m7.Value
+					matched = found
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
@@ -399,43 +446,53 @@ func SearchAppupVersion(
 	entries []term.Term,
 ) result.Result[[]term.Term, AppupFailure] {
 	for _, encoded := range entries {
-		switch __gp_m7 := any(encoded).(type) {
+		switch __gp_m8 := any(encoded).(type) {
 		case term.TupleTerm:
-			fields := __gp_m7.Elements
+			fields := __gp_m8.Elements
 
 			if len(fields) != 2 {
 				continue
 			}
 			var instructions []term.Term
-			switch __gp_m8 := any(fields[1]).(type) {
+			switch __gp_m9 := any(fields[1]).(type) {
 			case term.ProperListTerm:
-				found := __gp_m8.Elements
+				found := __gp_m9.Elements
 				instructions = found
 			default:
 				continue
 			}
-			switch __gp_m9 := any(fields[0]).(type) {
+			switch __gp_m10 := any(fields[0]).(type) {
 			case term.BinaryTerm:
-				raw := __gp_m9.Bytes
+				raw := __gp_m10.Bytes
 
 				pattern := string(raw)
-				switch __gp_m10 := any(result.Of(regexp.Compile(pattern))).(type) {
-				case result.Err[*regexp.Regexp, error]:
-					cause := __gp_m10.Err
+				switch __gp_m11 := any(result.Of(regexp2.Compile(pcreCompatiblePattern(pattern), regexp2.None))).(type) {
+				case result.Err[*regexp2.Regexp, error]:
+					cause := __gp_m11.Err
 					return result.Err[[]term.Term, AppupFailure]{Err: InvalidVersionPattern{Pattern: pattern, Detail: cause.Error()}}
-				case result.Ok[*regexp.Regexp, error]:
-					compiled := __gp_m10.Value
-					if compiled.FindString(baseVersion) == baseVersion {
-						return result.Ok[[]term.Term, AppupFailure]{Value: cloneInstructions(instructions)}
+				case result.Ok[*regexp2.Regexp, error]:
+					compiled := __gp_m11.Value
+
+					switch __gp_m12 := any(versionPatternMatches(compiled, pattern, baseVersion)).(type) {
+					case result.Err[bool, AppupFailure]:
+						failure := __gp_m12.Err
+						return result.Err[[]term.Term, AppupFailure]{Err: failure}
+					case result.Ok[bool, AppupFailure]:
+						found := __gp_m12.Value
+						if found {
+							return result.Ok[[]term.Term, AppupFailure]{Value: cloneInstructions(instructions)}
+						}
+					default:
+						panic("goplus: impossible enum value in match")
 					}
 				default:
 					panic("goplus: impossible enum value in match")
 				}
 			default:
 
-				switch __gp_m11 := any(appupText(fields[0])).(type) {
+				switch __gp_m13 := any(appupText(fields[0])).(type) {
 				case option.Some[string]:
-					version := __gp_m11.Value
+					version := __gp_m13.Value
 					if version == baseVersion {
 						return result.Ok[[]term.Term, AppupFailure]{Value: cloneInstructions(instructions)}
 					}
@@ -454,52 +511,52 @@ func SearchAppupVersion(
 
 func parseAppupEntries(encoded term.Term) result.Result[[]AppupEntry, AppupFailure] {
 	var values []term.Term
-	switch __gp_m12 := any(encoded).(type) {
+	switch __gp_m14 := any(encoded).(type) {
 	case term.ProperListTerm:
-		found := __gp_m12.Elements
+		found := __gp_m14.Elements
 		values = found
 	default:
 		return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script table is not a proper list"}}
 	}
 	entries := make([]AppupEntry, len(values))
 	for index, value := range values {
-		switch __gp_m13 := any(value).(type) {
+		switch __gp_m15 := any(value).(type) {
 		case term.TupleTerm:
-			fields := __gp_m13.Elements
+			fields := __gp_m15.Elements
 
 			if len(fields) != 2 {
 				return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script entry must have two fields"}}
 			}
 			var instructions []term.Term
-			switch __gp_m14 := any(fields[1]).(type) {
+			switch __gp_m16 := any(fields[1]).(type) {
 			case term.ProperListTerm:
-				found := __gp_m14.Elements
+				found := __gp_m16.Elements
 				instructions = cloneInstructions(found)
 			default:
 				return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script instructions are not a proper list"}}
 			}
-			switch __gp_m15 := any(fields[0]).(type) {
+			switch __gp_m17 := any(fields[0]).(type) {
 			case term.BinaryTerm:
-				raw := __gp_m15.Bytes
+				raw := __gp_m17.Bytes
 
 				pattern := string(raw)
-				switch __gp_m16 := any(result.Of(regexp.Compile(pattern))).(type) {
-				case result.Err[*regexp.Regexp, error]:
-					cause := __gp_m16.Err
+				switch __gp_m18 := any(result.Of(regexp2.Compile(pcreCompatiblePattern(pattern), regexp2.None))).(type) {
+				case result.Err[*regexp2.Regexp, error]:
+					cause := __gp_m18.Err
 					return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidVersionPattern{Pattern: pattern, Detail: cause.Error()}}
-				case result.Ok[*regexp.Regexp, error]:
-					compiled := __gp_m16.Value
+				case result.Ok[*regexp2.Regexp, error]:
+					compiled := __gp_m18.Value
 					entries[index] = AppupEntry{Selector: VersionPattern{Pattern: pattern}, Instructions: instructions, pattern: compiled}
 				default:
 					panic("goplus: impossible enum value in match")
 				}
 			default:
 
-				switch __gp_m17 := any(appupText(fields[0])).(type) {
+				switch __gp_m19 := any(appupText(fields[0])).(type) {
 				case option.None[string]:
 					return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "version selector is neither text nor binary pattern"}}
 				case option.Some[string]:
-					version := __gp_m17.Value
+					version := __gp_m19.Value
 					entries[index] = AppupEntry{Selector: ExactVersion{Version: version}, Instructions: instructions}
 				default:
 					panic("goplus: impossible enum value in match")
@@ -512,19 +569,155 @@ func parseAppupEntries(encoded term.Term) result.Result[[]AppupEntry, AppupFailu
 	return result.Ok[[]AppupEntry, AppupFailure]{Value: entries}
 }
 
+func versionPatternMatches(
+	compiled *regexp2.Regexp,
+	pattern string,
+	baseVersion string,
+) result.Result[bool, AppupFailure] {
+	switch __gp_m20 := any(result.Of(compiled.FindStringMatch(baseVersion))).(type) {
+	case result.Err[*regexp2.Match, error]:
+		cause := __gp_m20.Err
+		return result.Err[bool, AppupFailure]{Err: VersionPatternFailure{Pattern: pattern, Detail: cause.Error()}}
+	case result.Ok[*regexp2.Match, error]:
+		found := __gp_m20.Value
+		return result.Ok[bool, AppupFailure]{Value: found != nil && found.String() == baseVersion}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func pcreCompatiblePattern(pattern string) string {
+	var normalized strings.Builder
+	for index := 0; index < len(pattern); {
+		quantifierEnd := -1
+		if !escapedPatternByte(pattern, index) {
+			switch pattern[index] {
+			case '*', '+', '?':
+				if index+1 < len(pattern) && pattern[index+1] == '+' {
+					quantifierEnd = index + 1
+				}
+			case '{':
+				close := strings.IndexByte(pattern[index+1:], '}')
+				if close >= 0 {
+					close += index + 1
+					if close+1 < len(pattern) && pattern[close+1] == '+' && validRepeatRange(pattern[index+1:close]) {
+						quantifierEnd = close + 1
+					}
+				}
+			}
+		}
+		if quantifierEnd >= 0 {
+			current := normalized.String()
+			switch __gp_m21 := any(priorRegexAtomStart(current)).(type) {
+			case option.None[int]:
+				normalized.WriteString(pattern[index : quantifierEnd+1])
+			case option.Some[int]:
+				start := __gp_m21.Value
+
+				normalized.Reset()
+				normalized.WriteString(current[:start])
+				normalized.WriteString("(?>")
+				normalized.WriteString(current[start:])
+				normalized.WriteString(pattern[index:quantifierEnd])
+				normalized.WriteByte(')')
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			index = quantifierEnd + 1
+			continue
+		}
+		normalized.WriteByte(pattern[index])
+		index++
+	}
+	return normalized.String()
+}
+
+func priorRegexAtomStart(pattern string) option.Option[int] {
+	if pattern == "" {
+		return option.None[int]{}
+	}
+	last := len(pattern) - 1
+	switch pattern[last] {
+	case ')':
+		return scanRegexGroupStart(pattern, last, '(', ')')
+	case ']':
+		return scanRegexGroupStart(pattern, last, '[', ']')
+	case '}':
+		open := strings.LastIndexByte(pattern[:last], '{')
+		if open > 1 && pattern[open-2] == '\\' && (pattern[open-1] == 'p' || pattern[open-1] == 'P') {
+			return option.Some[int]{Value: open - 2}
+		}
+	}
+	_, width := utf8.DecodeLastRuneInString(pattern)
+	start := len(pattern) - width
+	if start > 0 && pattern[start-1] == '\\' && !escapedPatternByte(pattern, start-1) {
+		start--
+	}
+	return option.Some[int]{Value: start}
+}
+
+func scanRegexGroupStart(pattern string, end int, open byte, close byte) option.Option[int] {
+	depth := 0
+	for index := end; index >= 0; index-- {
+		if escapedPatternByte(pattern, index) {
+			continue
+		}
+		if pattern[index] == close {
+			depth++
+		}
+		if pattern[index] == open {
+			depth--
+			if depth == 0 {
+				return option.Some[int]{Value: index}
+			}
+		}
+	}
+	return option.None[int]{}
+}
+
+func escapedPatternByte(pattern string, index int) bool {
+	slashes := 0
+	for index--; index >= 0 && pattern[index] == '\\'; index-- {
+		slashes++
+	}
+	return slashes%2 == 1
+}
+
+func validRepeatRange(value string) bool {
+	if value == "" {
+		return false
+	}
+	commas := 0
+	digits := 0
+	for _, character := range value {
+		if character == ',' {
+			commas++
+			if commas > 1 {
+				return false
+			}
+			continue
+		}
+		if character < '0' || character > '9' {
+			return false
+		}
+		digits++
+	}
+	return digits > 0
+}
+
 func appupText(value term.Term) option.Option[string] {
-	switch __gp_m18 := any(value).(type) {
+	switch __gp_m22 := any(value).(type) {
 	case term.BinaryTerm:
-		raw := __gp_m18.Bytes
+		raw := __gp_m22.Bytes
 		return option.Some[string]{Value: string(raw)}
 	case term.ProperListTerm:
-		characters := __gp_m18.Elements
+		characters := __gp_m22.Elements
 
 		var text strings.Builder
 		for _, character := range characters {
-			switch __gp_m19 := any(term.Int64(character)).(type) {
+			switch __gp_m23 := any(term.Int64(character)).(type) {
 			case option.Some[int64]:
-				code := __gp_m19.Value
+				code := __gp_m23.Value
 
 				if code < 0 || code > unicode.MaxRune || code >= 0xD800 && code <= 0xDFFF {
 					return option.None[string]{}

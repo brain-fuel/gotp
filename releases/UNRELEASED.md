@@ -96,6 +96,10 @@ This document is not a release and does not authorize a tag or publication.
 - Added a reproducible official OTP-29.0.4 container oracle, ETF-backed corpus,
   and differential laws for appup selector ordering/failure behavior and relup
   diagnostics; regex-engine and complete `~tp` parity remain open.
+- Replaced RE2-only appup matching with MIT `regexp2` plus typed PCRE
+  possessive-quantifier normalization; pinned differential cases now cover
+  backreferences, lookaround, atomic groups, Unicode classes, and possessive
+  repeats while complete PCRE2 proof remains open.
 
 ### Generation-owned literal memory
 
