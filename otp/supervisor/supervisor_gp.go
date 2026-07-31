@@ -349,7 +349,7 @@ func Error(failure Failure) string {
 	case KernelFailure:
 		cause := __gp_m0.Cause
 
-		return "gotp/supervisor: " + kernel.Error(cause)
+		return "gotp/supervisor: " + kernel.FailureError(cause)
 	default:
 		panic("goplus: impossible enum value in match")
 	}

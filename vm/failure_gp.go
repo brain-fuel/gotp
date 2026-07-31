@@ -64,6 +64,14 @@ type UninitializedRegister struct {
 
 func (UninitializedRegister) isFailure() {}
 
+//goplus:variant (Failure) MissingConstant(Kind string, Index uint64)
+type MissingConstant struct {
+	Kind  string
+	Index uint64
+}
+
+func (MissingConstant) isFailure() {}
+
 //goplus:variant (Failure) MissingLabel(Label uint64)
 type MissingLabel struct {
 	Label uint64
@@ -96,6 +104,7 @@ type FailureCases[R any] struct {
 	InvalidProgram        func(Detail string) R
 	RegisterOutOfRange    func(Register string, Index int) R
 	UninitializedRegister func(Register string, Index int) R
+	MissingConstant       func(Kind string, Index uint64) R
 	MissingLabel          func(Label uint64) R
 	StepLimitExceeded     func(Limit int) R
 	UnsupportedOpcode     func(Name string, Arity int, Offset int) R
@@ -118,6 +127,8 @@ func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 		return cs.RegisterOutOfRange(m.Register, m.Index)
 	case UninitializedRegister:
 		return cs.UninitializedRegister(m.Register, m.Index)
+	case MissingConstant:
+		return cs.MissingConstant(m.Kind, m.Index)
 	case MissingLabel:
 		return cs.MissingLabel(m.Label)
 	case StepLimitExceeded:
@@ -139,6 +150,7 @@ type FailureEqOverrides struct {
 	InvalidProgram        func(x, y InvalidProgram) (eq, handled bool)
 	RegisterOutOfRange    func(x, y RegisterOutOfRange) (eq, handled bool)
 	UninitializedRegister func(x, y UninitializedRegister) (eq, handled bool)
+	MissingConstant       func(x, y MissingConstant) (eq, handled bool)
 	MissingLabel          func(x, y MissingLabel) (eq, handled bool)
 	StepLimitExceeded     func(x, y StepLimitExceeded) (eq, handled bool)
 	UnsupportedOpcode     func(x, y UnsupportedOpcode) (eq, handled bool)
@@ -257,6 +269,23 @@ func FailureEqualWith(a, b Failure, ov FailureEqOverrides) bool {
 			return false
 		}
 		return true
+	case MissingConstant:
+		y, ok := any(b).(MissingConstant)
+		if !ok {
+			return false
+		}
+		if ov.MissingConstant != nil {
+			if eq, handled := ov.MissingConstant(x, y); handled {
+				return eq
+			}
+		}
+		if x.Kind != y.Kind {
+			return false
+		}
+		if x.Index != y.Index {
+			return false
+		}
+		return true
 	case MissingLabel:
 		y, ok := any(b).(MissingLabel)
 		if !ok {
@@ -348,6 +377,11 @@ func Error(failure Failure) string {
 		index := __gp_m0.Index
 
 		return fmt.Sprintf("gotp/vm: %s register %d is uninitialized", register, index)
+	case MissingConstant:
+		kind := __gp_m0.Kind
+		index := __gp_m0.Index
+
+		return fmt.Sprintf("gotp/vm: %s constant %d is unavailable", kind, index)
 	case MissingLabel:
 		label := __gp_m0.Label
 

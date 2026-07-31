@@ -454,7 +454,7 @@ func spawn(
 	case result.Err[term.PID, kernel.Failure]:
 		failure := __gp_m24.Err
 
-		t.Fatal(kernel.Error(failure))
+		t.Fatal(kernel.FailureError(failure))
 		return term.PID{}
 	default:
 		panic("goplus: impossible enum value in match")

@@ -10,15 +10,18 @@ import (
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
+	"goforge.dev/gotp/term"
 )
 
 type MachineConfig struct {
 	XRegisters int
 	StepLimit  int
+	Atoms      map[uint64]string
+	Literals   map[uint64]term.Term
 }
 
 type RunResult struct {
-	Value beam.Operand
+	Value term.Term
 	Steps int
 }
 
@@ -81,8 +84,10 @@ func MachineMutationEqual(a, b MachineMutation) bool {
 type Machine struct {
 	program   []beam.Instruction
 	labels    map[uint64]int
-	x         []option.Option[beam.Operand]
-	y         []option.Option[beam.Operand]
+	x         []option.Option[term.Term]
+	y         []option.Option[term.Term]
+	atoms     map[uint64]string
+	literals  map[uint64]term.Term
 	returnPCs []int
 	pc        int
 	steps     int
@@ -133,185 +138,87 @@ func NewMachine(
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	registers := make([]option.Option[beam.Operand], config.XRegisters)
+	registers := make([]option.Option[term.Term], config.XRegisters)
 	for index := range registers {
-		registers[index] = option.None[beam.Operand]{}
+		registers[index] = option.None[term.Term]{}
 	}
 	return result.Ok[*Machine, Failure]{Value: &Machine{
-		program: program, labels: labels, x: registers, stepLimit: config.StepLimit,
+		program:   program,
+		labels:    labels,
+		x:         registers,
+		atoms:     cloneAtomPool(config.Atoms),
+		literals:  cloneLiteralPool(config.Literals),
+		stepLimit: config.StepLimit,
 	}}
 }
 
 func (machine *Machine) SetX(
 	index int,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
 	if index < 0 || index >= len(machine.x) {
 		return result.Err[MachineMutation, Failure]{Err: RegisterOutOfRange{Register: "x", Index: index}}
 	}
-	machine.x[index] = option.Some[beam.Operand]{Value: value}
+	machine.x[index] = option.Some[term.Term]{Value: term.Clone(value)}
 	return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 }
 
-func (machine *Machine) X(index int) result.Result[beam.Operand, Failure] {
+func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
 	return machine.register(machine.x, "x", index)
 }
 
 func (machine *Machine) Run(entryLabel uint64) result.Result[RunResult, Failure] {
-	entry, present := machine.labels[entryLabel]
-	switch __gp_m1 := any(option.Of(entry, present)).(type) {
-	case option.None[int]:
+	var started result.Result[*Continuation, Failure] = machine.Start(entryLabel)
+	switch __gp_m1 := any(started).(type) {
+	case result.Err[*Continuation, Failure]:
+		failure := __gp_m1.Err
 
-		return result.Err[RunResult, Failure]{Err: MissingLabel{Label: entryLabel}}
-	case option.Some[int]:
-		position := __gp_m1.Value
+		return result.Err[RunResult, Failure]{Err: failure}
+	case result.Ok[*Continuation, Failure]:
+		continuation := __gp_m1.Value
 
-		machine.pc = position + 1
+		var resumed result.Result[ExecutionSlice, Failure] = continuation.Resume(
+			VMReductionBudget{value: machine.stepLimit},
+		)
+		switch __gp_m2 := any(resumed).(type) {
+		case result.Err[ExecutionSlice, Failure]:
+			failure := __gp_m2.Err
+
+			return result.Err[RunResult, Failure]{Err: failure}
+		case result.Ok[ExecutionSlice, Failure]:
+			slice := __gp_m2.Value
+
+			var execution ExecutionSlice = slice
+			switch __gp_m3 := any(execution).(type) {
+			case ExecutionSuspended:
+
+				return result.Err[RunResult, Failure]{Err: StepLimitExceeded{Limit: machine.stepLimit}}
+			case ExecutionWaiting:
+
+				return result.Err[RunResult, Failure]{Err: InvalidProgram{Detail: "execution waited without a process scheduler"}}
+			case ExecutionCompleted:
+				value := __gp_m3.Value
+
+				return result.Ok[RunResult, Failure]{Value: RunResult{Value: value, Steps: machine.steps}}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	default:
 		panic("goplus: impossible enum value in match")
-	}
-	machine.steps = 0
-	machine.returnPCs = machine.returnPCs[:0]
-
-	for {
-		if machine.steps >= machine.stepLimit {
-			return result.Err[RunResult, Failure]{Err: StepLimitExceeded{Limit: machine.stepLimit}}
-		}
-		if machine.pc < 0 || machine.pc >= len(machine.program) {
-			return result.Err[RunResult, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
-				"program counter %d is out of range",
-				machine.pc,
-			)}}
-		}
-		instruction := machine.program[machine.pc]
-		machine.steps++
-		next := machine.pc + 1
-
-		switch instruction.Opcode.Name {
-		case "label", "func_info":
-			machine.pc = next
-		case "move":
-			switch __gp_m2 := any(machine.move(instruction)).(type) {
-			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m2.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			case result.Ok[MachineMutation, Failure]:
-
-				machine.pc = next
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "jump":
-			switch __gp_m3 := any(machine.instructionLabel(instruction, 0)).(type) {
-			case result.Ok[int, Failure]:
-				target := __gp_m3.Value
-
-				machine.pc = target
-			case result.Err[int, Failure]:
-				failure := __gp_m3.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "call":
-			switch __gp_m4 := any(machine.instructionLabel(instruction, 1)).(type) {
-			case result.Ok[int, Failure]:
-				target := __gp_m4.Value
-
-				machine.returnPCs = append(machine.returnPCs, next)
-				machine.pc = target
-			case result.Err[int, Failure]:
-				failure := __gp_m4.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "call_only":
-			switch __gp_m5 := any(machine.instructionLabel(instruction, 1)).(type) {
-			case result.Ok[int, Failure]:
-				target := __gp_m5.Value
-
-				machine.pc = target
-			case result.Err[int, Failure]:
-				failure := __gp_m5.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "call_last":
-			switch __gp_m6 := any(machine.deallocate(instruction, 2)).(type) {
-			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m6.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			case result.Ok[MachineMutation, Failure]:
-
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-			switch __gp_m7 := any(machine.instructionLabel(instruction, 1)).(type) {
-			case result.Ok[int, Failure]:
-				target := __gp_m7.Value
-
-				machine.pc = target
-			case result.Err[int, Failure]:
-				failure := __gp_m7.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "allocate", "allocate_zero":
-			switch __gp_m8 := any(machine.allocate(instruction, 0)).(type) {
-			case result.Ok[MachineMutation, Failure]:
-
-				machine.pc = next
-			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m8.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "deallocate":
-			switch __gp_m9 := any(machine.deallocate(instruction, 0)).(type) {
-			case result.Ok[MachineMutation, Failure]:
-
-				machine.pc = next
-			case result.Err[MachineMutation, Failure]:
-				failure := __gp_m9.Err
-
-				return result.Err[RunResult, Failure]{Err: failure}
-			default:
-				panic("goplus: impossible enum value in match")
-			}
-		case "return":
-			if len(machine.returnPCs) == 0 {
-				return machine.finish()
-			}
-			last := len(machine.returnPCs) - 1
-			machine.pc = machine.returnPCs[last]
-			machine.returnPCs = machine.returnPCs[:last]
-		case "int_code_end":
-			return machine.finish()
-		default:
-			return result.Err[RunResult, Failure]{Err: UnsupportedOpcode{Name: instruction.Opcode.Name, Arity: instruction.Opcode.Arity, Offset: instruction.Offset}}
-		}
 	}
 }
 
 func (machine *Machine) finish() result.Result[RunResult, Failure] {
-	switch __gp_m10 := any(machine.X(0)).(type) {
-	case result.Ok[beam.Operand, Failure]:
-		value := __gp_m10.Value
+	switch __gp_m4 := any(machine.X(0)).(type) {
+	case result.Ok[term.Term, Failure]:
+		value := __gp_m4.Value
 
 		return result.Ok[RunResult, Failure]{Value: RunResult{Value: value, Steps: machine.steps}}
-	case result.Err[beam.Operand, Failure]:
-		failure := __gp_m10.Err
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m4.Err
 
 		return result.Err[RunResult, Failure]{Err: failure}
 	default:
@@ -328,13 +235,13 @@ func (machine *Machine) move(
 			len(instruction.Operands),
 		)}}
 	}
-	switch __gp_m11 := any(machine.resolve(instruction.Operands[0])).(type) {
-	case result.Err[beam.Operand, Failure]:
-		failure := __gp_m11.Err
+	switch __gp_m5 := any(machine.resolve(instruction.Operands[0])).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m5.Err
 
 		return result.Err[MachineMutation, Failure]{Err: failure}
-	case result.Ok[beam.Operand, Failure]:
-		value := __gp_m11.Value
+	case result.Ok[term.Term, Failure]:
+		value := __gp_m5.Value
 
 		return machine.assign(instruction.Operands[1], value)
 	default:
@@ -344,77 +251,82 @@ func (machine *Machine) move(
 
 func (machine *Machine) resolve(
 	operand beam.Operand,
-) result.Result[beam.Operand, Failure] {
-	switch __gp_m12 := any(operand).(type) {
+) result.Result[term.Term, Failure] {
+	switch __gp_m6 := any(operand).(type) {
 	case beam.TypedRegisterOperand:
-		register := __gp_m12.Register
+		register := __gp_m6.Register
 
 		return machine.resolve(register)
 	case beam.XRegisterOperand:
-		index := __gp_m12.Index
+		index := __gp_m6.Index
 
 		return machine.readIndexed(machine.x, "x", index)
 	case beam.YRegisterOperand:
-		index := __gp_m12.Index
+		index := __gp_m6.Index
 
-		switch __gp_m13 := any(machine.yPosition(index)).(type) {
+		switch __gp_m7 := any(machine.yPosition(index)).(type) {
 		case result.Ok[int, Failure]:
-			position := __gp_m13.Value
+			position := __gp_m7.Value
 
 			return machine.register(machine.y, "y", position)
 		case result.Err[int, Failure]:
-			failure := __gp_m13.Err
+			failure := __gp_m7.Err
 
-			return result.Err[beam.Operand, Failure]{Err: failure}
+			return result.Err[term.Term, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	case beam.UnsignedOperand:
+		value := __gp_m6.Value
 
-		return result.Ok[beam.Operand, Failure]{Value: operand}
+		return result.Ok[term.Term, Failure]{Value: integerTerm(value)}
 	case beam.IntegerOperand:
+		value := __gp_m6.Value
 
-		return result.Ok[beam.Operand, Failure]{Value: operand}
+		return result.Ok[term.Term, Failure]{Value: integerTerm(value)}
 	case beam.AtomOperand:
+		index := __gp_m6.Index
 
-		return result.Ok[beam.Operand, Failure]{Value: operand}
+		return machine.atomConstant(index)
 	case beam.CharacterOperand:
+		value := __gp_m6.Value
 
-		return result.Ok[beam.Operand, Failure]{Value: operand}
+		return result.Ok[term.Term, Failure]{Value: integerTerm(value)}
 	case beam.LiteralOperand:
+		index := __gp_m6.Index
 
-		return result.Ok[beam.Operand, Failure]{Value: operand}
+		return machine.literalConstant(index)
 	default:
 
-		return result.Err[beam.Operand, Failure]{Err: InvalidProgram{Detail: "operand is not a value"}}
+		return result.Err[term.Term, Failure]{Err: InvalidProgram{Detail: "operand is not a value"}}
 	}
 }
 
 func (machine *Machine) assign(
 	destination beam.Operand,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m14 := any(destination).(type) {
+	switch __gp_m8 := any(destination).(type) {
 	case beam.TypedRegisterOperand:
-		register := __gp_m14.Register
+		register := __gp_m8.Register
 
 		return machine.assign(register, value)
 	case beam.XRegisterOperand:
-		index := __gp_m14.Index
+		index := __gp_m8.Index
 
 		return machine.writeIndexed(machine.x, "x", index, value)
 	case beam.YRegisterOperand:
-		index := __gp_m14.Index
+		index := __gp_m8.Index
 
-		switch __gp_m15 := any(machine.yPosition(index)).(type) {
+		switch __gp_m9 := any(machine.yPosition(index)).(type) {
 		case result.Err[int, Failure]:
-			failure := __gp_m15.Err
+			failure := __gp_m9.Err
 
 			return result.Err[MachineMutation, Failure]{Err: failure}
 		case result.Ok[int, Failure]:
-			position := __gp_m15.Value
+			position := __gp_m9.Value
 
-			machine.y[position] = option.Some[beam.Operand]{Value: value}
+			machine.y[position] = option.Some[term.Term]{Value: term.Clone(value)}
 			return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 		default:
 			panic("goplus: impossible enum value in match")
@@ -426,19 +338,19 @@ func (machine *Machine) assign(
 }
 
 func (machine *Machine) readIndexed(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index *big.Int,
-) result.Result[beam.Operand, Failure] {
-	switch __gp_m16 := any(registerIndex(index)).(type) {
+) result.Result[term.Term, Failure] {
+	switch __gp_m10 := any(registerIndex(index)).(type) {
 	case option.None[uint64]:
 
-		return result.Err[beam.Operand, Failure]{Err: InvalidProgram{Detail: name + " register index is not uint64"}}
+		return result.Err[term.Term, Failure]{Err: InvalidProgram{Detail: name + " register index is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m16.Value
+		value := __gp_m10.Value
 
 		if value > uint64(maxInt()) {
-			return result.Err[beam.Operand, Failure]{Err: RegisterOutOfRange{Register: name, Index: maxInt()}}
+			return result.Err[term.Term, Failure]{Err: RegisterOutOfRange{Register: name, Index: maxInt()}}
 		}
 		return machine.register(registers, name, int(value))
 	default:
@@ -447,22 +359,22 @@ func (machine *Machine) readIndexed(
 }
 
 func (machine *Machine) writeIndexed(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index *big.Int,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m17 := any(registerIndex(index)).(type) {
+	switch __gp_m11 := any(registerIndex(index)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[MachineMutation, Failure]{Err: InvalidProgram{Detail: name + " register index is not uint64"}}
 	case option.Some[uint64]:
-		position := __gp_m17.Value
+		position := __gp_m11.Value
 
 		if position >= uint64(len(registers)) {
 			return result.Err[MachineMutation, Failure]{Err: RegisterOutOfRange{Register: name, Index: int(position)}}
 		}
-		registers[int(position)] = option.Some[beam.Operand]{Value: value}
+		registers[int(position)] = option.Some[term.Term]{Value: term.Clone(value)}
 		return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -470,33 +382,33 @@ func (machine *Machine) writeIndexed(
 }
 
 func (machine *Machine) register(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index int,
-) result.Result[beam.Operand, Failure] {
+) result.Result[term.Term, Failure] {
 	if index < 0 || index >= len(registers) {
-		return result.Err[beam.Operand, Failure]{Err: RegisterOutOfRange{Register: name, Index: index}}
+		return result.Err[term.Term, Failure]{Err: RegisterOutOfRange{Register: name, Index: index}}
 	}
-	switch __gp_m18 := any(registers[index]).(type) {
-	case option.Some[beam.Operand]:
-		value := __gp_m18.Value
+	switch __gp_m12 := any(registers[index]).(type) {
+	case option.Some[term.Term]:
+		value := __gp_m12.Value
 
-		return result.Ok[beam.Operand, Failure]{Value: value}
-	case option.None[beam.Operand]:
+		return result.Ok[term.Term, Failure]{Value: term.Clone(value)}
+	case option.None[term.Term]:
 
-		return result.Err[beam.Operand, Failure]{Err: UninitializedRegister{Register: name, Index: index}}
+		return result.Err[term.Term, Failure]{Err: UninitializedRegister{Register: name, Index: index}}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 }
 
 func (machine *Machine) yPosition(index *big.Int) result.Result[int, Failure] {
-	switch __gp_m19 := any(registerIndex(index)).(type) {
+	switch __gp_m13 := any(registerIndex(index)).(type) {
 	case option.None[uint64]:
 
 		return result.Err[int, Failure]{Err: InvalidProgram{Detail: "y register index is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m19.Value
+		value := __gp_m13.Value
 
 		if value >= uint64(len(machine.y)) {
 			return result.Err[int, Failure]{Err: RegisterOutOfRange{Register: "y", Index: int(value)}}
@@ -518,7 +430,7 @@ func (machine *Machine) instructionLabel(
 			operandIndex,
 		)}}
 	}
-	switch __gp_m20 := any(labelIndex(instruction.Operands[operandIndex])).(type) {
+	switch __gp_m14 := any(labelIndex(instruction.Operands[operandIndex])).(type) {
 	case option.None[uint64]:
 
 		return result.Err[int, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
@@ -527,12 +439,12 @@ func (machine *Machine) instructionLabel(
 			operandIndex,
 		)}}
 	case option.Some[uint64]:
-		label := __gp_m20.Value
+		label := __gp_m14.Value
 
 		target, present := machine.labels[label]
-		switch __gp_m21 := any(option.Of(target, present)).(type) {
+		switch __gp_m15 := any(option.Of(target, present)).(type) {
 		case option.Some[int]:
-			position := __gp_m21.Value
+			position := __gp_m15.Value
 
 			return result.Ok[int, Failure]{Value: position + 1}
 		case option.None[int]:
@@ -550,16 +462,16 @@ func (machine *Machine) allocate(
 	instruction beam.Instruction,
 	operandIndex int,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m22 := any(allocationCount(instruction, operandIndex)).(type) {
+	switch __gp_m16 := any(allocationCount(instruction, operandIndex)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m22.Err
+		failure := __gp_m16.Err
 
 		return result.Err[MachineMutation, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m22.Value
+		count := __gp_m16.Value
 
 		for index := 0; index < count; index++ {
-			machine.y = append(machine.y, option.None[beam.Operand]{})
+			machine.y = append(machine.y, option.None[term.Term]{})
 		}
 		return result.Ok[MachineMutation, Failure]{Value: MachineMutated{}}
 	default:
@@ -571,13 +483,13 @@ func (machine *Machine) deallocate(
 	instruction beam.Instruction,
 	operandIndex int,
 ) result.Result[MachineMutation, Failure] {
-	switch __gp_m23 := any(allocationCount(instruction, operandIndex)).(type) {
+	switch __gp_m17 := any(allocationCount(instruction, operandIndex)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m23.Err
+		failure := __gp_m17.Err
 
 		return result.Err[MachineMutation, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m23.Value
+		count := __gp_m17.Value
 
 		if count > len(machine.y) {
 			return result.Err[MachineMutation, Failure]{Err: InvalidProgram{Detail: "invalid deallocation count"}}
@@ -599,13 +511,13 @@ func allocationCount(
 			instruction.Opcode.Name,
 		)}}
 	}
-	switch __gp_m24 := any(instruction.Operands[operandIndex]).(type) {
+	switch __gp_m18 := any(instruction.Operands[operandIndex]).(type) {
 	case beam.UnsignedOperand:
-		value := __gp_m24.Value
+		value := __gp_m18.Value
 
-		switch __gp_m25 := any(registerIndex(value)).(type) {
+		switch __gp_m19 := any(registerIndex(value)).(type) {
 		case option.Some[uint64]:
-			count := __gp_m25.Value
+			count := __gp_m19.Value
 
 			if count <= 1_000_000 {
 				return result.Ok[int, Failure]{Value: int(count)}
@@ -622,9 +534,9 @@ func allocationCount(
 }
 
 func labelIndex(operand beam.Operand) option.Option[uint64] {
-	switch __gp_m26 := any(operand).(type) {
+	switch __gp_m20 := any(operand).(type) {
 	case beam.LabelOperand:
-		index := __gp_m26.Index
+		index := __gp_m20.Index
 
 		return registerIndex(index)
 	default:
@@ -642,4 +554,51 @@ func registerIndex(index *big.Int) option.Option[uint64] {
 
 func maxInt() int {
 	return int(^uint(0) >> 1)
+}
+
+func integerTerm(value *big.Int) term.Term {
+	if value.IsInt64() {
+		return term.Integer(value.Int64())
+	}
+	return term.MustBigInteger(value)
+}
+
+func (machine *Machine) atomConstant(index *big.Int) result.Result[term.Term, Failure] {
+	if !index.IsUint64() {
+		return result.Err[term.Term, Failure]{Err: InvalidProgram{Detail: "atom index is not uint64"}}
+	}
+	position := index.Uint64()
+	name, present := machine.atoms[position]
+	if !present {
+		return result.Err[term.Term, Failure]{Err: MissingConstant{Kind: "atom", Index: position}}
+	}
+	return result.Ok[term.Term, Failure]{Value: term.MustAtom(name)}
+}
+
+func (machine *Machine) literalConstant(index *big.Int) result.Result[term.Term, Failure] {
+	if !index.IsUint64() {
+		return result.Err[term.Term, Failure]{Err: InvalidProgram{Detail: "literal index is not uint64"}}
+	}
+	position := index.Uint64()
+	value, present := machine.literals[position]
+	if !present {
+		return result.Err[term.Term, Failure]{Err: MissingConstant{Kind: "literal", Index: position}}
+	}
+	return result.Ok[term.Term, Failure]{Value: term.Clone(value)}
+}
+
+func cloneAtomPool(values map[uint64]string) map[uint64]string {
+	cloned := make(map[uint64]string, len(values))
+	for index, value := range values {
+		cloned[index] = value
+	}
+	return cloned
+}
+
+func cloneLiteralPool(values map[uint64]term.Term) map[uint64]term.Term {
+	cloned := make(map[uint64]term.Term, len(values))
+	for index, value := range values {
+		cloned[index] = term.Clone(value)
+	}
+	return cloned
 }

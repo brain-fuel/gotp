@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
+	"goforge.dev/gotp/term"
 )
 
 func TestMachineRunsLocalCallAndRegisterMoves(t *testing.T) {
@@ -44,11 +46,11 @@ func TestMachineRunsLocalCallAndRegisterMoves(t *testing.T) {
 			panic("goplus: impossible enum value in match")
 		}
 		switch __gp_m2 := any(machine.X(1)).(type) {
-		case result.Err[beam.Operand, Failure]:
+		case result.Err[term.Term, Failure]:
 			failure := __gp_m2.Err
 
 			t.Fatal(Error(failure))
-		case result.Ok[beam.Operand, Failure]:
+		case result.Ok[term.Term, Failure]:
 			value := __gp_m2.Value
 
 			assertIntegerOperand(t, value, 42)
@@ -127,7 +129,7 @@ func TestMachineBoundsInfiniteControlFlow(t *testing.T) {
 func TestMachineRejectsUnsupportedOpcode(t *testing.T) {
 	program := []beam.Instruction{
 		instruction("label", label(1)),
-		instruction("send"),
+		instruction("call_ext"),
 	}
 	switch __gp_m7 := any(NewMachine(program, MachineConfig{})).(type) {
 	case result.Err[*Machine, Failure]:
@@ -155,18 +157,69 @@ func TestMachineRejectsUnsupportedOpcode(t *testing.T) {
 	}
 }
 
-func assertIntegerOperand(t *testing.T, operand beam.Operand, want int64) {
+func assertIntegerOperand(t *testing.T, value term.Term, want int64) {
 	t.Helper()
-	switch __gp_m9 := any(operand).(type) {
-	case beam.IntegerOperand:
-		value := __gp_m9.Value
+	switch __gp_m9 := any(term.Int64(value)).(type) {
+	case option.Some[int64]:
+		found := __gp_m9.Value
 
-		if value.Int64() != want {
-			t.Fatalf("integer = %d, want %d", value.Int64(), want)
+		if found != want {
+			t.Fatalf("integer = %d, want %d", found, want)
+		}
+	case option.None[int64]:
+
+		t.Fatal("runtime value is not an integer")
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestMachineRegistersStoreRuntimeTerms(t *testing.T) {
+	switch __gp_m10 := any(NewMachine([]beam.Instruction{}, MachineConfig{})).(type) {
+	case result.Err[*Machine, Failure]:
+		failure := __gp_m10.Err
+
+		t.Fatal(Error(failure))
+	case result.Ok[*Machine, Failure]:
+		machine := __gp_m10.Value
+
+		pid := term.PID{Node: 1, Number: 7, Creation: 1}
+		switch __gp_m11 := any(machine.SetX(0, term.PIDValue(pid))).(type) {
+		case result.Err[MachineMutation, Failure]:
+			failure := __gp_m11.Err
+
+			t.Fatal(Error(failure))
+		case result.Ok[MachineMutation, Failure]:
+
+			switch __gp_m12 := any(machine.X(0)).(type) {
+			case result.Err[term.Term, Failure]:
+				failure := __gp_m12.Err
+
+				t.Fatal(Error(failure))
+			case result.Ok[term.Term, Failure]:
+				value := __gp_m12.Value
+
+				switch __gp_m13 := any(term.TermPIDValue(value)).(type) {
+				case option.Some[term.PID]:
+					found := __gp_m13.Value
+
+					if found != pid {
+						t.Fatalf("PID = %#v", found)
+					}
+				case option.None[term.PID]:
+
+					t.Fatal("register value is not a PID")
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
 		}
 	default:
-
-		t.Fatal("operand is not an integer")
+		panic("goplus: impossible enum value in match")
 	}
 }
 

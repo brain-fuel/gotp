@@ -138,7 +138,7 @@ func TestMonitorDeliversDownAndWakesWaiter(t *testing.T) {
 	case result.Err[term.Reference, Failure]:
 		failure := __gp_m5.Err
 
-		t.Fatal(Error(failure))
+		t.Fatal(FailureError(failure))
 	case result.Ok[term.Reference, Failure]:
 		found := __gp_m5.Value
 
@@ -198,7 +198,7 @@ func TestTrapExitConvertsLinkedExitToSignal(t *testing.T) {
 	case result.Err[KernelMutation, Failure]:
 		failure := __gp_m9.Err
 
-		t.Fatal(Error(failure))
+		t.Fatal(FailureError(failure))
 	case result.Ok[KernelMutation, Failure]:
 
 	default:
@@ -242,7 +242,7 @@ func TestAbnormalLinkedExitPropagates(t *testing.T) {
 	case result.Err[KernelMutation, Failure]:
 		failure := __gp_m12.Err
 
-		t.Fatal(Error(failure))
+		t.Fatal(FailureError(failure))
 	case result.Ok[KernelMutation, Failure]:
 
 	default:
@@ -332,7 +332,7 @@ func mustSpawn(
 	case result.Err[term.PID, Failure]:
 		failure := __gp_m18.Err
 
-		t.Fatal(Error(failure))
+		t.Fatal(FailureError(failure))
 		return term.PID{}
 	default:
 		panic("goplus: impossible enum value in match")

@@ -235,7 +235,7 @@ func Error(failure Failure) string {
 	case KernelFailure:
 		cause := __gp_m0.Cause
 
-		return "gotp/genserver: " + kernel.Error(cause)
+		return "gotp/genserver: " + kernel.FailureError(cause)
 	case CallbackFailure:
 		detail := __gp_m0.Detail
 

@@ -216,7 +216,7 @@ func startSupervisor(
 	case result.Err[term.PID, kernel.Failure]:
 		failure := __gp_m8.Err
 
-		t.Fatal(kernel.Error(failure))
+		t.Fatal(kernel.FailureError(failure))
 	case result.Ok[term.PID, kernel.Failure]:
 		found := __gp_m8.Value
 

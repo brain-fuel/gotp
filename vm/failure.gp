@@ -14,6 +14,7 @@ type Failure enum {
 	InvalidProgram(Detail string)
 	RegisterOutOfRange(Register string, Index int)
 	UninitializedRegister(Register string, Index int)
+	MissingConstant(Kind string, Index uint64)
 	MissingLabel(Label uint64)
 	StepLimitExceeded(Limit int)
 	UnsupportedOpcode(Name string, Arity int, Offset int)
@@ -35,6 +36,8 @@ func (failure Failure) Error() string {
 		return fmt.Sprintf("gotp/vm: %s register %d is out of range", register, index)
 	case UninitializedRegister(register, index):
 		return fmt.Sprintf("gotp/vm: %s register %d is uninitialized", register, index)
+	case MissingConstant(kind, index):
+		return fmt.Sprintf("gotp/vm: %s constant %d is unavailable", kind, index)
 	case MissingLabel(label):
 		return fmt.Sprintf("gotp/vm: label %d does not exist", label)
 	case StepLimitExceeded(limit):

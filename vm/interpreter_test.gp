@@ -5,8 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
+	"goforge.dev/gotp/term"
 )
 
 func TestMachineRunsLocalCallAndRegisterMoves(t *testing.T) {
@@ -83,7 +85,7 @@ func TestMachineBoundsInfiniteControlFlow(t *testing.T) {
 func TestMachineRejectsUnsupportedOpcode(t *testing.T) {
 	program := []beam.Instruction{
 		instruction("label", label(1)),
-		instruction("send"),
+		instruction("call_ext"),
 	}
 	match NewMachine(program, MachineConfig{}) {
 	case result.Err(failure):
@@ -100,15 +102,38 @@ func TestMachineRejectsUnsupportedOpcode(t *testing.T) {
 	}
 }
 
-func assertIntegerOperand(t *testing.T, operand beam.Operand, want int64) {
+func assertIntegerOperand(t *testing.T, value term.Term, want int64) {
 	t.Helper()
-	match operand {
-	case beam.IntegerOperand(value):
-		if value.Int64() != want {
-			t.Fatalf("integer = %d, want %d", value.Int64(), want)
+	match term.Int64(value) {
+	case option.Some(found):
+		if found != want { t.Fatalf("integer = %d, want %d", found, want) }
+	case option.None:
+		t.Fatal("runtime value is not an integer")
+	}
+}
+
+func TestMachineRegistersStoreRuntimeTerms(t *testing.T) {
+	match NewMachine([]beam.Instruction{}, MachineConfig{}) {
+	case result.Err(failure):
+		t.Fatal(failure.Error())
+	case result.Ok(machine):
+		pid := term.PID{Node: 1, Number: 7, Creation: 1}
+		match machine.SetX(0, term.PIDValue(pid)) {
+		case result.Err(failure):
+			t.Fatal(failure.Error())
+		case result.Ok(_):
+			match machine.X(0) {
+			case result.Err(failure):
+				t.Fatal(failure.Error())
+			case result.Ok(value):
+				match term.TermPIDValue(value) {
+				case option.Some(found):
+					if found != pid { t.Fatalf("PID = %#v", found) }
+				case option.None:
+					t.Fatal("register value is not a PID")
+				}
+			}
 		}
-	case _:
-		t.Fatal("operand is not an integer")
 	}
 }
 

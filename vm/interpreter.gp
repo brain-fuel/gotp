@@ -7,15 +7,18 @@ import (
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
+	"goforge.dev/gotp/term"
 )
 
 type MachineConfig struct {
 	XRegisters int
 	StepLimit  int
+	Atoms      map[uint64]string
+	Literals   map[uint64]term.Term
 }
 
 type RunResult struct {
-	Value beam.Operand
+	Value term.Term
 	Steps int
 }
 
@@ -26,8 +29,10 @@ type MachineMutation enum {
 type Machine struct {
 	program   []beam.Instruction
 	labels    map[uint64]int
-	x         []option.Option[beam.Operand]
-	y         []option.Option[beam.Operand]
+	x         []option.Option[term.Term]
+	y         []option.Option[term.Term]
+	atoms     map[uint64]string
+	literals  map[uint64]term.Term
 	returnPCs []int
 	pc        int
 	steps     int
@@ -73,128 +78,59 @@ func NewMachine(
 			labels[label] = index
 		}
 	}
-	registers := make([]option.Option[beam.Operand], config.XRegisters)
+	registers := make([]option.Option[term.Term], config.XRegisters)
 	for index := range registers {
-		registers[index] = option.None[beam.Operand]
+		registers[index] = option.None[term.Term]
 	}
 	return result.Ok[*Machine, Failure](&Machine{
-		program: program, labels: labels, x: registers, stepLimit: config.StepLimit,
+		program: program,
+		labels: labels,
+		x: registers,
+		atoms: cloneAtomPool(config.Atoms),
+		literals: cloneLiteralPool(config.Literals),
+		stepLimit: config.StepLimit,
 	})
 }
 
 func (machine *Machine) SetX(
 	index int,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
 	if index < 0 || index >= len(machine.x) {
 		return result.Err[MachineMutation, Failure](RegisterOutOfRange("x", index))
 	}
-	machine.x[index] = option.Some[beam.Operand](value)
+	machine.x[index] = option.Some[term.Term](term.Clone(value))
 	return result.Ok[MachineMutation, Failure](MachineMutated())
 }
 
-func (machine *Machine) X(index int) result.Result[beam.Operand, Failure] {
+func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
 	return machine.register(machine.x, "x", index)
 }
 
 func (machine *Machine) Run(entryLabel uint64) result.Result[RunResult, Failure] {
-	entry, present := machine.labels[entryLabel]
-	match option.Of(entry, present) {
-	case option.None:
-		return result.Err[RunResult, Failure](MissingLabel(entryLabel))
-	case option.Some(position):
-		machine.pc = position + 1
-	}
-	machine.steps = 0
-	machine.returnPCs = machine.returnPCs[:0]
-
-	for {
-		if machine.steps >= machine.stepLimit {
-			return result.Err[RunResult, Failure](StepLimitExceeded(machine.stepLimit))
-		}
-		if machine.pc < 0 || machine.pc >= len(machine.program) {
-			return result.Err[RunResult, Failure](InvalidProgram(fmt.Sprintf(
-				"program counter %d is out of range",
-				machine.pc,
-			)))
-		}
-		instruction := machine.program[machine.pc]
-		machine.steps++
-		next := machine.pc + 1
-
-		switch instruction.Opcode.Name {
-		case "label", "func_info":
-			machine.pc = next
-		case "move":
-			match machine.move(instruction) {
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			case result.Ok(MachineMutated):
-				machine.pc = next
+	var started result.Result[*Continuation, Failure] = machine.Start(entryLabel)
+	match started {
+	case result.Err(failure):
+		return result.Err[RunResult, Failure](failure)
+	case result.Ok(continuation):
+		var resumed result.Result[ExecutionSlice, Failure] = continuation.Resume(
+			VMReductionBudget{value: machine.stepLimit},
+		)
+		match resumed {
+		case result.Err(failure):
+			return result.Err[RunResult, Failure](failure)
+		case result.Ok(slice):
+			var execution ExecutionSlice = slice
+			match execution {
+			case ExecutionSuspended(_):
+				return result.Err[RunResult, Failure](StepLimitExceeded(machine.stepLimit))
+			case ExecutionWaiting(_):
+				return result.Err[RunResult, Failure](InvalidProgram(
+					"execution waited without a process scheduler",
+				))
+			case ExecutionCompleted(value, _):
+				return result.Ok[RunResult, Failure](RunResult{Value: value, Steps: machine.steps})
 			}
-		case "jump":
-			match machine.instructionLabel(instruction, 0) {
-			case result.Ok(target):
-				machine.pc = target
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "call":
-			match machine.instructionLabel(instruction, 1) {
-			case result.Ok(target):
-				machine.returnPCs = append(machine.returnPCs, next)
-				machine.pc = target
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "call_only":
-			match machine.instructionLabel(instruction, 1) {
-			case result.Ok(target):
-				machine.pc = target
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "call_last":
-			match machine.deallocate(instruction, 2) {
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			case result.Ok(MachineMutated):
-			}
-			match machine.instructionLabel(instruction, 1) {
-			case result.Ok(target):
-				machine.pc = target
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "allocate", "allocate_zero":
-			match machine.allocate(instruction, 0) {
-			case result.Ok(MachineMutated):
-				machine.pc = next
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "deallocate":
-			match machine.deallocate(instruction, 0) {
-			case result.Ok(MachineMutated):
-				machine.pc = next
-			case result.Err(failure):
-				return result.Err[RunResult, Failure](failure)
-			}
-		case "return":
-			if len(machine.returnPCs) == 0 {
-				return machine.finish()
-			}
-			last := len(machine.returnPCs) - 1
-			machine.pc = machine.returnPCs[last]
-			machine.returnPCs = machine.returnPCs[:last]
-		case "int_code_end":
-			return machine.finish()
-		default:
-			return result.Err[RunResult, Failure](UnsupportedOpcode(
-				instruction.Opcode.Name,
-				instruction.Opcode.Arity,
-				instruction.Offset,
-			))
 		}
 	}
 }
@@ -227,7 +163,7 @@ func (machine *Machine) move(
 
 func (machine *Machine) resolve(
 	operand beam.Operand,
-) result.Result[beam.Operand, Failure] {
+) result.Result[term.Term, Failure] {
 	match operand {
 	case beam.TypedRegisterOperand(register, _):
 		return machine.resolve(register)
@@ -238,26 +174,26 @@ func (machine *Machine) resolve(
 		case result.Ok(position):
 			return machine.register(machine.y, "y", position)
 		case result.Err(failure):
-			return result.Err[beam.Operand, Failure](failure)
+			return result.Err[term.Term, Failure](failure)
 		}
-	case beam.UnsignedOperand(_):
-		return result.Ok[beam.Operand, Failure](operand)
-	case beam.IntegerOperand(_):
-		return result.Ok[beam.Operand, Failure](operand)
-	case beam.AtomOperand(_):
-		return result.Ok[beam.Operand, Failure](operand)
-	case beam.CharacterOperand(_):
-		return result.Ok[beam.Operand, Failure](operand)
-	case beam.LiteralOperand(_):
-		return result.Ok[beam.Operand, Failure](operand)
+	case beam.UnsignedOperand(value):
+		return result.Ok[term.Term, Failure](integerTerm(value))
+	case beam.IntegerOperand(value):
+		return result.Ok[term.Term, Failure](integerTerm(value))
+	case beam.AtomOperand(index):
+		return machine.atomConstant(index)
+	case beam.CharacterOperand(value):
+		return result.Ok[term.Term, Failure](integerTerm(value))
+	case beam.LiteralOperand(index):
+		return machine.literalConstant(index)
 	case _:
-		return result.Err[beam.Operand, Failure](InvalidProgram("operand is not a value"))
+		return result.Err[term.Term, Failure](InvalidProgram("operand is not a value"))
 	}
 }
 
 func (machine *Machine) assign(
 	destination beam.Operand,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
 	match destination {
 	case beam.TypedRegisterOperand(register, _):
@@ -269,7 +205,7 @@ func (machine *Machine) assign(
 		case result.Err(failure):
 			return result.Err[MachineMutation, Failure](failure)
 		case result.Ok(position):
-			machine.y[position] = option.Some[beam.Operand](value)
+			machine.y[position] = option.Some[term.Term](term.Clone(value))
 			return result.Ok[MachineMutation, Failure](MachineMutated())
 		}
 	case _:
@@ -278,26 +214,26 @@ func (machine *Machine) assign(
 }
 
 func (machine *Machine) readIndexed(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index *big.Int,
-) result.Result[beam.Operand, Failure] {
+) result.Result[term.Term, Failure] {
 	match registerIndex(index) {
 	case option.None:
-		return result.Err[beam.Operand, Failure](InvalidProgram(name + " register index is not uint64"))
+		return result.Err[term.Term, Failure](InvalidProgram(name + " register index is not uint64"))
 	case option.Some(value):
 		if value > uint64(maxInt()) {
-			return result.Err[beam.Operand, Failure](RegisterOutOfRange(name, maxInt()))
+			return result.Err[term.Term, Failure](RegisterOutOfRange(name, maxInt()))
 		}
 		return machine.register(registers, name, int(value))
 	}
 }
 
 func (machine *Machine) writeIndexed(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index *big.Int,
-	value beam.Operand,
+	value term.Term,
 ) result.Result[MachineMutation, Failure] {
 	match registerIndex(index) {
 	case option.None:
@@ -306,24 +242,24 @@ func (machine *Machine) writeIndexed(
 		if position >= uint64(len(registers)) {
 			return result.Err[MachineMutation, Failure](RegisterOutOfRange(name, int(position)))
 		}
-		registers[int(position)] = option.Some[beam.Operand](value)
+		registers[int(position)] = option.Some[term.Term](term.Clone(value))
 		return result.Ok[MachineMutation, Failure](MachineMutated())
 	}
 }
 
 func (machine *Machine) register(
-	registers []option.Option[beam.Operand],
+	registers []option.Option[term.Term],
 	name string,
 	index int,
-) result.Result[beam.Operand, Failure] {
+) result.Result[term.Term, Failure] {
 	if index < 0 || index >= len(registers) {
-		return result.Err[beam.Operand, Failure](RegisterOutOfRange(name, index))
+		return result.Err[term.Term, Failure](RegisterOutOfRange(name, index))
 	}
 	match registers[index] {
 	case option.Some(value):
-		return result.Ok[beam.Operand, Failure](value)
+		return result.Ok[term.Term, Failure](term.Clone(value))
 	case option.None:
-		return result.Err[beam.Operand, Failure](UninitializedRegister(name, index))
+		return result.Err[term.Term, Failure](UninitializedRegister(name, index))
 	}
 }
 
@@ -377,7 +313,7 @@ func (machine *Machine) allocate(
 		return result.Err[MachineMutation, Failure](failure)
 	case result.Ok(count):
 		for index := 0; index < count; index++ {
-			machine.y = append(machine.y, option.None[beam.Operand])
+			machine.y = append(machine.y, option.None[term.Term])
 		}
 		return result.Ok[MachineMutation, Failure](MachineMutated())
 	}
@@ -441,4 +377,51 @@ func registerIndex(index *big.Int) option.Option[uint64] {
 
 func maxInt() int {
 	return int(^uint(0) >> 1)
+}
+
+func integerTerm(value *big.Int) term.Term {
+	if value.IsInt64() {
+		return term.Integer(value.Int64())
+	}
+	return term.MustBigInteger(value)
+}
+
+func (machine *Machine) atomConstant(index *big.Int) result.Result[term.Term, Failure] {
+	if !index.IsUint64() {
+		return result.Err[term.Term, Failure](InvalidProgram("atom index is not uint64"))
+	}
+	position := index.Uint64()
+	name, present := machine.atoms[position]
+	if !present {
+		return result.Err[term.Term, Failure](MissingConstant("atom", position))
+	}
+	return result.Ok[term.Term, Failure](term.MustAtom(name))
+}
+
+func (machine *Machine) literalConstant(index *big.Int) result.Result[term.Term, Failure] {
+	if !index.IsUint64() {
+		return result.Err[term.Term, Failure](InvalidProgram("literal index is not uint64"))
+	}
+	position := index.Uint64()
+	value, present := machine.literals[position]
+	if !present {
+		return result.Err[term.Term, Failure](MissingConstant("literal", position))
+	}
+	return result.Ok[term.Term, Failure](term.Clone(value))
+}
+
+func cloneAtomPool(values map[uint64]string) map[uint64]string {
+	cloned := make(map[uint64]string, len(values))
+	for index, value := range values {
+		cloned[index] = value
+	}
+	return cloned
+}
+
+func cloneLiteralPool(values map[uint64]term.Term) map[uint64]term.Term {
+	cloned := make(map[uint64]term.Term, len(values))
+	for index, value := range values {
+		cloned[index] = term.Clone(value)
+	}
+	return cloned
 }

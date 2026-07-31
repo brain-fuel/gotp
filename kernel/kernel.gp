@@ -53,6 +53,7 @@ type Failure enum {
 	NilBehavior()
 	MissingProcess(Role string, PID term.PID)
 	InvalidLink(Detail string)
+	InvalidTimer(Detail string)
 }
 
 func (failure Failure) Error() string {
@@ -63,6 +64,8 @@ func (failure Failure) Error() string {
 		return fmt.Sprintf("gotp/kernel: %s process %v does not exist", role, pid)
 	case InvalidLink(detail):
 		return "gotp/kernel: invalid link: " + detail
+	case InvalidTimer(detail):
+		return "gotp/kernel: invalid timer: " + detail
 	}
 }
 
@@ -105,6 +108,7 @@ type Kernel struct {
 	runQueue      []term.PID
 	queued        map[term.PID]bool
 	sequences     map[route]uint64
+	wakeups       *wakeQueue
 }
 
 func New(config KernelConfig) *Kernel {
@@ -119,6 +123,7 @@ func New(config KernelConfig) *Kernel {
 		processes: make(map[term.PID]*process),
 		queued:    make(map[term.PID]bool),
 		sequences: make(map[route]uint64),
+		wakeups: newWakeQueue(),
 	}
 }
 
@@ -296,6 +301,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 	if maxReductions <= 0 {
 		maxReductions = 1_000_000
 	}
+	kernel.drainWakeups()
 	reductions := 0
 	for len(kernel.runQueue) > 0 && reductions < maxReductions {
 		pid := kernel.runQueue[0]

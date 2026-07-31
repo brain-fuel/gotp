@@ -347,11 +347,19 @@ type InvalidLink struct {
 
 func (InvalidLink) isFailure() {}
 
+//goplus:variant (Failure) InvalidTimer(Detail string)
+type InvalidTimer struct {
+	Detail string
+}
+
+func (InvalidTimer) isFailure() {}
+
 // FailureCases selects one handler per Failure variant for FailureFold.
 type FailureCases[R any] struct {
 	NilBehavior    func() R
 	MissingProcess func(Role string, PID term.PID) R
 	InvalidLink    func(Detail string) R
+	InvalidTimer   func(Detail string) R
 }
 
 // FailureFold reduces Failure by one-level case analysis.
@@ -363,6 +371,8 @@ func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 		return cs.MissingProcess(m.Role, m.PID)
 	case InvalidLink:
 		return cs.InvalidLink(m.Detail)
+	case InvalidTimer:
+		return cs.InvalidTimer(m.Detail)
 	default:
 		panic("goplus: impossible enum value in FailureFold")
 	}
@@ -374,6 +384,7 @@ type FailureEqOverrides struct {
 	NilBehavior    func(x, y NilBehavior) (eq, handled bool)
 	MissingProcess func(x, y MissingProcess) (eq, handled bool)
 	InvalidLink    func(x, y InvalidLink) (eq, handled bool)
+	InvalidTimer   func(x, y InvalidTimer) (eq, handled bool)
 }
 
 // FailureEqualWith reports structural equality of a and b under ov.
@@ -425,6 +436,20 @@ func FailureEqualWith(a, b Failure, ov FailureEqOverrides) bool {
 			return false
 		}
 		return true
+	case InvalidTimer:
+		y, ok := any(b).(InvalidTimer)
+		if !ok {
+			return false
+		}
+		if ov.InvalidTimer != nil {
+			if eq, handled := ov.InvalidTimer(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
 	}
 	return false
 }
@@ -435,7 +460,7 @@ func FailureEqual(a, b Failure) bool {
 }
 
 //goplus:method (Failure) Error
-func Error(failure Failure) string {
+func FailureError(failure Failure) string {
 	switch __gp_m0 := any(failure).(type) {
 	case NilBehavior:
 
@@ -449,6 +474,10 @@ func Error(failure Failure) string {
 		detail := __gp_m0.Detail
 
 		return "gotp/kernel: invalid link: " + detail
+	case InvalidTimer:
+		detail := __gp_m0.Detail
+
+		return "gotp/kernel: invalid timer: " + detail
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -689,6 +718,7 @@ type Kernel struct {
 	runQueue      []term.PID
 	queued        map[term.PID]bool
 	sequences     map[route]uint64
+	wakeups       *wakeQueue
 }
 
 func New(config KernelConfig) *Kernel {
@@ -703,6 +733,7 @@ func New(config KernelConfig) *Kernel {
 		processes: make(map[term.PID]*process),
 		queued:    make(map[term.PID]bool),
 		sequences: make(map[route]uint64),
+		wakeups:   newWakeQueue(),
 	}
 }
 
@@ -952,6 +983,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 	if maxReductions <= 0 {
 		maxReductions = 1_000_000
 	}
+	kernel.drainWakeups()
 	reductions := 0
 	for len(kernel.runQueue) > 0 && reductions < maxReductions {
 		pid := kernel.runQueue[0]
