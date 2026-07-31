@@ -58,3 +58,5 @@ This document is not a release and does not authorize a tag or publication.
   acknowledged termination through explicit typed codecs and callbacks.
 - Added capability-scoped `sys` trace, bounded log, and statistics controls
   using deterministic `std/clock` timestamps and property-tested retention.
+- Added a total typed parser and transaction validator for the pinned low-level
+  relup instruction vocabulary and `point_of_no_return` ordering.
