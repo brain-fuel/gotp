@@ -76,3 +76,11 @@ well as the public behavior.
 - `gb_sets` callback corpus: `sha256:15b68c00cf4f96d5e604af76ed8d01a0e5480a8cf6afb26ef9b041211dc526d7`
 - `gb_trees` corpus: `sha256:909bcb16c572321f2bb4792cf2f2fc4294eac7712c420fb101a5c93f1f24f318`
 - `gb_trees` callback corpus: `sha256:4e764c8238d7b8e28d0568a66fbe600c16774665de8a8be4b32b6f554e08a4e3`
+
+## Gen-server foundation
+
+The pinned `gen_server.beam` currently executes request-ID collection and
+introspection exports. ETF reference terms use an explicit static node resolver.
+This does not establish lifecycle parity: start, linking, monitor, request,
+reply, timeout, stop, and system-message paths still require end-to-end
+scheduler evidence.
