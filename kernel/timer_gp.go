@@ -18,6 +18,110 @@ type wakeQueue struct {
 	pids  []term.PID
 }
 
+//goplus:enum WakeTimerStatus
+type WakeTimerStatus interface{ isWakeTimerStatus() }
+
+//goplus:variant (WakeTimerStatus) WakeTimerPending()
+type WakeTimerPending struct{}
+
+func (WakeTimerPending) isWakeTimerStatus() {}
+
+//goplus:variant (WakeTimerStatus) WakeTimerFired()
+type WakeTimerFired struct{}
+
+func (WakeTimerFired) isWakeTimerStatus() {}
+
+//goplus:variant (WakeTimerStatus) WakeTimerCancelled()
+type WakeTimerCancelled struct{}
+
+func (WakeTimerCancelled) isWakeTimerStatus() {}
+
+// WakeTimerStatusCases selects one handler per WakeTimerStatus variant for WakeTimerStatusFold.
+type WakeTimerStatusCases[R any] struct {
+	WakeTimerPending   func() R
+	WakeTimerFired     func() R
+	WakeTimerCancelled func() R
+}
+
+// WakeTimerStatusFold reduces WakeTimerStatus by one-level case analysis.
+func WakeTimerStatusFold[R any](w WakeTimerStatus, cs WakeTimerStatusCases[R]) R {
+	switch any(w).(type) {
+	case WakeTimerPending:
+		return cs.WakeTimerPending()
+	case WakeTimerFired:
+		return cs.WakeTimerFired()
+	case WakeTimerCancelled:
+		return cs.WakeTimerCancelled()
+	default:
+		panic("goplus: impossible enum value in WakeTimerStatusFold")
+	}
+}
+
+// WakeTimerStatusEqOverrides carries optional per-variant hooks for WakeTimerStatusEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type WakeTimerStatusEqOverrides struct {
+	WakeTimerPending   func(x, y WakeTimerPending) (eq, handled bool)
+	WakeTimerFired     func(x, y WakeTimerFired) (eq, handled bool)
+	WakeTimerCancelled func(x, y WakeTimerCancelled) (eq, handled bool)
+}
+
+// WakeTimerStatusEqualWith reports structural equality of a and b under ov.
+func WakeTimerStatusEqualWith(a, b WakeTimerStatus, ov WakeTimerStatusEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case WakeTimerPending:
+		y, ok := any(b).(WakeTimerPending)
+		if !ok {
+			return false
+		}
+		if ov.WakeTimerPending != nil {
+			if eq, handled := ov.WakeTimerPending(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case WakeTimerFired:
+		y, ok := any(b).(WakeTimerFired)
+		if !ok {
+			return false
+		}
+		if ov.WakeTimerFired != nil {
+			if eq, handled := ov.WakeTimerFired(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case WakeTimerCancelled:
+		y, ok := any(b).(WakeTimerCancelled)
+		if !ok {
+			return false
+		}
+		if ov.WakeTimerCancelled != nil {
+			if eq, handled := ov.WakeTimerCancelled(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// WakeTimerStatusEqual reports structural equality of a and b.
+func WakeTimerStatusEqual(a, b WakeTimerStatus) bool {
+	return WakeTimerStatusEqualWith(a, b, WakeTimerStatusEqOverrides{})
+}
+
+type WakeTimer struct {
+	mutex  sync.Mutex
+	status WakeTimerStatus
+	stop   clock.Stop
+}
+
 func newWakeQueue() *wakeQueue {
 	return &wakeQueue{}
 }
@@ -42,25 +146,44 @@ func (kernel *Kernel) WakeAfter(
 	pid term.PID,
 	delay time.Duration,
 ) result.Result[clock.Stop, Failure] {
+	switch __gp_m0 := any(kernel.WakeTimerAfter(source, pid, delay)).(type) {
+	case result.Err[*WakeTimer, Failure]:
+		failure := __gp_m0.Err
+
+		return result.Err[clock.Stop, Failure]{Err: failure}
+	case result.Ok[*WakeTimer, Failure]:
+		timer := __gp_m0.Value
+
+		return result.Ok[clock.Stop, Failure]{Value: timer}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) WakeTimerAfter(
+	source clock.Clock,
+	pid term.PID,
+	delay time.Duration,
+) result.Result[*WakeTimer, Failure] {
 	if source == nil {
-		return result.Err[clock.Stop, Failure]{Err: InvalidTimer{Detail: "clock capability is nil"}}
+		return result.Err[*WakeTimer, Failure]{Err: InvalidTimer{Detail: "clock capability is nil"}}
 	}
 	if delay < 0 {
-		return result.Err[clock.Stop, Failure]{Err: InvalidTimer{Detail: "delay is negative"}}
+		return result.Err[*WakeTimer, Failure]{Err: InvalidTimer{Detail: "delay is negative"}}
 	}
 	switch any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
-		return result.Err[clock.Stop, Failure]{Err: MissingProcess{Role: "timer target", PID: pid}}
+		return result.Err[*WakeTimer, Failure]{Err: MissingProcess{Role: "timer target", PID: pid}}
 	case option.Some[*process]:
 
-		stop := source.AfterFunc(delay, func() {
-			kernel.wakeups.push(pid)
-		})
+		timer := &WakeTimer{status: WakeTimerPending{}}
+		stop := source.AfterFunc(delay, func() { timer.fire(kernel.wakeups, pid) })
 		if stop == nil {
-			return result.Err[clock.Stop, Failure]{Err: InvalidTimer{Detail: "clock returned nil stop handle"}}
+			return result.Err[*WakeTimer, Failure]{Err: InvalidTimer{Detail: "clock returned nil stop handle"}}
 		}
-		return result.Ok[clock.Stop, Failure]{Value: stop}
+		timer.attach(stop)
+		return result.Ok[*WakeTimer, Failure]{Value: timer}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -71,6 +194,74 @@ func (context *Context) WakeAfter(
 	delay time.Duration,
 ) result.Result[clock.Stop, Failure] {
 	return context.kernel.WakeAfter(source, context.process.pid, delay)
+}
+
+func (context *Context) WakeTimerAfter(
+	source clock.Clock,
+	delay time.Duration,
+) result.Result[*WakeTimer, Failure] {
+	return context.kernel.WakeTimerAfter(source, context.process.pid, delay)
+}
+
+func (timer *WakeTimer) Status() WakeTimerStatus {
+	timer.mutex.Lock()
+	defer timer.mutex.Unlock()
+	return timer.status
+}
+
+func (timer *WakeTimer) Stop() bool {
+	timer.mutex.Lock()
+	var status WakeTimerStatus = timer.status
+	switch any(status).(type) {
+	case WakeTimerPending:
+
+		timer.status = WakeTimerCancelled{}
+		stop := timer.stop
+		timer.mutex.Unlock()
+		if stop != nil {
+			stop.Stop()
+		}
+		return true
+	case WakeTimerFired, WakeTimerCancelled:
+
+		timer.mutex.Unlock()
+		return false
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (timer *WakeTimer) attach(stop clock.Stop) {
+	timer.mutex.Lock()
+	timer.stop = stop
+	var status WakeTimerStatus = timer.status
+	timer.mutex.Unlock()
+	switch any(status).(type) {
+	case WakeTimerCancelled:
+
+		stop.Stop()
+	case WakeTimerPending, WakeTimerFired:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (timer *WakeTimer) fire(queue *wakeQueue, pid term.PID) {
+	timer.mutex.Lock()
+	var status WakeTimerStatus = timer.status
+	switch any(status).(type) {
+	case WakeTimerPending:
+
+		timer.status = WakeTimerFired{}
+		timer.mutex.Unlock()
+		queue.push(pid)
+	case WakeTimerFired, WakeTimerCancelled:
+
+		timer.mutex.Unlock()
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 }
 
 func (kernel *Kernel) drainWakeups() {

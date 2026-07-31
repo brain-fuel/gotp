@@ -79,7 +79,7 @@ func TestVMProcessSendsThroughKernelCapability(t *testing.T) {
 			case result.Err[*VMProcess, AdapterFailure]:
 				failure := __gp_m5.Err
 
-				t.Fatal(Error(failure))
+				t.Fatal(AdapterFailureError(failure))
 			case result.Ok[*VMProcess, AdapterFailure]:
 				process := __gp_m5.Value
 
@@ -158,7 +158,7 @@ func TestVMProcessSendToMissingPIDReturnsMessage(t *testing.T) {
 		case result.Err[*VMProcess, AdapterFailure]:
 			failure := __gp_m11.Err
 
-			t.Fatal(Error(failure))
+			t.Fatal(AdapterFailureError(failure))
 		case result.Ok[*VMProcess, AdapterFailure]:
 			process := __gp_m11.Value
 

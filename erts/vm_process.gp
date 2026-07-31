@@ -1,6 +1,9 @@
 package erts
 
 import (
+	"time"
+
+	"goforge.dev/goplus/std/clock"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -10,6 +13,8 @@ import (
 
 type AdapterFailure enum {
 	NilMachine()
+	NilClock()
+	NilCallRegistry()
 	VMStartFailure(Cause vm.Failure)
 	VMBudgetFailure(Cause vm.Failure)
 }
@@ -18,6 +23,10 @@ func (failure AdapterFailure) Error() string {
 	match failure {
 	case NilMachine:
 		return "gotp/erts: VM machine is nil"
+	case NilClock:
+		return "gotp/erts: VM process clock is nil"
+	case NilCallRegistry:
+		return "gotp/erts: VM process call registry is nil"
 	case VMStartFailure(cause):
 		return "gotp/erts: start VM process: " + cause.Error()
 	case VMBudgetFailure(cause):
@@ -41,6 +50,9 @@ type VMProcess struct {
 	instructions int
 	receiveMessages []kernel.MessageEnvelope
 	receiveCursor int
+	clock           clock.Clock
+	timer           *kernel.WakeTimer
+	callRegistry    *CallRegistry
 }
 
 // assayxport:unit gotp.erts.vm-process
@@ -48,8 +60,41 @@ func NewVMProcess(
 	machine *vm.Machine,
 	entryLabel uint64,
 ) result.Result[*VMProcess, AdapterFailure] {
+	return NewVMProcessWithClock(machine, entryLabel, clock.Real{})
+}
+
+// assayxport:unit gotp.erts.receive-timeout
+func NewVMProcessWithClock(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+) result.Result[*VMProcess, AdapterFailure] {
+	return newVMProcess(machine, entryLabel, source, nil)
+}
+
+func NewVMProcessWithRegistry(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+	registry *CallRegistry,
+) result.Result[*VMProcess, AdapterFailure] {
+	if registry == nil {
+		return result.Err[*VMProcess, AdapterFailure](NilCallRegistry())
+	}
+	return newVMProcess(machine, entryLabel, source, registry)
+}
+
+func newVMProcess(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+	registry *CallRegistry,
+) result.Result[*VMProcess, AdapterFailure] {
 	if machine == nil {
 		return result.Err[*VMProcess, AdapterFailure](NilMachine())
+	}
+	if source == nil {
+		return result.Err[*VMProcess, AdapterFailure](NilClock())
 	}
 	var started result.Result[*vm.Continuation, vm.Failure] = machine.Start(entryLabel)
 	match started {
@@ -66,6 +111,8 @@ func NewVMProcess(
 				continuation: continuation,
 				quantum: quantum,
 				state: initial,
+				clock: source,
+				callRegistry: registry,
 			})
 		}
 	}
@@ -97,8 +144,9 @@ func (process *VMProcess) Step(context *kernel.Context) kernel.StepResult {
 }
 
 func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
-	var checked result.Result[vm.HostCapabilities, vm.Failure] = vm.HostWithMessaging(
-		vm.MessagingEffects{
+	var checked result.Result[vm.HostCapabilities, vm.Failure] = vm.HostWithTimedMessaging(
+		vm.TimedMessagingEffects{
+		Messaging: vm.MessagingEffects{
 		Send: func(destination term.Term, message term.Term) vm.SendOutcome {
 			match term.TermPIDValue(destination) {
 			case option.None:
@@ -112,17 +160,31 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				}
 			}
 		},
-		Receive: vm.ReceiveEffects{
+			Receive: vm.ReceiveEffects{
 			Peek: func() vm.ReceiveOutcome { return process.peekMessage(context) },
 			Advance: process.advanceMessage,
-			Remove: process.removeMessage,
-		},
-		},
+				Remove: process.removeMessage,
+			},
+			},
+			Timer: vm.TimerEffects{
+			Wait: func(delay time.Duration) vm.TimerWaitOutcome { return process.waitTimer(context, delay) },
+			Cancel: process.cancelTimer,
+				Finish: process.finishTimer,
+				},
+			},
 	)
 	match checked {
 	case result.Err(cause):
 		return process.fail(cause.Error())
 	case result.Ok(host):
+		if process.callRegistry != nil {
+			match vm.HostGrantExternalCalls(host, process.callRegistry.Call) {
+			case result.Err(cause):
+				return process.fail(cause.Error())
+			case result.Ok(granted):
+				host = granted
+			}
+		}
 		var resumed result.Result[vm.ExecutionSlice, vm.Failure] = process.continuation.ResumeWithHost(
 			process.quantum,
 			host,
@@ -164,6 +226,49 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 		}
 	}
 	}
+}
+
+func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration) vm.TimerWaitOutcome {
+	if process.timer != nil {
+		var status kernel.WakeTimerStatus = process.timer.Status()
+		match status {
+		case kernel.WakeTimerPending:
+			return vm.TimerPending()
+		case kernel.WakeTimerFired:
+			return vm.TimerExpired()
+		case kernel.WakeTimerCancelled:
+			process.timer = nil
+		}
+	}
+	match context.WakeTimerAfter(process.clock, delay) {
+	case result.Err(failure):
+		return vm.TimerRejected(failure.Error())
+	case result.Ok(timer):
+		process.timer = timer
+		return vm.TimerPending()
+	}
+}
+
+func (process *VMProcess) cancelTimer() vm.TimerMutation {
+	if process.timer == nil {
+		return vm.TimerUnchanged()
+	}
+	changed := process.timer.Stop()
+	process.timer = nil
+	if changed {
+		return vm.TimerChanged()
+	}
+	return vm.TimerUnchanged()
+}
+
+func (process *VMProcess) finishTimer() vm.TimerMutation {
+	changed := process.timer != nil || process.receiveCursor != 0
+	process.timer = nil
+	process.receiveCursor = 0
+	if changed {
+		return vm.TimerChanged()
+	}
+	return vm.TimerUnchanged()
 }
 
 // assayxport:unit gotp.erts.selective-receive

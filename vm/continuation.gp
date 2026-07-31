@@ -2,7 +2,11 @@ package vm
 
 import (
 	"fmt"
+	"math"
+	"math/big"
+	"time"
 
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/term"
@@ -57,7 +61,7 @@ func VMReductionBudgetValue(budget VMReductionBudget) int {
 
 func OpcodeReductionClass(name string) ReductionClass {
 	switch name {
-	case "call", "call_only", "call_last", "return", "send", "loop_rec_end":
+	case "call", "call_only", "call_last", "call_ext", "call_ext_only", "call_ext_last", "return", "send", "loop_rec_end":
 		return DispatchReduction()
 	default:
 		return ReductionFree()
@@ -81,6 +85,10 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 	machine.pc = entry + 1
 	machine.steps = 0
 	machine.returnPCs = machine.returnPCs[:0]
+	machine.returnImages = machine.returnImages[:0]
+	if machine.root != nil {
+		machine.activate(machine.root)
+	}
 	return result.Ok[*Continuation, Failure](&Continuation{machine: machine})
 }
 
@@ -197,7 +205,7 @@ func executeInstruction(
 	case "call":
 		match machine.instructionLabel(instruction, 1) {
 		case result.Ok(target):
-			machine.returnPCs = append(machine.returnPCs, next)
+			machine.pushReturn(next)
 			machine.pc = target
 		case result.Err(failure):
 			return result.Err[instructionOutcome, Failure](failure)
@@ -221,6 +229,12 @@ func executeInstruction(
 		case result.Err(failure):
 			return result.Err[instructionOutcome, Failure](failure)
 		}
+	case "call_ext":
+		return executeExternalCall(machine, instruction, host, false, false)
+	case "call_ext_only":
+		return executeExternalCall(machine, instruction, host, true, false)
+	case "call_ext_last":
+		return executeExternalCall(machine, instruction, host, true, true)
 	case "allocate", "allocate_zero":
 		match machine.allocate(instruction, 0) {
 		case result.Ok(MachineMutated):
@@ -228,6 +242,12 @@ func executeInstruction(
 		case result.Err(failure):
 			return result.Err[instructionOutcome, Failure](failure)
 		}
+	case "allocate_heap", "get_hd", "get_list", "get_tl", "get_tuple_element", "init_yregs",
+		"is_atom", "is_binary", "is_bitstr", "is_boolean", "is_eq", "is_eq_exact", "is_float",
+		"is_integer", "is_list", "is_map", "is_ne", "is_ne_exact", "is_nil", "is_nonempty_list",
+		"is_number", "is_pid", "is_port", "is_reference", "is_tagged_tuple", "is_tuple", "line",
+		"put_list", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim":
+		return executeCoreTermInstruction(machine, instruction)
 	case "deallocate":
 		match machine.deallocate(instruction, 0) {
 		case result.Ok(MachineMutated):
@@ -348,7 +368,38 @@ func executeInstruction(
 				"receive removal rejected: " + detail,
 			))
 		case ReceiveMessageRemoved:
+			var timerCapability TimerCapability = host.Timer
+			match timerCapability {
+			case TimerUnavailable:
+			case TimerAllowed:
+				if host.timerCancel == nil {
+					return result.Err[instructionOutcome, Failure](InvalidConfiguration("timer cancel effect is nil"))
+				}
+				var cancelled TimerMutation = host.timerCancel()
+				match cancelled {
+				case TimerMutationRejected(detail):
+					return result.Err[instructionOutcome, Failure](InvalidProgram("timer cancellation rejected: " + detail))
+				case TimerChanged, TimerUnchanged:
+				}
+			}
 			machine.pc = next
+		}
+	case "timeout":
+		var timerCapability TimerCapability = host.Timer
+		match timerCapability {
+		case TimerUnavailable:
+			return result.Err[instructionOutcome, Failure](InvalidProgram("timeout requires an explicit timer capability"))
+		case TimerAllowed:
+			if host.timerFinish == nil {
+				return result.Err[instructionOutcome, Failure](InvalidConfiguration("timer finish effect is nil"))
+			}
+			var finished TimerMutation = host.timerFinish()
+			match finished {
+			case TimerMutationRejected(detail):
+				return result.Err[instructionOutcome, Failure](InvalidProgram("timer completion rejected: " + detail))
+			case TimerChanged, TimerUnchanged:
+				machine.pc = next
+			}
 		}
 	case "wait":
 		match machine.instructionLabel(instruction, 0) {
@@ -358,13 +409,61 @@ func executeInstruction(
 			machine.pc = target
 			return result.Ok[instructionOutcome, Failure](InstructionWaits())
 		}
+	case "wait_timeout":
+		if len(instruction.Operands) != 2 {
+			return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf(
+				"wait_timeout has %d operands",
+				len(instruction.Operands),
+			)))
+		}
+		match receiveTimeout(machine, instruction.Operands[1]) {
+		case result.Err(failure):
+			return result.Err[instructionOutcome, Failure](failure)
+		case result.Ok(timeout):
+			match timeout {
+			case option.None:
+				match machine.instructionLabel(instruction, 0) {
+				case result.Err(failure):
+					return result.Err[instructionOutcome, Failure](failure)
+				case result.Ok(target):
+					machine.pc = target
+					return result.Ok[instructionOutcome, Failure](InstructionWaits())
+				}
+			case option.Some(delay):
+				if delay == 0 {
+					machine.pc = next
+					return result.Ok[instructionOutcome, Failure](InstructionContinues())
+				}
+				var timerCapability TimerCapability = host.Timer
+				match timerCapability {
+				case TimerUnavailable:
+					return result.Err[instructionOutcome, Failure](InvalidProgram("wait_timeout requires an explicit timer capability"))
+				case TimerAllowed:
+					if host.timerWait == nil {
+						return result.Err[instructionOutcome, Failure](InvalidConfiguration("timer wait effect is nil"))
+					}
+					var waited TimerWaitOutcome = host.timerWait(delay)
+					match waited {
+					case TimerRejected(detail):
+						return result.Err[instructionOutcome, Failure](InvalidProgram("timer wait rejected: " + detail))
+					case TimerExpired:
+						machine.pc = next
+					case TimerPending:
+						match machine.instructionLabel(instruction, 0) {
+						case result.Err(failure):
+							return result.Err[instructionOutcome, Failure](failure)
+						case result.Ok(target):
+							machine.pc = target
+							return result.Ok[instructionOutcome, Failure](InstructionWaits())
+						}
+					}
+				}
+			}
+		}
 	case "return":
-		if len(machine.returnPCs) == 0 {
+		if !machine.returnToCaller() {
 			return result.Ok[instructionOutcome, Failure](InstructionHalts())
 		}
-		last := len(machine.returnPCs) - 1
-		machine.pc = machine.returnPCs[last]
-		machine.returnPCs = machine.returnPCs[:last]
 	case "int_code_end":
 		return result.Ok[instructionOutcome, Failure](InstructionHalts())
 	default:
@@ -375,4 +474,39 @@ func executeInstruction(
 		))
 	}
 	return result.Ok[instructionOutcome, Failure](InstructionContinues())
+}
+
+func receiveTimeout(
+	machine *Machine,
+	operand beam.Operand,
+) result.Result[option.Option[time.Duration], Failure] {
+	match machine.resolve(operand) {
+	case result.Err(failure):
+		return result.Err[option.Option[time.Duration], Failure](failure)
+	case result.Ok(value):
+		match term.AtomName(value) {
+		case option.Some(name):
+			if name == "infinity" {
+				return result.Ok[option.Option[time.Duration], Failure](option.None[time.Duration]())
+			}
+		case option.None:
+		}
+		match term.IntegerValue(value) {
+		case option.None:
+			return result.Err[option.Option[time.Duration], Failure](InvalidProgram(
+				"receive timeout must be a non-negative integer or infinity",
+			))
+		case option.Some(integer):
+			if !integer.IsInt64() {
+				return result.Err[option.Option[time.Duration], Failure](InvalidProgram("receive timeout is out of range"))
+			}
+			milliseconds := integer.Int64()
+			if milliseconds < 0 || milliseconds > math.MaxInt64/int64(time.Millisecond) {
+				return result.Err[option.Option[time.Duration], Failure](InvalidProgram("receive timeout is out of range"))
+			}
+			return result.Ok[option.Option[time.Duration], Failure](
+				option.Some(time.Duration(milliseconds) * time.Millisecond),
+			)
+		}
+	}
 }

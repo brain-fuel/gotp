@@ -35,7 +35,7 @@ func ExampleVMProcess_Behavior() {
 		case result.Err[*VMProcess, AdapterFailure]:
 			failure := __gp_m1.Err
 
-			fmt.Println(Error(failure))
+			fmt.Println(AdapterFailureError(failure))
 		case result.Ok[*VMProcess, AdapterFailure]:
 			process := __gp_m1.Value
 
@@ -155,7 +155,7 @@ func TestVMCompletionExitsNormally(t *testing.T) {
 		case result.Err[*VMProcess, AdapterFailure]:
 			failure := __gp_m8.Err
 
-			t.Fatal(Error(failure))
+			t.Fatal(AdapterFailureError(failure))
 		case result.Ok[*VMProcess, AdapterFailure]:
 			process := __gp_m8.Value
 
@@ -230,7 +230,7 @@ func TestVMFailureBecomesStructuredProcessExit(t *testing.T) {
 		case result.Err[*VMProcess, AdapterFailure]:
 			failure := __gp_m14.Err
 
-			t.Fatal(Error(failure))
+			t.Fatal(AdapterFailureError(failure))
 		case result.Ok[*VMProcess, AdapterFailure]:
 			process := __gp_m14.Value
 

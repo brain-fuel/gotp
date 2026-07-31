@@ -182,7 +182,7 @@ type DecodeLimit struct {
 func (DecodeLimit) isFailure() {}
 
 //goplus:method (Failure) Error
-func Error(failure Failure) string {
+func FailureError(failure Failure) string {
 	switch __gp_m0 := any(failure).(type) {
 	case ReadFailure:
 		path := __gp_m0.Path

@@ -312,7 +312,7 @@ func Error(failure Failure) string {
 	case BeamFailure:
 		cause := __gp_m0.Cause
 
-		return beam.Error(cause)
+		return beam.FailureError(cause)
 	case ETFFailure:
 		cause := __gp_m0.Cause
 

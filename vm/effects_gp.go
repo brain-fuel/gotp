@@ -4,9 +4,471 @@
 package vm
 
 import (
+	"time"
+
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/term"
 )
+
+//goplus:enum TimerWaitOutcome
+type TimerWaitOutcome interface{ isTimerWaitOutcome() }
+
+//goplus:variant (TimerWaitOutcome) TimerPending()
+type TimerPending struct{}
+
+func (TimerPending) isTimerWaitOutcome() {}
+
+//goplus:variant (TimerWaitOutcome) TimerExpired()
+type TimerExpired struct{}
+
+func (TimerExpired) isTimerWaitOutcome() {}
+
+//goplus:variant (TimerWaitOutcome) TimerRejected(Detail string)
+type TimerRejected struct {
+	Detail string
+}
+
+func (TimerRejected) isTimerWaitOutcome() {}
+
+// TimerWaitOutcomeCases selects one handler per TimerWaitOutcome variant for TimerWaitOutcomeFold.
+type TimerWaitOutcomeCases[R any] struct {
+	TimerPending  func() R
+	TimerExpired  func() R
+	TimerRejected func(Detail string) R
+}
+
+// TimerWaitOutcomeFold reduces TimerWaitOutcome by one-level case analysis.
+func TimerWaitOutcomeFold[R any](t TimerWaitOutcome, cs TimerWaitOutcomeCases[R]) R {
+	switch m := any(t).(type) {
+	case TimerPending:
+		return cs.TimerPending()
+	case TimerExpired:
+		return cs.TimerExpired()
+	case TimerRejected:
+		return cs.TimerRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in TimerWaitOutcomeFold")
+	}
+}
+
+// TimerWaitOutcomeEqOverrides carries optional per-variant hooks for TimerWaitOutcomeEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type TimerWaitOutcomeEqOverrides struct {
+	TimerPending  func(x, y TimerPending) (eq, handled bool)
+	TimerExpired  func(x, y TimerExpired) (eq, handled bool)
+	TimerRejected func(x, y TimerRejected) (eq, handled bool)
+}
+
+// TimerWaitOutcomeEqualWith reports structural equality of a and b under ov.
+func TimerWaitOutcomeEqualWith(a, b TimerWaitOutcome, ov TimerWaitOutcomeEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case TimerPending:
+		y, ok := any(b).(TimerPending)
+		if !ok {
+			return false
+		}
+		if ov.TimerPending != nil {
+			if eq, handled := ov.TimerPending(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case TimerExpired:
+		y, ok := any(b).(TimerExpired)
+		if !ok {
+			return false
+		}
+		if ov.TimerExpired != nil {
+			if eq, handled := ov.TimerExpired(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case TimerRejected:
+		y, ok := any(b).(TimerRejected)
+		if !ok {
+			return false
+		}
+		if ov.TimerRejected != nil {
+			if eq, handled := ov.TimerRejected(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// TimerWaitOutcomeEqual reports structural equality of a and b.
+func TimerWaitOutcomeEqual(a, b TimerWaitOutcome) bool {
+	return TimerWaitOutcomeEqualWith(a, b, TimerWaitOutcomeEqOverrides{})
+}
+
+//goplus:enum TimerMutation
+type TimerMutation interface{ isTimerMutation() }
+
+//goplus:variant (TimerMutation) TimerChanged()
+type TimerChanged struct{}
+
+func (TimerChanged) isTimerMutation() {}
+
+//goplus:variant (TimerMutation) TimerUnchanged()
+type TimerUnchanged struct{}
+
+func (TimerUnchanged) isTimerMutation() {}
+
+//goplus:variant (TimerMutation) TimerMutationRejected(Detail string)
+type TimerMutationRejected struct {
+	Detail string
+}
+
+func (TimerMutationRejected) isTimerMutation() {}
+
+// TimerMutationCases selects one handler per TimerMutation variant for TimerMutationFold.
+type TimerMutationCases[R any] struct {
+	TimerChanged          func() R
+	TimerUnchanged        func() R
+	TimerMutationRejected func(Detail string) R
+}
+
+// TimerMutationFold reduces TimerMutation by one-level case analysis.
+func TimerMutationFold[R any](t TimerMutation, cs TimerMutationCases[R]) R {
+	switch m := any(t).(type) {
+	case TimerChanged:
+		return cs.TimerChanged()
+	case TimerUnchanged:
+		return cs.TimerUnchanged()
+	case TimerMutationRejected:
+		return cs.TimerMutationRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in TimerMutationFold")
+	}
+}
+
+// TimerMutationEqOverrides carries optional per-variant hooks for TimerMutationEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type TimerMutationEqOverrides struct {
+	TimerChanged          func(x, y TimerChanged) (eq, handled bool)
+	TimerUnchanged        func(x, y TimerUnchanged) (eq, handled bool)
+	TimerMutationRejected func(x, y TimerMutationRejected) (eq, handled bool)
+}
+
+// TimerMutationEqualWith reports structural equality of a and b under ov.
+func TimerMutationEqualWith(a, b TimerMutation, ov TimerMutationEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case TimerChanged:
+		y, ok := any(b).(TimerChanged)
+		if !ok {
+			return false
+		}
+		if ov.TimerChanged != nil {
+			if eq, handled := ov.TimerChanged(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case TimerUnchanged:
+		y, ok := any(b).(TimerUnchanged)
+		if !ok {
+			return false
+		}
+		if ov.TimerUnchanged != nil {
+			if eq, handled := ov.TimerUnchanged(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case TimerMutationRejected:
+		y, ok := any(b).(TimerMutationRejected)
+		if !ok {
+			return false
+		}
+		if ov.TimerMutationRejected != nil {
+			if eq, handled := ov.TimerMutationRejected(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// TimerMutationEqual reports structural equality of a and b.
+func TimerMutationEqual(a, b TimerMutation) bool {
+	return TimerMutationEqualWith(a, b, TimerMutationEqOverrides{})
+}
+
+type TimerWaitEffect func(Delay time.Duration) TimerWaitOutcome
+type TimerMutationEffect func() TimerMutation
+
+//goplus:enum TimerCapability
+type TimerCapability interface{ isTimerCapability() }
+
+//goplus:variant (TimerCapability) TimerUnavailable()
+type TimerUnavailable struct{}
+
+func (TimerUnavailable) isTimerCapability() {}
+
+//goplus:variant (TimerCapability) TimerAllowed()
+type TimerAllowed struct{}
+
+func (TimerAllowed) isTimerCapability() {}
+
+// TimerCapabilityCases selects one handler per TimerCapability variant for TimerCapabilityFold.
+type TimerCapabilityCases[R any] struct {
+	TimerUnavailable func() R
+	TimerAllowed     func() R
+}
+
+// TimerCapabilityFold reduces TimerCapability by one-level case analysis.
+func TimerCapabilityFold[R any](t TimerCapability, cs TimerCapabilityCases[R]) R {
+	switch any(t).(type) {
+	case TimerUnavailable:
+		return cs.TimerUnavailable()
+	case TimerAllowed:
+		return cs.TimerAllowed()
+	default:
+		panic("goplus: impossible enum value in TimerCapabilityFold")
+	}
+}
+
+// TimerCapabilityEqOverrides carries optional per-variant hooks for TimerCapabilityEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type TimerCapabilityEqOverrides struct {
+	TimerUnavailable func(x, y TimerUnavailable) (eq, handled bool)
+	TimerAllowed     func(x, y TimerAllowed) (eq, handled bool)
+}
+
+// TimerCapabilityEqualWith reports structural equality of a and b under ov.
+func TimerCapabilityEqualWith(a, b TimerCapability, ov TimerCapabilityEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case TimerUnavailable:
+		y, ok := any(b).(TimerUnavailable)
+		if !ok {
+			return false
+		}
+		if ov.TimerUnavailable != nil {
+			if eq, handled := ov.TimerUnavailable(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case TimerAllowed:
+		y, ok := any(b).(TimerAllowed)
+		if !ok {
+			return false
+		}
+		if ov.TimerAllowed != nil {
+			if eq, handled := ov.TimerAllowed(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// TimerCapabilityEqual reports structural equality of a and b.
+func TimerCapabilityEqual(a, b TimerCapability) bool {
+	return TimerCapabilityEqualWith(a, b, TimerCapabilityEqOverrides{})
+}
+
+type TimerEffects struct {
+	Wait   TimerWaitEffect
+	Cancel TimerMutationEffect
+	Finish TimerMutationEffect
+}
+
+type ExternalFunction struct {
+	Module   string
+	Function string
+	Arity    uint32
+}
+
+//goplus:enum ExternalCallOutcome
+type ExternalCallOutcome interface{ isExternalCallOutcome() }
+
+//goplus:variant (ExternalCallOutcome) ExternalCallReturned(Value term.Term)
+type ExternalCallReturned struct {
+	Value term.Term
+}
+
+func (ExternalCallReturned) isExternalCallOutcome() {}
+
+//goplus:variant (ExternalCallOutcome) ExternalCallRejected(Detail string)
+type ExternalCallRejected struct {
+	Detail string
+}
+
+func (ExternalCallRejected) isExternalCallOutcome() {}
+
+// ExternalCallOutcomeCases selects one handler per ExternalCallOutcome variant for ExternalCallOutcomeFold.
+type ExternalCallOutcomeCases[R any] struct {
+	ExternalCallReturned func(Value term.Term) R
+	ExternalCallRejected func(Detail string) R
+}
+
+// ExternalCallOutcomeFold reduces ExternalCallOutcome by one-level case analysis.
+func ExternalCallOutcomeFold[R any](e ExternalCallOutcome, cs ExternalCallOutcomeCases[R]) R {
+	switch m := any(e).(type) {
+	case ExternalCallReturned:
+		return cs.ExternalCallReturned(m.Value)
+	case ExternalCallRejected:
+		return cs.ExternalCallRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in ExternalCallOutcomeFold")
+	}
+}
+
+// ExternalCallOutcomeEqOverrides carries optional per-variant hooks for ExternalCallOutcomeEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type ExternalCallOutcomeEqOverrides struct {
+	ExternalCallReturned func(x, y ExternalCallReturned) (eq, handled bool)
+	ExternalCallRejected func(x, y ExternalCallRejected) (eq, handled bool)
+}
+
+// ExternalCallOutcomeEqualWith reports structural equality of a and b under ov.
+func ExternalCallOutcomeEqualWith(a, b ExternalCallOutcome, ov ExternalCallOutcomeEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case ExternalCallReturned:
+		y, ok := any(b).(ExternalCallReturned)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallReturned != nil {
+			if eq, handled := ov.ExternalCallReturned(x, y); handled {
+				return eq
+			}
+		}
+		if x.Value != y.Value {
+			return false
+		}
+		return true
+	case ExternalCallRejected:
+		y, ok := any(b).(ExternalCallRejected)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallRejected != nil {
+			if eq, handled := ov.ExternalCallRejected(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// ExternalCallOutcomeEqual reports structural equality of a and b.
+func ExternalCallOutcomeEqual(a, b ExternalCallOutcome) bool {
+	return ExternalCallOutcomeEqualWith(a, b, ExternalCallOutcomeEqOverrides{})
+}
+
+type ExternalCallEffect func(Target ExternalFunction, Arguments []term.Term) ExternalCallOutcome
+
+//goplus:enum ExternalCallCapability
+type ExternalCallCapability interface{ isExternalCallCapability() }
+
+//goplus:variant (ExternalCallCapability) ExternalCallsUnavailable()
+type ExternalCallsUnavailable struct{}
+
+func (ExternalCallsUnavailable) isExternalCallCapability() {}
+
+//goplus:variant (ExternalCallCapability) ExternalCallsAllowed()
+type ExternalCallsAllowed struct{}
+
+func (ExternalCallsAllowed) isExternalCallCapability() {}
+
+// ExternalCallCapabilityCases selects one handler per ExternalCallCapability variant for ExternalCallCapabilityFold.
+type ExternalCallCapabilityCases[R any] struct {
+	ExternalCallsUnavailable func() R
+	ExternalCallsAllowed     func() R
+}
+
+// ExternalCallCapabilityFold reduces ExternalCallCapability by one-level case analysis.
+func ExternalCallCapabilityFold[R any](e ExternalCallCapability, cs ExternalCallCapabilityCases[R]) R {
+	switch any(e).(type) {
+	case ExternalCallsUnavailable:
+		return cs.ExternalCallsUnavailable()
+	case ExternalCallsAllowed:
+		return cs.ExternalCallsAllowed()
+	default:
+		panic("goplus: impossible enum value in ExternalCallCapabilityFold")
+	}
+}
+
+// ExternalCallCapabilityEqOverrides carries optional per-variant hooks for ExternalCallCapabilityEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type ExternalCallCapabilityEqOverrides struct {
+	ExternalCallsUnavailable func(x, y ExternalCallsUnavailable) (eq, handled bool)
+	ExternalCallsAllowed     func(x, y ExternalCallsAllowed) (eq, handled bool)
+}
+
+// ExternalCallCapabilityEqualWith reports structural equality of a and b under ov.
+func ExternalCallCapabilityEqualWith(a, b ExternalCallCapability, ov ExternalCallCapabilityEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case ExternalCallsUnavailable:
+		y, ok := any(b).(ExternalCallsUnavailable)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallsUnavailable != nil {
+			if eq, handled := ov.ExternalCallsUnavailable(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case ExternalCallsAllowed:
+		y, ok := any(b).(ExternalCallsAllowed)
+		if !ok {
+			return false
+		}
+		if ov.ExternalCallsAllowed != nil {
+			if eq, handled := ov.ExternalCallsAllowed(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// ExternalCallCapabilityEqual reports structural equality of a and b.
+func ExternalCallCapabilityEqual(a, b ExternalCallCapability) bool {
+	return ExternalCallCapabilityEqualWith(a, b, ExternalCallCapabilityEqOverrides{})
+}
 
 //goplus:enum SendOutcome
 type SendOutcome interface{ isSendOutcome() }
@@ -532,19 +994,37 @@ type MessagingEffects struct {
 	Receive ReceiveEffects
 }
 
+type TimedMessagingEffects struct {
+	Messaging MessagingEffects
+	Timer     TimerEffects
+}
+
 type HostCapabilities struct {
-	Send    SendCapability
-	Receive ReceiveCapability
-	send    SendEffect
-	peek    ReceivePeekEffect
-	advance ReceiveAdvanceEffect
-	remove  ReceiveRemoveEffect
+	Send          SendCapability
+	Receive       ReceiveCapability
+	Timer         TimerCapability
+	ExternalCalls ExternalCallCapability
+	send          SendEffect
+	peek          ReceivePeekEffect
+	advance       ReceiveAdvanceEffect
+	remove        ReceiveRemoveEffect
+	timerWait     TimerWaitEffect
+	timerCancel   TimerMutationEffect
+	timerFinish   TimerMutationEffect
+	externalCall  ExternalCallEffect
 }
 
 func NoHostCapabilities() HostCapabilities {
 	var unavailable SendCapability = SendUnavailable{}
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable{}
-	return HostCapabilities{Send: unavailable, Receive: receiveUnavailable}
+	var timerUnavailable TimerCapability = TimerUnavailable{}
+	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
+	return HostCapabilities{
+		Send:          unavailable,
+		Receive:       receiveUnavailable,
+		Timer:         timerUnavailable,
+		ExternalCalls: callsUnavailable,
+	}
 }
 
 // assayxport:unit gotp.vm.host-effects
@@ -554,10 +1034,14 @@ func HostWithSend(effect SendEffect) result.Result[HostCapabilities, Failure] {
 	}
 	var allowed SendCapability = SendAllowed{}
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable{}
+	var timerUnavailable TimerCapability = TimerUnavailable{}
+	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
 	return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
-		Send:    allowed,
-		Receive: receiveUnavailable,
-		send:    effect,
+		Send:          allowed,
+		Receive:       receiveUnavailable,
+		Timer:         timerUnavailable,
+		ExternalCalls: callsUnavailable,
+		send:          effect,
 	}}
 }
 
@@ -571,12 +1055,16 @@ func HostWithReceive(effects ReceiveEffects) result.Result[HostCapabilities, Fai
 
 		var sendUnavailable SendCapability = SendUnavailable{}
 		var receiveAllowed ReceiveCapability = ReceiveAllowed{}
+		var timerUnavailable TimerCapability = TimerUnavailable{}
+		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
 		return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
-			Send:    sendUnavailable,
-			Receive: receiveAllowed,
-			peek:    effects.Peek,
-			advance: effects.Advance,
-			remove:  effects.Remove,
+			Send:          sendUnavailable,
+			Receive:       receiveAllowed,
+			Timer:         timerUnavailable,
+			ExternalCalls: callsUnavailable,
+			peek:          effects.Peek,
+			advance:       effects.Advance,
+			remove:        effects.Remove,
 		}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -596,14 +1084,56 @@ func HostWithMessaging(effects MessagingEffects) result.Result[HostCapabilities,
 
 		var sendAllowed SendCapability = SendAllowed{}
 		var receiveAllowed ReceiveCapability = ReceiveAllowed{}
+		var timerUnavailable TimerCapability = TimerUnavailable{}
+		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
 		return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
-			Send:    sendAllowed,
-			Receive: receiveAllowed,
-			send:    effects.Send,
-			peek:    effects.Receive.Peek,
-			advance: effects.Receive.Advance,
-			remove:  effects.Receive.Remove,
+			Send:          sendAllowed,
+			Receive:       receiveAllowed,
+			Timer:         timerUnavailable,
+			ExternalCalls: callsUnavailable,
+			send:          effects.Send,
+			peek:          effects.Receive.Peek,
+			advance:       effects.Receive.Advance,
+			remove:        effects.Receive.Remove,
 		}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+// assayxport:unit gotp.vm.external-call-capability
+func HostGrantExternalCalls(
+	host HostCapabilities,
+	effect ExternalCallEffect,
+) result.Result[HostCapabilities, Failure] {
+	if effect == nil {
+		return result.Err[HostCapabilities, Failure]{Err: InvalidConfiguration{Detail: "external call effect is nil"}}
+	}
+	var allowed ExternalCallCapability = ExternalCallsAllowed{}
+	host.ExternalCalls = allowed
+	host.externalCall = effect
+	return result.Ok[HostCapabilities, Failure]{Value: host}
+}
+
+// assayxport:unit gotp.vm.receive-timeout
+func HostWithTimedMessaging(effects TimedMessagingEffects) result.Result[HostCapabilities, Failure] {
+	switch __gp_m2 := any(HostWithMessaging(effects.Messaging)).(type) {
+	case result.Err[HostCapabilities, Failure]:
+		failure := __gp_m2.Err
+
+		return result.Err[HostCapabilities, Failure]{Err: failure}
+	case result.Ok[HostCapabilities, Failure]:
+		host := __gp_m2.Value
+
+		if effects.Timer.Wait == nil || effects.Timer.Cancel == nil || effects.Timer.Finish == nil {
+			return result.Err[HostCapabilities, Failure]{Err: InvalidConfiguration{Detail: "timer effects must be complete"}}
+		}
+		var timerAllowed TimerCapability = TimerAllowed{}
+		host.Timer = timerAllowed
+		host.timerWait = effects.Timer.Wait
+		host.timerCancel = effects.Timer.Cancel
+		host.timerFinish = effects.Timer.Finish
+		return result.Ok[HostCapabilities, Failure]{Value: host}
 	default:
 		panic("goplus: impossible enum value in match")
 	}

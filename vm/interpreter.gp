@@ -15,6 +15,29 @@ type MachineConfig struct {
 	StepLimit  int
 	Atoms      map[uint64]string
 	Literals   map[uint64]term.Term
+	Imports    map[uint64]ExternalFunction
+	ModuleName string
+	Exports    map[ExternalFunction]uint64
+	LinkedModules map[string]ModuleImage
+}
+
+type ModuleImage struct {
+	Name     string
+	Program  []beam.Instruction
+	Atoms    map[uint64]string
+	Literals map[uint64]term.Term
+	Imports  map[uint64]ExternalFunction
+	Exports  map[ExternalFunction]uint64
+}
+
+type machineImage struct {
+	name     string
+	program  []beam.Instruction
+	labels   map[uint64]int
+	atoms    map[uint64]string
+	literals map[uint64]term.Term
+	imports  map[uint64]ExternalFunction
+	exports  map[ExternalFunction]uint64
 }
 
 type RunResult struct {
@@ -33,7 +56,12 @@ type Machine struct {
 	y         []option.Option[term.Term]
 	atoms     map[uint64]string
 	literals  map[uint64]term.Term
+	imports   map[uint64]ExternalFunction
 	returnPCs []int
+	returnImages []*machineImage
+	current   *machineImage
+	root      *machineImage
+	modules   map[string]*machineImage
 	pc        int
 	steps     int
 	stepLimit int
@@ -82,12 +110,50 @@ func NewMachine(
 	for index := range registers {
 		registers[index] = option.None[term.Term]
 	}
-	return result.Ok[*Machine, Failure](&Machine{
-		program: program,
+	moduleName := config.ModuleName
+	if moduleName == "" {
+		moduleName = "$root"
+	}
+	root := &machineImage{
+		name: moduleName,
+		program: append([]beam.Instruction(nil), program...),
 		labels: labels,
-		x: registers,
 		atoms: cloneAtomPool(config.Atoms),
 		literals: cloneLiteralPool(config.Literals),
+		imports: cloneImportPool(config.Imports),
+		exports: cloneExportPool(config.Exports),
+	}
+	match validateImageExports(root) {
+	case result.Err(failure):
+		return result.Err[*Machine, Failure](failure)
+	case result.Ok(_):
+	}
+	modules := map[string]*machineImage{moduleName: root}
+	for name, linked := range config.LinkedModules {
+		if name == moduleName {
+			return result.Err[*Machine, Failure](InvalidProgram("linked module duplicates root module " + name))
+		}
+		if linked.Name != "" && linked.Name != name {
+			return result.Err[*Machine, Failure](InvalidProgram("linked module name differs from its registry key"))
+		}
+		linked.Name = name
+		match newMachineImage(linked) {
+		case result.Err(failure):
+			return result.Err[*Machine, Failure](failure)
+		case result.Ok(image):
+			modules[name] = image
+		}
+	}
+	return result.Ok[*Machine, Failure](&Machine{
+		program: root.program,
+		labels: root.labels,
+		x: registers,
+		atoms: root.atoms,
+		literals: root.literals,
+		imports: root.imports,
+		current: root,
+		root: root,
+		modules: modules,
 		stepLimit: config.StepLimit,
 	})
 }
@@ -363,6 +429,8 @@ func labelIndex(operand beam.Operand) option.Option[uint64] {
 	match operand {
 	case beam.LabelOperand(index):
 		return registerIndex(index)
+	case beam.UnsignedOperand(index):
+		return registerIndex(index)
 	case _:
 		return option.None[uint64]
 	}
@@ -391,6 +459,9 @@ func (machine *Machine) atomConstant(index *big.Int) result.Result[term.Term, Fa
 		return result.Err[term.Term, Failure](InvalidProgram("atom index is not uint64"))
 	}
 	position := index.Uint64()
+	if position == 0 {
+		return result.Ok[term.Term, Failure](term.List())
+	}
 	name, present := machine.atoms[position]
 	if !present {
 		return result.Err[term.Term, Failure](MissingConstant("atom", position))
@@ -424,4 +495,115 @@ func cloneLiteralPool(values map[uint64]term.Term) map[uint64]term.Term {
 		cloned[index] = term.Clone(value)
 	}
 	return cloned
+}
+
+func cloneImportPool(source map[uint64]ExternalFunction) map[uint64]ExternalFunction {
+	cloned := make(map[uint64]ExternalFunction, len(source))
+	for index, target := range source {
+		cloned[index] = target
+	}
+	return cloned
+}
+
+func cloneExportPool(source map[ExternalFunction]uint64) map[ExternalFunction]uint64 {
+	cloned := make(map[ExternalFunction]uint64, len(source))
+	for target, label := range source {
+		cloned[target] = label
+	}
+	return cloned
+}
+
+func labelsForProgram(program []beam.Instruction) result.Result[map[uint64]int, Failure] {
+	labels := make(map[uint64]int)
+	for index, instruction := range program {
+		if instruction.Opcode.Name != "label" {
+			continue
+		}
+		if len(instruction.Operands) != 1 {
+			return result.Err[map[uint64]int, Failure](InvalidProgram(fmt.Sprintf(
+				"label at instruction %d has %d operands",
+				index,
+				len(instruction.Operands),
+			)))
+		}
+		match labelIndex(instruction.Operands[0]) {
+		case option.None:
+			return result.Err[map[uint64]int, Failure](InvalidProgram(fmt.Sprintf(
+				"label at instruction %d is not a nonnegative uint64",
+				index,
+			)))
+		case option.Some(label):
+			if _, duplicate := labels[label]; duplicate {
+				return result.Err[map[uint64]int, Failure](InvalidProgram(fmt.Sprintf("duplicate label %d", label)))
+			}
+			labels[label] = index
+		}
+	}
+	return result.Ok[map[uint64]int, Failure](labels)
+}
+
+func newMachineImage(config ModuleImage) result.Result[*machineImage, Failure] {
+	if config.Name == "" {
+		return result.Err[*machineImage, Failure](InvalidProgram("linked module name is empty"))
+	}
+	match labelsForProgram(config.Program) {
+	case result.Err(failure):
+		return result.Err[*machineImage, Failure](failure)
+	case result.Ok(labels):
+		image := &machineImage{
+			name: config.Name,
+			program: append([]beam.Instruction(nil), config.Program...),
+			labels: labels,
+			atoms: cloneAtomPool(config.Atoms),
+			literals: cloneLiteralPool(config.Literals),
+			imports: cloneImportPool(config.Imports),
+			exports: cloneExportPool(config.Exports),
+		}
+		match validateImageExports(image) {
+		case result.Err(failure):
+			return result.Err[*machineImage, Failure](failure)
+		case result.Ok(_):
+			return result.Ok[*machineImage, Failure](image)
+		}
+	}
+}
+
+func validateImageExports(image *machineImage) result.Result[bool, Failure] {
+	for target, label := range image.exports {
+		if target.Module != image.name {
+			return result.Err[bool, Failure](InvalidProgram("module export identity differs from image name"))
+		}
+		if _, present := image.labels[label]; !present {
+			return result.Err[bool, Failure](MissingLabel(label))
+		}
+	}
+	return result.Ok[bool, Failure](true)
+}
+
+func (machine *Machine) activate(image *machineImage) {
+	machine.current = image
+	machine.program = image.program
+	machine.labels = image.labels
+	machine.atoms = image.atoms
+	machine.literals = image.literals
+	machine.imports = image.imports
+}
+
+func (machine *Machine) pushReturn(pc int) {
+	machine.returnPCs = append(machine.returnPCs, pc)
+	machine.returnImages = append(machine.returnImages, machine.current)
+}
+
+func (machine *Machine) returnToCaller() bool {
+	if len(machine.returnPCs) == 0 {
+		return false
+	}
+	last := len(machine.returnPCs) - 1
+	image := machine.returnImages[last]
+	pc := machine.returnPCs[last]
+	machine.returnPCs = machine.returnPCs[:last]
+	machine.returnImages = machine.returnImages[:last]
+	machine.activate(image)
+	machine.pc = pc
+	return true
 }

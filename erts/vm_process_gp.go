@@ -4,6 +4,9 @@
 package erts
 
 import (
+	"time"
+
+	"goforge.dev/goplus/std/clock"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -18,6 +21,16 @@ type AdapterFailure interface{ isAdapterFailure() }
 type NilMachine struct{}
 
 func (NilMachine) isAdapterFailure() {}
+
+//goplus:variant (AdapterFailure) NilClock()
+type NilClock struct{}
+
+func (NilClock) isAdapterFailure() {}
+
+//goplus:variant (AdapterFailure) NilCallRegistry()
+type NilCallRegistry struct{}
+
+func (NilCallRegistry) isAdapterFailure() {}
 
 //goplus:variant (AdapterFailure) VMStartFailure(Cause vm.Failure)
 type VMStartFailure struct {
@@ -36,6 +49,8 @@ func (VMBudgetFailure) isAdapterFailure() {}
 // AdapterFailureCases selects one handler per AdapterFailure variant for AdapterFailureFold.
 type AdapterFailureCases[R any] struct {
 	NilMachine      func() R
+	NilClock        func() R
+	NilCallRegistry func() R
 	VMStartFailure  func(Cause vm.Failure) R
 	VMBudgetFailure func(Cause vm.Failure) R
 }
@@ -45,6 +60,10 @@ func AdapterFailureFold[R any](a AdapterFailure, cs AdapterFailureCases[R]) R {
 	switch m := any(a).(type) {
 	case NilMachine:
 		return cs.NilMachine()
+	case NilClock:
+		return cs.NilClock()
+	case NilCallRegistry:
+		return cs.NilCallRegistry()
 	case VMStartFailure:
 		return cs.VMStartFailure(m.Cause)
 	case VMBudgetFailure:
@@ -58,6 +77,8 @@ func AdapterFailureFold[R any](a AdapterFailure, cs AdapterFailureCases[R]) R {
 // A hook returning handled=false falls through to the derived comparison.
 type AdapterFailureEqOverrides struct {
 	NilMachine      func(x, y NilMachine) (eq, handled bool)
+	NilClock        func(x, y NilClock) (eq, handled bool)
+	NilCallRegistry func(x, y NilCallRegistry) (eq, handled bool)
 	VMStartFailure  func(x, y VMStartFailure) (eq, handled bool)
 	VMBudgetFailure func(x, y VMBudgetFailure) (eq, handled bool)
 }
@@ -75,6 +96,30 @@ func AdapterFailureEqualWith(a, b AdapterFailure, ov AdapterFailureEqOverrides) 
 		}
 		if ov.NilMachine != nil {
 			if eq, handled := ov.NilMachine(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case NilClock:
+		y, ok := any(b).(NilClock)
+		if !ok {
+			return false
+		}
+		if ov.NilClock != nil {
+			if eq, handled := ov.NilClock(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case NilCallRegistry:
+		y, ok := any(b).(NilCallRegistry)
+		if !ok {
+			return false
+		}
+		if ov.NilCallRegistry != nil {
+			if eq, handled := ov.NilCallRegistry(x, y); handled {
 				return eq
 			}
 		}
@@ -118,11 +163,17 @@ func AdapterFailureEqual(a, b AdapterFailure) bool {
 }
 
 //goplus:method (AdapterFailure) Error
-func Error(failure AdapterFailure) string {
+func AdapterFailureError(failure AdapterFailure) string {
 	switch __gp_m0 := any(failure).(type) {
 	case NilMachine:
 
 		return "gotp/erts: VM machine is nil"
+	case NilClock:
+
+		return "gotp/erts: VM process clock is nil"
+	case NilCallRegistry:
+
+		return "gotp/erts: VM process call registry is nil"
 	case VMStartFailure:
 		cause := __gp_m0.Cause
 
@@ -324,6 +375,9 @@ type VMProcess struct {
 	instructions    int
 	receiveMessages []kernel.MessageEnvelope
 	receiveCursor   int
+	clock           clock.Clock
+	timer           *kernel.WakeTimer
+	callRegistry    *CallRegistry
 }
 
 // assayxport:unit gotp.erts.vm-process
@@ -331,8 +385,41 @@ func NewVMProcess(
 	machine *vm.Machine,
 	entryLabel uint64,
 ) result.Result[*VMProcess, AdapterFailure] {
+	return NewVMProcessWithClock(machine, entryLabel, clock.Real{})
+}
+
+// assayxport:unit gotp.erts.receive-timeout
+func NewVMProcessWithClock(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+) result.Result[*VMProcess, AdapterFailure] {
+	return newVMProcess(machine, entryLabel, source, nil)
+}
+
+func NewVMProcessWithRegistry(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+	registry *CallRegistry,
+) result.Result[*VMProcess, AdapterFailure] {
+	if registry == nil {
+		return result.Err[*VMProcess, AdapterFailure]{Err: NilCallRegistry{}}
+	}
+	return newVMProcess(machine, entryLabel, source, registry)
+}
+
+func newVMProcess(
+	machine *vm.Machine,
+	entryLabel uint64,
+	source clock.Clock,
+	registry *CallRegistry,
+) result.Result[*VMProcess, AdapterFailure] {
 	if machine == nil {
 		return result.Err[*VMProcess, AdapterFailure]{Err: NilMachine{}}
+	}
+	if source == nil {
+		return result.Err[*VMProcess, AdapterFailure]{Err: NilClock{}}
 	}
 	var started result.Result[*vm.Continuation, vm.Failure] = machine.Start(entryLabel)
 	switch __gp_m1 := any(started).(type) {
@@ -357,6 +444,8 @@ func NewVMProcess(
 				continuation: continuation,
 				quantum:      quantum,
 				state:        initial,
+				clock:        source,
+				callRegistry: registry,
 			}}
 		default:
 			panic("goplus: impossible enum value in match")
@@ -400,34 +489,41 @@ func (process *VMProcess) Step(context *kernel.Context) kernel.StepResult {
 }
 
 func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
-	var checked result.Result[vm.HostCapabilities, vm.Failure] = vm.HostWithMessaging(
-		vm.MessagingEffects{
-			Send: func(destination term.Term, message term.Term) vm.SendOutcome {
-				switch __gp_m4 := any(term.TermPIDValue(destination)).(type) {
-				case option.None[term.PID]:
+	var checked result.Result[vm.HostCapabilities, vm.Failure] = vm.HostWithTimedMessaging(
+		vm.TimedMessagingEffects{
+			Messaging: vm.MessagingEffects{
+				Send: func(destination term.Term, message term.Term) vm.SendOutcome {
+					switch __gp_m4 := any(term.TermPIDValue(destination)).(type) {
+					case option.None[term.PID]:
 
-					return vm.SendRejected{Detail: "destination is not a PID"}
-				case option.Some[term.PID]:
-					pid := __gp_m4.Value
+						return vm.SendRejected{Detail: "destination is not a PID"}
+					case option.Some[term.PID]:
+						pid := __gp_m4.Value
 
-					switch any(context.Send(pid, message)).(type) {
-					case kernel.Delivered:
+						switch any(context.Send(pid, message)).(type) {
+						case kernel.Delivered:
 
-						return vm.MessageSent{Value: message}
-					case kernel.NoProcess:
+							return vm.MessageSent{Value: message}
+						case kernel.NoProcess:
 
-						return vm.MessageSent{Value: message}
+							return vm.MessageSent{Value: message}
+						default:
+							panic("goplus: impossible enum value in match")
+						}
 					default:
 						panic("goplus: impossible enum value in match")
 					}
-				default:
-					panic("goplus: impossible enum value in match")
-				}
+				},
+				Receive: vm.ReceiveEffects{
+					Peek:    func() vm.ReceiveOutcome { return process.peekMessage(context) },
+					Advance: process.advanceMessage,
+					Remove:  process.removeMessage,
+				},
 			},
-			Receive: vm.ReceiveEffects{
-				Peek:    func() vm.ReceiveOutcome { return process.peekMessage(context) },
-				Advance: process.advanceMessage,
-				Remove:  process.removeMessage,
+			Timer: vm.TimerEffects{
+				Wait:   func(delay time.Duration) vm.TimerWaitOutcome { return process.waitTimer(context, delay) },
+				Cancel: process.cancelTimer,
+				Finish: process.finishTimer,
 			},
 		},
 	)
@@ -439,22 +535,36 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 	case result.Ok[vm.HostCapabilities, vm.Failure]:
 		host := __gp_m6.Value
 
+		if process.callRegistry != nil {
+			switch __gp_m7 := any(vm.HostGrantExternalCalls(host, process.callRegistry.Call)).(type) {
+			case result.Err[vm.HostCapabilities, vm.Failure]:
+				cause := __gp_m7.Err
+
+				return process.fail(vm.Error(cause))
+			case result.Ok[vm.HostCapabilities, vm.Failure]:
+				granted := __gp_m7.Value
+
+				host = granted
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		}
 		var resumed result.Result[vm.ExecutionSlice, vm.Failure] = process.continuation.ResumeWithHost(
 			process.quantum,
 			host,
 		)
-		switch __gp_m7 := any(resumed).(type) {
+		switch __gp_m8 := any(resumed).(type) {
 		case result.Err[vm.ExecutionSlice, vm.Failure]:
-			cause := __gp_m7.Err
+			cause := __gp_m8.Err
 
 			return process.fail(vm.Error(cause))
 		case result.Ok[vm.ExecutionSlice, vm.Failure]:
-			slice := __gp_m7.Value
+			slice := __gp_m8.Value
 
 			var execution vm.ExecutionSlice = slice
-			switch __gp_m8 := any(execution).(type) {
+			switch __gp_m9 := any(execution).(type) {
 			case vm.ExecutionSuspended:
-				progress := __gp_m8.Progress
+				progress := __gp_m9.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -462,7 +572,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.state = suspended
 				return kernel.Yield{}
 			case vm.ExecutionWaiting:
-				progress := __gp_m8.Progress
+				progress := __gp_m9.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -470,8 +580,8 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.state = waiting
 				return kernel.Wait{}
 			case vm.ExecutionCompleted:
-				value := __gp_m8.Value
-				progress := __gp_m8.Progress
+				value := __gp_m9.Value
+				progress := __gp_m9.Progress
 
 				process.reductions += progress.Reductions
 				process.instructions = progress.TotalInstructions
@@ -489,6 +599,60 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 	}
 }
 
+func (process *VMProcess) waitTimer(context *kernel.Context, delay time.Duration) vm.TimerWaitOutcome {
+	if process.timer != nil {
+		var status kernel.WakeTimerStatus = process.timer.Status()
+		switch any(status).(type) {
+		case kernel.WakeTimerPending:
+
+			return vm.TimerPending{}
+		case kernel.WakeTimerFired:
+
+			return vm.TimerExpired{}
+		case kernel.WakeTimerCancelled:
+
+			process.timer = nil
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	switch __gp_m11 := any(context.WakeTimerAfter(process.clock, delay)).(type) {
+	case result.Err[*kernel.WakeTimer, kernel.Failure]:
+		failure := __gp_m11.Err
+
+		return vm.TimerRejected{Detail: kernel.FailureError(failure)}
+	case result.Ok[*kernel.WakeTimer, kernel.Failure]:
+		timer := __gp_m11.Value
+
+		process.timer = timer
+		return vm.TimerPending{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (process *VMProcess) cancelTimer() vm.TimerMutation {
+	if process.timer == nil {
+		return vm.TimerUnchanged{}
+	}
+	changed := process.timer.Stop()
+	process.timer = nil
+	if changed {
+		return vm.TimerChanged{}
+	}
+	return vm.TimerUnchanged{}
+}
+
+func (process *VMProcess) finishTimer() vm.TimerMutation {
+	changed := process.timer != nil || process.receiveCursor != 0
+	process.timer = nil
+	process.receiveCursor = 0
+	if changed {
+		return vm.TimerChanged{}
+	}
+	return vm.TimerUnchanged{}
+}
+
 // assayxport:unit gotp.erts.selective-receive
 func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome {
 	if process.receiveCursor < len(process.receiveMessages) {
@@ -496,12 +660,12 @@ func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome
 			process.receiveMessages[process.receiveCursor].Message,
 		)}
 	}
-	switch __gp_m9 := any(context.ReceiveMessage(nil)).(type) {
+	switch __gp_m12 := any(context.ReceiveMessage(nil)).(type) {
 	case option.None[kernel.MessageEnvelope]:
 
 		return vm.ReceiveEmpty{}
 	case option.Some[kernel.MessageEnvelope]:
-		envelope := __gp_m9.Value
+		envelope := __gp_m12.Value
 
 		stored := kernel.MessageEnvelope{
 			Message: term.Clone(envelope.Message),
