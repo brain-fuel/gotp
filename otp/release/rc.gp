@@ -1,6 +1,8 @@
 package release
 
 import (
+	"fmt"
+
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/term"
 )
@@ -15,6 +17,7 @@ type HighInstruction enum {
 	AddApplication(Application string, Type string)
 	RemoveApplication(Application string)
 	RestartApplication(Application string)
+	BeforeCommit(Instruction Instruction)
 	LowLevel(Instruction Instruction)
 }
 
@@ -25,6 +28,7 @@ type TranslationFailure enum {
 	ModuleOutsideApplication(Module string)
 	ConflictingApplicationVersions(Application string, Left string, Right string)
 	InvalidTranslatedScript(Cause ScriptFailure)
+	InvalidHighInstruction(Index int, Detail string)
 }
 
 func (failure TranslationFailure) Error() string {
@@ -35,6 +39,7 @@ func (failure TranslationFailure) Error() string {
 	case ModuleOutsideApplication(module): return "gotp/release: module is outside every application " + module
 	case ConflictingApplicationVersions(application, left, right): return "gotp/release: conflicting versions for " + application + ": " + left + " and " + right
 	case InvalidTranslatedScript(cause): return cause.Error()
+	case InvalidHighInstruction(index, detail): return "gotp/release: high-level instruction " + fmt.Sprint(index) + ": " + detail
 	}
 }
 
@@ -58,7 +63,7 @@ func TranslateScripts(direction AppupDirection, scripts [][]HighInstruction, app
 			ordered := dependencyOrder(component, dependent)
 			for _, member := range component { emitted[member] = true }
 			match translateDependencyGroup(direction, ordered, dependent, applications) { case result.Err(failure): return result.Err[Script, TranslationFailure](failure); case result.Ok(group): before = append(before, group.before...); after = append(after, group.after...) }
-		} else { match instruction { case LowLevel(low): after = append(after, cloneInstruction(low)); case _: } }
+		} else { match instruction { case BeforeCommit(low): before = append(before, cloneInstruction(low)); case LowLevel(low): after = append(after, cloneInstruction(low)); case _: } }
 	}
 	match mergeObjectCode(before) { case result.Err(failure): return result.Err[Script, TranslationFailure](failure); case result.Ok(merged): before = merged }
 	before, after = relocateRestarts(direction, before, after)

@@ -89,3 +89,5 @@ This document is not a release and does not authorize a tag or publication.
   upgrade/downgrade ordering, object-code merging, and restart canonicalization.
 - Raw Erlang instruction decoding and differential `systools_rc` parity remain
   incomplete; no OTP parity claim is made.
+- Added total raw high-level instruction decoding and a direct relup-delta to
+  executable-script bridge; differential OTP ordering proof remains open.

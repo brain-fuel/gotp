@@ -4,6 +4,8 @@
 package release
 
 import (
+	"fmt"
+
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/term"
 )
@@ -222,6 +224,13 @@ type RestartApplication struct {
 
 func (RestartApplication) isHighInstruction() {}
 
+//goplus:variant (HighInstruction) BeforeCommit(Instruction Instruction)
+type BeforeCommit struct {
+	Instruction Instruction
+}
+
+func (BeforeCommit) isHighInstruction() {}
+
 //goplus:variant (HighInstruction) LowLevel(Instruction Instruction)
 type LowLevel struct {
 	Instruction Instruction
@@ -237,6 +246,7 @@ type HighInstructionCases[R any] struct {
 	AddApplication     func(Application string, Type string) R
 	RemoveApplication  func(Application string) R
 	RestartApplication func(Application string) R
+	BeforeCommit       func(Instruction Instruction) R
 	LowLevel           func(Instruction Instruction) R
 }
 
@@ -255,6 +265,8 @@ func HighInstructionFold[R any](h HighInstruction, cs HighInstructionCases[R]) R
 		return cs.RemoveApplication(m.Application)
 	case RestartApplication:
 		return cs.RestartApplication(m.Application)
+	case BeforeCommit:
+		return cs.BeforeCommit(m.Instruction)
 	case LowLevel:
 		return cs.LowLevel(m.Instruction)
 	default:
@@ -309,6 +321,14 @@ type InvalidTranslatedScript struct {
 
 func (InvalidTranslatedScript) isTranslationFailure() {}
 
+//goplus:variant (TranslationFailure) InvalidHighInstruction(Index int, Detail string)
+type InvalidHighInstruction struct {
+	Index  int
+	Detail string
+}
+
+func (InvalidHighInstruction) isTranslationFailure() {}
+
 // TranslationFailureCases selects one handler per TranslationFailure variant for TranslationFailureFold.
 type TranslationFailureCases[R any] struct {
 	DuplicateModuleInstruction     func(Module string) R
@@ -317,6 +337,7 @@ type TranslationFailureCases[R any] struct {
 	ModuleOutsideApplication       func(Module string) R
 	ConflictingApplicationVersions func(Application string, Left string, Right string) R
 	InvalidTranslatedScript        func(Cause ScriptFailure) R
+	InvalidHighInstruction         func(Index int, Detail string) R
 }
 
 // TranslationFailureFold reduces TranslationFailure by one-level case analysis.
@@ -334,6 +355,8 @@ func TranslationFailureFold[R any](t TranslationFailure, cs TranslationFailureCa
 		return cs.ConflictingApplicationVersions(m.Application, m.Left, m.Right)
 	case InvalidTranslatedScript:
 		return cs.InvalidTranslatedScript(m.Cause)
+	case InvalidHighInstruction:
+		return cs.InvalidHighInstruction(m.Index, m.Detail)
 	default:
 		panic("goplus: impossible enum value in TranslationFailureFold")
 	}
@@ -348,6 +371,7 @@ type TranslationFailureEqOverrides struct {
 	ModuleOutsideApplication       func(x, y ModuleOutsideApplication) (eq, handled bool)
 	ConflictingApplicationVersions func(x, y ConflictingApplicationVersions) (eq, handled bool)
 	InvalidTranslatedScript        func(x, y InvalidTranslatedScript) (eq, handled bool)
+	InvalidHighInstruction         func(x, y InvalidHighInstruction) (eq, handled bool)
 }
 
 // TranslationFailureEqualWith reports structural equality of a and b under ov.
@@ -446,6 +470,23 @@ func TranslationFailureEqualWith(a, b TranslationFailure, ov TranslationFailureE
 			return false
 		}
 		return true
+	case InvalidHighInstruction:
+		y, ok := any(b).(InvalidHighInstruction)
+		if !ok {
+			return false
+		}
+		if ov.InvalidHighInstruction != nil {
+			if eq, handled := ov.InvalidHighInstruction(x, y); handled {
+				return eq
+			}
+		}
+		if x.Index != y.Index {
+			return false
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
 	}
 	return false
 }
@@ -478,6 +519,10 @@ func TranslationFailureError(failure TranslationFailure) string {
 	case InvalidTranslatedScript:
 		cause := __gp_m0.Cause
 		return ScriptFailureError(cause)
+	case InvalidHighInstruction:
+		index := __gp_m0.Index
+		detail := __gp_m0.Detail
+		return "gotp/release: high-level instruction " + fmt.Sprint(index) + ": " + detail
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -556,6 +601,9 @@ func TranslateScripts(direction AppupDirection, scripts [][]HighInstruction, app
 			}
 		} else {
 			switch __gp_m3 := any(instruction).(type) {
+			case BeforeCommit:
+				low := __gp_m3.Instruction
+				before = append(before, cloneInstruction(low))
 			case LowLevel:
 				low := __gp_m3.Instruction
 				after = append(after, cloneInstruction(low))

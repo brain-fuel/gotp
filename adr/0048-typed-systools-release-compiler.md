@@ -23,12 +23,15 @@ failure is a sealed value and no translation effect has ambient authority.
 - Specification: OTP `systools_rc.erl` at pinned tag `OTP-29.0.4`.
 - Decision: `adr:0048-typed-systools-release-compiler`.
 - Code: `gotp.otp.systools-rc`, `gotp.otp.release-script`.
-- Laws: `test:gotp.otp.systools-rc-laws`.
+- Laws: `test:gotp.otp.systools-rc-laws`,
+  `test:gotp.otp.systools-rc-parser-laws`.
 
 ## Remaining obligations
 
-The raw Erlang high-level instruction vocabulary still needs a total decoder
-into the sealed Go+ representation. Exact OTP SCC condensation ordering,
-instruction syntax diagnostics, `mnesia_backup`, legacy restart aliases, and a
+Artifact `gotp.otp.systools-rc-parser` now totally decodes the documented raw
+Erlang high-level vocabulary, normalizes shorthand forms, preserves per-script
+commit boundaries, and connects relup deltas directly to the compiler. Exact
+OTP SCC condensation ordering, diagnostic text, the pinned-but-unimplemented
+`mnesia_backup` operation, unresolved legacy restart aliases, and a
 differential corpus against `systools_rc:translate_scripts/4` remain open.
 Consequently this ADR does not establish declaration or module conformance.
