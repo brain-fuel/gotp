@@ -8,6 +8,7 @@
 - Native-entry decision: `adr:gotp.pinned-native-loadable-entries`
 - Native ABI decision: `adr:gotp.pinned-darwin-arm64-native-abi`
 - Native macro decision: `adr:gotp.pinned-native-api-macros`
+- Hot-code decision: `adr:gotp.two-version-hot-code-state`
 - Deployable unit: `code:gotp.compat.ledger`
 - Upstream tag: `OTP-29.0.4`
 - Upstream commit: `1259612946cb36a8bf9614b289090bb32fbcbeb2`

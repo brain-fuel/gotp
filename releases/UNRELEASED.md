@@ -47,3 +47,5 @@ This document is not a release and does not authorize a tag or publication.
   driver, and EI functions, types, layouts, enums, and variables.
 - Added compiler-profiled inventories of 1,047 active, OTP-owned NIF, driver,
   and EI macros across Darwin ARM64, Linux AMD64/ARM64, and Windows AMD64.
+- Added an immutable two-version hot-code state machine with generation-scoped
+  execution references, soft-purge safety, and forced-purge invalidation laws.
