@@ -72,3 +72,11 @@ This document is not a release and does not authorize a tag or publication.
   busy soft pre-purge.
 - This is an unreleased compatibility slice. It does not establish OTP feature
   parity, and the compatibility inventory remains incomplete.
+
+### Typed appup and relup foundations
+
+- Added ordered, typed `.appup` parsing and exact/full-regex version selection.
+- Added deterministic upgrade/downgrade release-delta assembly for changed,
+  added, and removed applications and emulator restart placement.
+- `systools_rc` translation and the remaining `systools_relup` surface are not
+  complete; no OTP parity claim is made.
