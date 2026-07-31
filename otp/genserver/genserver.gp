@@ -132,10 +132,17 @@ type CodeChangeHandler[State any] func(
 	Extra term.Term,
 ) result.Result[State, Failure]
 
+type StateReplaceHandler[State any] func(Function term.Term, StateValue State) result.Result[State, Failure]
+type TerminateHandler[State any] func(Reason term.Term, StateValue State) result.Result[bool, Failure]
+
 type systemRequest enum {
 	SystemSuspend()
 	SystemResume()
 	SystemChangeCode(Module term.Term, OldVersion term.Term, Extra term.Term)
+	SystemGetState()
+	SystemReplaceState(Function term.Term)
+	SystemGetStatus()
+	SystemTerminate(Reason term.Term)
 	UnknownSystemRequest(Request term.Term)
 }
 
@@ -150,6 +157,11 @@ type Config[State, Request, Reply, Cast any] struct {
 	HandleCast   CastHandler[State, Cast]
 	HandleInfo   InfoHandler[State]
 	CodeChange   CodeChangeHandler[State]
+	StateCodec   Codec[State]
+	ReplaceState StateReplaceHandler[State]
+	Terminate    TerminateHandler[State]
+	ModuleName   string
+	Parent       option.Option[term.PID]
 }
 
 type Server[State, Request, Reply, Cast any] struct {
@@ -161,6 +173,11 @@ type Server[State, Request, Reply, Cast any] struct {
 	handleCast   CastHandler[State, Cast]
 	handleInfo   InfoHandler[State]
 	codeChange   CodeChangeHandler[State]
+	stateCodec   Codec[State]
+	replaceState StateReplaceHandler[State]
+	terminate    TerminateHandler[State]
+	moduleName   string
+	parent       option.Option[term.PID]
 	suspended    bool
 }
 
@@ -177,12 +194,16 @@ func New[State, Request, Reply, Cast any](
 			InvalidConfiguration("call and cast handlers are required"),
 		)
 	}
+	parent := config.Parent
+	if parent == nil { parent = option.None[term.PID]() }
 	return result.Ok[*Server[State, Request, Reply, Cast], Failure](
 		&Server[State, Request, Reply, Cast]{
 			state: config.InitialState, requestCodec: config.RequestCodec,
 			replyCodec: config.ReplyCodec, castCodec: config.CastCodec,
 			handleCall: config.HandleCall, handleCast: config.HandleCast,
 			handleInfo: config.HandleInfo, codeChange: config.CodeChange,
+			stateCodec: config.StateCodec, replaceState: config.ReplaceState,
+			terminate: config.Terminate, moduleName: config.ModuleName, parent: parent,
 		},
 	)
 }
@@ -227,6 +248,7 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 	case option.None: return option.None[kernel.StepResult]()
 	case option.Some(envelope):
 		var response term.Term = okReply
+		var transition kernel.StepResult = kernel.Yield()
 		match envelope.request {
 		case SystemSuspend: server.suspended = true
 		case SystemResume: server.suspended = false
@@ -234,11 +256,43 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 			if !server.suspended { response = systemFailure("not_suspended") } else {
 				match server.ChangeCode(oldVersion, extra) { case result.Err(failure): response = term.Tuple(errorReply, term.Binary([]byte(failure.Error()))); case result.Ok(_): }
 			}
-		case UnknownSystemRequest(_): response = systemFailure("unknown_system_msg")
+		case SystemGetState: response = server.encodedSystemState()
+		case SystemReplaceState(function):
+			if server.replaceState == nil { response = systemCallbackFailure("system_replace_state callback is nil") } else {
+				match server.replaceState(function.Clone(), server.state) {
+				case result.Err(failure): response = systemCallbackFailure(failure.Error())
+				case result.Ok(state):
+					if server.stateCodec == nil { response = systemCallbackFailure("state codec is nil") } else {
+						match server.stateCodec.Encode(state) { case result.Err(failure): response = systemCallbackFailure(failure.Error()); case result.Ok(encoded): server.state = state; response = term.Tuple(okReply, encoded) }
+					}
+				}
+			}
+		case SystemGetStatus: response = server.systemStatus(context)
+		case SystemTerminate(reason):
+			if server.terminate != nil { match server.terminate(reason.Clone(), server.state) { case result.Err(_): case result.Ok(_): } }
+			transition = kernel.Stop(reason.Clone())
+		case UnknownSystemRequest(request): response = term.Tuple(errorReply, term.Tuple(term.MustAtom("unknown_system_msg"), request.Clone()))
 		}
 		context.Send(envelope.replyTo, term.Tuple(envelope.tag.Clone(), response))
-		return option.Some[kernel.StepResult](kernel.Yield())
+		return option.Some[kernel.StepResult](transition)
 	}
+}
+
+func (server *Server[State, Request, Reply, Cast]) encodedSystemState() term.Term {
+	if server.stateCodec == nil { return systemCallbackFailure("state codec is nil") }
+	match server.stateCodec.Encode(server.state) { case result.Err(failure): return systemCallbackFailure(failure.Error()); case result.Ok(encoded): return term.Tuple(okReply, encoded) }
+}
+
+func (server *Server[State, Request, Reply, Cast]) systemStatus(context *kernel.Context) term.Term {
+	module := server.moduleName
+	if module == "" { module = "gen_server" }
+	var parent term.Term = term.MustAtom("undefined")
+	match server.parent { case option.Some(pid): parent = term.PIDTerm(pid); case option.None: }
+	state := server.encodedSystemState()
+	match state { case term.TupleTerm(values): if len(values) == 2 && term.Equal(values[0], okReply) { state = values[1] }; case _: }
+	systemState := term.MustAtom("running")
+	if server.suspended { systemState = term.MustAtom("suspended") }
+	return term.Tuple(term.MustAtom("status"), term.PIDTerm(context.Self()), term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, term.List(), state))
 }
 
 func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
@@ -267,15 +321,18 @@ func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope
 func systemRequestFromTerm(request term.Term) systemRequest {
 	match request {
 	case term.AtomTerm(name):
-		switch name { case "suspend": return SystemSuspend(); case "resume": return SystemResume() }
+		switch name { case "suspend": return SystemSuspend(); case "resume": return SystemResume(); case "get_state": return SystemGetState(); case "get_status": return SystemGetStatus() }
 	case term.TupleTerm(values):
 		if len(values) == 4 && term.Equal(values[0], term.MustAtom("change_code")) { return SystemChangeCode(values[1].Clone(), values[2].Clone(), values[3].Clone()) }
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("replace_state")) { return SystemReplaceState(values[1].Clone()) }
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("terminate")) { return SystemTerminate(values[1].Clone()) }
 	case _:
 	}
 	return UnknownSystemRequest(request.Clone())
 }
 
 func systemFailure(reason string) term.Term { return term.Tuple(errorReply, term.MustAtom(reason)) }
+func systemCallbackFailure(detail string) term.Term { return term.Tuple(errorReply, term.Tuple(term.MustAtom("callback_failed"), term.Binary([]byte(detail)))) }
 
 // assayxport:unit gotp.otp.gen-server-code-change
 func (server *Server[State, Request, Reply, Cast]) ChangeCode(

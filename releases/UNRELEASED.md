@@ -54,3 +54,5 @@ This document is not a release and does not authorize a tag or publication.
   migration and purged-generation VM image reclamation.
 - Added sender-checked `gen_server` system suspend/change/resume handling with
   selective mailbox dispatch and deterministic acknowledgements.
+- Added OTP-shaped system state inspection/replacement, status reports, and
+  acknowledged termination through explicit typed codecs and callbacks.

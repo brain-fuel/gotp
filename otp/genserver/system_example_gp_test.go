@@ -59,8 +59,15 @@ func TestSystemSuspendChangeCodeResumeIsSelective(t *testing.T) {
 	if server.Suspended() || server.State() != 112 {
 		t.Fatalf("resumed/state = %v/%d", server.Suspended(), server.State())
 	}
-	if len(replies) != 3 {
-		t.Fatalf("system replies = %d, want 3", len(replies))
+	runtime.Send(clientPID, serverPID, systemMessage(clientPID, "state", term.MustAtom("get_state")))
+	runtime.Send(clientPID, serverPID, systemMessage(clientPID, "replaced", term.Tuple(term.MustAtom("replace_state"), term.Integer(8))))
+	runtime.Send(clientPID, serverPID, systemMessage(clientPID, "status", term.MustAtom("get_status")))
+	runtime.Run(30)
+	if server.State() != 120 {
+		t.Fatalf("replaced state = %d", server.State())
+	}
+	if len(replies) != 6 {
+		t.Fatalf("system replies = %d, want 6", len(replies))
 	}
 	for index, tag := range []string{"suspended", "changed", "resumed"} {
 		switch __gp_m2 := any(replies[index]).(type) {
@@ -72,6 +79,46 @@ func TestSystemSuspendChangeCodeResumeIsSelective(t *testing.T) {
 		default:
 			t.Fatalf("reply %d is not tuple", index)
 		}
+	}
+	for index, want := range []int64{112, 120} {
+		switch __gp_m3 := any(replies[index+3]).(type) {
+		case term.TupleTerm:
+			tagged := __gp_m3.Elements
+			switch __gp_m4 := any(tagged[1]).(type) {
+			case term.TupleTerm:
+				values := __gp_m4.Elements
+				switch __gp_m5 := any(term.Int64(values[1])).(type) {
+				case option.Some[int64]:
+					found := __gp_m5.Value
+					if found != want {
+						t.Fatalf("state reply = %d, want %d", found, want)
+					}
+				case option.None[int64]:
+					t.Fatal("state reply is not int64")
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			default:
+				t.Fatal("state response is not tuple")
+			}
+		default:
+			t.Fatal("tagged state reply is not tuple")
+		}
+	}
+	switch __gp_m6 := any(replies[5]).(type) {
+	case term.TupleTerm:
+		tagged := __gp_m6.Elements
+		switch __gp_m7 := any(tagged[1]).(type) {
+		case term.TupleTerm:
+			status := __gp_m7.Elements
+			if len(status) != 4 || !term.Equal(status[0], term.MustAtom("status")) || !term.Equal(status[1], term.PIDTerm{Value: serverPID}) {
+				t.Fatalf("status = %v", tagged[1])
+			}
+		default:
+			t.Fatal("status response is not tuple")
+		}
+	default:
+		t.Fatal("tagged status reply is not tuple")
 	}
 }
 
@@ -86,5 +133,63 @@ func TestSystemChangeCodeRequiresSuspension(t *testing.T) {
 	runtime.Run(20)
 	if server.State() != 7 {
 		t.Fatalf("unsuspended change state = %d", server.State())
+	}
+}
+
+func TestSystemTerminateAcknowledgesThenStops(t *testing.T) {
+	server := upgradeServer(t, nil)
+	runtime := kernel.New(kernel.KernelConfig{})
+	serverPID := spawn(t, runtime, server.Behavior())
+	replies := []term.Term{}
+	clientPID := spawn(t, runtime, func(context *kernel.Context) kernel.StepResult {
+		switch __gp_m8 := any(context.ReceiveMessage(nil)).(type) {
+		case option.None[kernel.MessageEnvelope]:
+			return kernel.Wait{}
+		case option.Some[kernel.MessageEnvelope]:
+			envelope := __gp_m8.Value
+			replies = append(replies, envelope.Message)
+			return kernel.Yield{}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	})
+	runtime.Send(clientPID, serverPID, systemMessage(clientPID, "stop", term.Tuple(term.MustAtom("terminate"), term.MustAtom("shutdown"))))
+	runtime.Run(20)
+	switch __gp_m9 := any(runtime.ProcessInfo(serverPID)).(type) {
+	case option.None[kernel.ProcessInfo]:
+		t.Fatal("server process absent")
+	case option.Some[kernel.ProcessInfo]:
+		info := __gp_m9.Value
+		switch any(info.Status).(type) {
+		case kernel.Exited:
+		default:
+			t.Fatalf("server status = %v", info.Status)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	if len(replies) != 1 {
+		t.Fatalf("terminate replies = %d", len(replies))
+	}
+	switch __gp_m11 := any(replies[0]).(type) {
+	case term.TupleTerm:
+		values := __gp_m11.Elements
+		if len(values) != 2 || !term.Equal(values[1], okReply) {
+			t.Fatalf("terminate reply = %v", replies[0])
+		}
+	default:
+		t.Fatal("terminate reply is not tuple")
+	}
+}
+
+func TestFailedSystemReplacementPreservesState(t *testing.T) {
+	server := upgradeServer(t, nil)
+	runtime := kernel.New(kernel.KernelConfig{})
+	serverPID := spawn(t, runtime, server.Behavior())
+	clientPID := spawn(t, runtime, func(context *kernel.Context) kernel.StepResult { return kernel.Wait{} })
+	runtime.Send(clientPID, serverPID, systemMessage(clientPID, "replace", term.Tuple(term.MustAtom("replace_state"), term.MustAtom("invalid"))))
+	runtime.Run(20)
+	if server.State() != 7 {
+		t.Fatalf("failed replacement state = %d", server.State())
 	}
 }

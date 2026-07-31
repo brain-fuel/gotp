@@ -401,6 +401,9 @@ type CodeChangeHandler[State any] func(
 	Extra term.Term,
 ) result.Result[State, Failure]
 
+type StateReplaceHandler[State any] func(Function term.Term, StateValue State) result.Result[State, Failure]
+type TerminateHandler[State any] func(Reason term.Term, StateValue State) result.Result[bool, Failure]
+
 //goplus:enum systemRequest
 type systemRequest interface{ isSystemRequest() }
 
@@ -423,6 +426,30 @@ type systemChangeCode struct {
 
 func (systemChangeCode) isSystemRequest() {}
 
+//goplus:variant (systemRequest) SystemGetState()
+type systemGetState struct{}
+
+func (systemGetState) isSystemRequest() {}
+
+//goplus:variant (systemRequest) SystemReplaceState(Function term.Term)
+type systemReplaceState struct {
+	function term.Term
+}
+
+func (systemReplaceState) isSystemRequest() {}
+
+//goplus:variant (systemRequest) SystemGetStatus()
+type systemGetStatus struct{}
+
+func (systemGetStatus) isSystemRequest() {}
+
+//goplus:variant (systemRequest) SystemTerminate(Reason term.Term)
+type systemTerminate struct {
+	reason term.Term
+}
+
+func (systemTerminate) isSystemRequest() {}
+
 //goplus:variant (systemRequest) UnknownSystemRequest(Request term.Term)
 type unknownSystemRequest struct {
 	request term.Term
@@ -435,6 +462,10 @@ type systemRequestCases[R any] struct {
 	SystemSuspend        func() R
 	SystemResume         func() R
 	SystemChangeCode     func(Module term.Term, OldVersion term.Term, Extra term.Term) R
+	SystemGetState       func() R
+	SystemReplaceState   func(Function term.Term) R
+	SystemGetStatus      func() R
+	SystemTerminate      func(Reason term.Term) R
 	UnknownSystemRequest func(Request term.Term) R
 }
 
@@ -447,6 +478,14 @@ func systemRequestFold[R any](s systemRequest, cs systemRequestCases[R]) R {
 		return cs.SystemResume()
 	case systemChangeCode:
 		return cs.SystemChangeCode(m.module, m.oldVersion, m.extra)
+	case systemGetState:
+		return cs.SystemGetState()
+	case systemReplaceState:
+		return cs.SystemReplaceState(m.function)
+	case systemGetStatus:
+		return cs.SystemGetStatus()
+	case systemTerminate:
+		return cs.SystemTerminate(m.reason)
 	case unknownSystemRequest:
 		return cs.UnknownSystemRequest(m.request)
 	default:
@@ -460,6 +499,10 @@ type systemRequestEqOverrides struct {
 	SystemSuspend        func(x, y systemSuspend) (eq, handled bool)
 	SystemResume         func(x, y systemResume) (eq, handled bool)
 	SystemChangeCode     func(x, y systemChangeCode) (eq, handled bool)
+	SystemGetState       func(x, y systemGetState) (eq, handled bool)
+	SystemReplaceState   func(x, y systemReplaceState) (eq, handled bool)
+	SystemGetStatus      func(x, y systemGetStatus) (eq, handled bool)
+	SystemTerminate      func(x, y systemTerminate) (eq, handled bool)
 	UnknownSystemRequest func(x, y unknownSystemRequest) (eq, handled bool)
 }
 
@@ -513,6 +556,58 @@ func systemRequestEqualWith(a, b systemRequest, ov systemRequestEqOverrides) boo
 			return false
 		}
 		return true
+	case systemGetState:
+		y, ok := any(b).(systemGetState)
+		if !ok {
+			return false
+		}
+		if ov.SystemGetState != nil {
+			if eq, handled := ov.SystemGetState(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case systemReplaceState:
+		y, ok := any(b).(systemReplaceState)
+		if !ok {
+			return false
+		}
+		if ov.SystemReplaceState != nil {
+			if eq, handled := ov.SystemReplaceState(x, y); handled {
+				return eq
+			}
+		}
+		if x.function != y.function {
+			return false
+		}
+		return true
+	case systemGetStatus:
+		y, ok := any(b).(systemGetStatus)
+		if !ok {
+			return false
+		}
+		if ov.SystemGetStatus != nil {
+			if eq, handled := ov.SystemGetStatus(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case systemTerminate:
+		y, ok := any(b).(systemTerminate)
+		if !ok {
+			return false
+		}
+		if ov.SystemTerminate != nil {
+			if eq, handled := ov.SystemTerminate(x, y); handled {
+				return eq
+			}
+		}
+		if x.reason != y.reason {
+			return false
+		}
+		return true
 	case unknownSystemRequest:
 		y, ok := any(b).(unknownSystemRequest)
 		if !ok {
@@ -552,6 +647,11 @@ type Config[State, Request, Reply, Cast any] struct {
 	HandleCast   CastHandler[State, Cast]
 	HandleInfo   InfoHandler[State]
 	CodeChange   CodeChangeHandler[State]
+	StateCodec   Codec[State]
+	ReplaceState StateReplaceHandler[State]
+	Terminate    TerminateHandler[State]
+	ModuleName   string
+	Parent       option.Option[term.PID]
 }
 
 type Server[State, Request, Reply, Cast any] struct {
@@ -563,6 +663,11 @@ type Server[State, Request, Reply, Cast any] struct {
 	handleCast   CastHandler[State, Cast]
 	handleInfo   InfoHandler[State]
 	codeChange   CodeChangeHandler[State]
+	stateCodec   Codec[State]
+	replaceState StateReplaceHandler[State]
+	terminate    TerminateHandler[State]
+	moduleName   string
+	parent       option.Option[term.PID]
 	suspended    bool
 }
 
@@ -575,11 +680,17 @@ func New[State, Request, Reply, Cast any](
 	if config.HandleCall == nil || config.HandleCast == nil {
 		return result.Err[*Server[State, Request, Reply, Cast], Failure]{Err: InvalidConfiguration{Detail: "call and cast handlers are required"}}
 	}
+	parent := config.Parent
+	if parent == nil {
+		parent = option.None[term.PID]{}
+	}
 	return result.Ok[*Server[State, Request, Reply, Cast], Failure]{Value: &Server[State, Request, Reply, Cast]{
 		state: config.InitialState, requestCodec: config.RequestCodec,
 		replyCodec: config.ReplyCodec, castCodec: config.CastCodec,
 		handleCall: config.HandleCall, handleCast: config.HandleCast,
 		handleInfo: config.HandleInfo, codeChange: config.CodeChange,
+		stateCodec: config.StateCodec, replaceState: config.ReplaceState,
+		terminate: config.Terminate, moduleName: config.ModuleName, parent: parent,
 	}}
 }
 
@@ -653,6 +764,7 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 		envelope := __gp_m7.Value
 
 		var response term.Term = okReply
+		var transition kernel.StepResult = kernel.Yield{}
 		switch __gp_m8 := any(envelope.request).(type) {
 		case systemSuspend:
 			server.suspended = true
@@ -674,41 +786,136 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 					panic("goplus: impossible enum value in match")
 				}
 			}
+		case systemGetState:
+			response = server.encodedSystemState()
+		case systemReplaceState:
+			function := __gp_m8.function
+
+			if server.replaceState == nil {
+				response = systemCallbackFailure("system_replace_state callback is nil")
+			} else {
+				switch __gp_m10 := any(server.replaceState(term.Clone(function), server.state)).(type) {
+				case result.Err[State, Failure]:
+					failure := __gp_m10.Err
+					response = systemCallbackFailure(Error(failure))
+				case result.Ok[State, Failure]:
+					state := __gp_m10.Value
+
+					if server.stateCodec == nil {
+						response = systemCallbackFailure("state codec is nil")
+					} else {
+						switch __gp_m11 := any(server.stateCodec.Encode(state)).(type) {
+						case result.Err[term.Term, Failure]:
+							failure := __gp_m11.Err
+							response = systemCallbackFailure(Error(failure))
+						case result.Ok[term.Term, Failure]:
+							encoded := __gp_m11.Value
+							server.state = state
+							response = term.Tuple(okReply, encoded)
+						default:
+							panic("goplus: impossible enum value in match")
+						}
+					}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+		case systemGetStatus:
+			response = server.systemStatus(context)
+		case systemTerminate:
+			reason := __gp_m8.reason
+
+			if server.terminate != nil {
+				switch any(server.terminate(term.Clone(reason), server.state)).(type) {
+				case result.Err[bool, Failure]:
+				case result.Ok[bool, Failure]:
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+			transition = kernel.Stop{Reason: term.Clone(reason)}
 		case unknownSystemRequest:
-			response = systemFailure("unknown_system_msg")
+			request := __gp_m8.request
+			response = term.Tuple(errorReply, term.Tuple(term.MustAtom("unknown_system_msg"), term.Clone(request)))
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 		context.Send(envelope.replyTo, term.Tuple(term.Clone(envelope.tag), response))
-		return option.Some[kernel.StepResult]{Value: kernel.Yield{}}
+		return option.Some[kernel.StepResult]{Value: transition}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 }
 
-func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
-	switch __gp_m10 := any(signal).(type) {
-	case kernel.UserSignal:
-		from := __gp_m10.From
-		message := __gp_m10.Message
+func (server *Server[State, Request, Reply, Cast]) encodedSystemState() term.Term {
+	if server.stateCodec == nil {
+		return systemCallbackFailure("state codec is nil")
+	}
+	switch __gp_m13 := any(server.stateCodec.Encode(server.state)).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m13.Err
+		return systemCallbackFailure(Error(failure))
+	case result.Ok[term.Term, Failure]:
+		encoded := __gp_m13.Value
+		return term.Tuple(okReply, encoded)
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
 
-		switch __gp_m11 := any(message).(type) {
+func (server *Server[State, Request, Reply, Cast]) systemStatus(context *kernel.Context) term.Term {
+	module := server.moduleName
+	if module == "" {
+		module = "gen_server"
+	}
+	var parent term.Term = term.MustAtom("undefined")
+	switch __gp_m14 := any(server.parent).(type) {
+	case option.Some[term.PID]:
+		pid := __gp_m14.Value
+		parent = term.PIDTerm{Value: pid}
+	case option.None[term.PID]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	state := server.encodedSystemState()
+	switch __gp_m15 := any(state).(type) {
+	case term.TupleTerm:
+		values := __gp_m15.Elements
+		if len(values) == 2 && term.Equal(values[0], okReply) {
+			state = values[1]
+		}
+	default:
+	}
+	systemState := term.MustAtom("running")
+	if server.suspended {
+		systemState = term.MustAtom("suspended")
+	}
+	return term.Tuple(term.MustAtom("status"), term.PIDTerm{Value: context.Self()}, term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, term.List(), state))
+}
+
+func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
+	switch __gp_m16 := any(signal).(type) {
+	case kernel.UserSignal:
+		from := __gp_m16.From
+		message := __gp_m16.Message
+
+		switch __gp_m17 := any(message).(type) {
 		case term.TupleTerm:
-			values := __gp_m11.Elements
+			values := __gp_m17.Elements
 
 			if len(values) != 3 || !term.Equal(values[0], systemTag) {
 				return option.None[systemEnvelope]{}
 			}
-			switch __gp_m12 := any(values[1]).(type) {
+			switch __gp_m18 := any(values[1]).(type) {
 			case term.TupleTerm:
-				reply := __gp_m12.Elements
+				reply := __gp_m18.Elements
 
 				if len(reply) != 2 {
 					return option.None[systemEnvelope]{}
 				}
-				switch __gp_m13 := any(reply[0]).(type) {
+				switch __gp_m19 := any(reply[0]).(type) {
 				case term.PIDTerm:
-					replyTo := __gp_m13.Value
+					replyTo := __gp_m19.Value
 
 					if replyTo != from {
 						return option.None[systemEnvelope]{}
@@ -729,21 +936,31 @@ func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope
 }
 
 func systemRequestFromTerm(request term.Term) systemRequest {
-	switch __gp_m14 := any(request).(type) {
+	switch __gp_m20 := any(request).(type) {
 	case term.AtomTerm:
-		name := __gp_m14.Name
+		name := __gp_m20.Name
 
 		switch name {
 		case "suspend":
 			return systemSuspend{}
 		case "resume":
 			return systemResume{}
+		case "get_state":
+			return systemGetState{}
+		case "get_status":
+			return systemGetStatus{}
 		}
 	case term.TupleTerm:
-		values := __gp_m14.Elements
+		values := __gp_m20.Elements
 
 		if len(values) == 4 && term.Equal(values[0], term.MustAtom("change_code")) {
 			return systemChangeCode{module: term.Clone(values[1]), oldVersion: term.Clone(values[2]), extra: term.Clone(values[3])}
+		}
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("replace_state")) {
+			return systemReplaceState{function: term.Clone(values[1])}
+		}
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("terminate")) {
+			return systemTerminate{reason: term.Clone(values[1])}
 		}
 	default:
 
@@ -752,6 +969,9 @@ func systemRequestFromTerm(request term.Term) systemRequest {
 }
 
 func systemFailure(reason string) term.Term { return term.Tuple(errorReply, term.MustAtom(reason)) }
+func systemCallbackFailure(detail string) term.Term {
+	return term.Tuple(errorReply, term.Tuple(term.MustAtom("callback_failed"), term.Binary([]byte(detail))))
+}
 
 // assayxport:unit gotp.otp.gen-server-code-change
 func (server *Server[State, Request, Reply, Cast]) ChangeCode(
@@ -761,12 +981,12 @@ func (server *Server[State, Request, Reply, Cast]) ChangeCode(
 	if server.codeChange == nil {
 		return result.Err[State, Failure]{Err: InvalidConfiguration{Detail: "code_change callback is nil"}}
 	}
-	switch __gp_m15 := any(server.codeChange(term.Clone(oldVersion), server.state, term.Clone(extra))).(type) {
+	switch __gp_m21 := any(server.codeChange(term.Clone(oldVersion), server.state, term.Clone(extra))).(type) {
 	case result.Err[State, Failure]:
-		failure := __gp_m15.Err
+		failure := __gp_m21.Err
 		return result.Err[State, Failure]{Err: failure}
 	case result.Ok[State, Failure]:
-		state := __gp_m15.Value
+		state := __gp_m21.Value
 		server.state = state
 		return result.Ok[State, Failure]{Value: state}
 	default:
@@ -780,9 +1000,9 @@ func (server *Server[State, Request, Reply, Cast]) call(
 	values []term.Term,
 ) kernel.StepResult {
 	var caller term.PID
-	switch __gp_m16 := any(values[1]).(type) {
+	switch __gp_m22 := any(values[1]).(type) {
 	case term.PIDTerm:
-		found := __gp_m16.Value
+		found := __gp_m22.Value
 
 		caller = found
 	default:
@@ -790,18 +1010,18 @@ func (server *Server[State, Request, Reply, Cast]) call(
 		return server.info(context, signal)
 	}
 	var reference term.Reference
-	switch __gp_m17 := any(values[2]).(type) {
+	switch __gp_m23 := any(values[2]).(type) {
 	case term.ReferenceTerm:
-		found := __gp_m17.Value
+		found := __gp_m23.Value
 
 		reference = found
 	default:
 
 		return server.info(context, signal)
 	}
-	switch __gp_m18 := any(signal).(type) {
+	switch __gp_m24 := any(signal).(type) {
 	case kernel.UserSignal:
-		from := __gp_m18.From
+		from := __gp_m24.From
 
 		if caller != from {
 			return server.info(context, signal)
@@ -810,21 +1030,21 @@ func (server *Server[State, Request, Reply, Cast]) call(
 
 		return server.info(context, signal)
 	}
-	switch __gp_m19 := any(server.requestCodec.Decode(values[3])).(type) {
+	switch __gp_m25 := any(server.requestCodec.Decode(values[3])).(type) {
 	case result.Err[Request, Failure]:
-		failure := __gp_m19.Err
+		failure := __gp_m25.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[Request, Failure]:
-		request := __gp_m19.Value
+		request := __gp_m25.Value
 
-		switch __gp_m20 := any(server.handleCall(context, request, server.state)).(type) {
+		switch __gp_m26 := any(server.handleCall(context, request, server.state)).(type) {
 		case result.Err[CallResult[State, Reply], Failure]:
-			failure := __gp_m20.Err
+			failure := __gp_m26.Err
 
 			return kernel.Stop{Reason: callbackFailure(failure)}
 		case result.Ok[CallResult[State, Reply], Failure]:
-			decision := __gp_m20.Value
+			decision := __gp_m26.Value
 
 			return server.completeCall(context, caller, reference, decision)
 		default:
@@ -843,18 +1063,18 @@ func (server *Server[State, Request, Reply, Cast]) completeCall(
 ) kernel.StepResult {
 	var reply Reply
 	var transition kernel.StepResult
-	switch __gp_m21 := any(decision).(type) {
+	switch __gp_m27 := any(decision).(type) {
 	case ContinueCall[State, Reply]:
-		value := __gp_m21.ReplyValue
-		state := __gp_m21.StateValue
+		value := __gp_m27.ReplyValue
+		state := __gp_m27.StateValue
 
 		reply = value
 		server.state = state
 		transition = kernel.Yield{}
 	case StopCall[State, Reply]:
-		value := __gp_m21.ReplyValue
-		state := __gp_m21.StateValue
-		reason := __gp_m21.Reason
+		value := __gp_m27.ReplyValue
+		state := __gp_m27.StateValue
+		reason := __gp_m27.Reason
 
 		reply = value
 		server.state = state
@@ -862,13 +1082,13 @@ func (server *Server[State, Request, Reply, Cast]) completeCall(
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m22 := any(server.replyCodec.Encode(reply)).(type) {
+	switch __gp_m28 := any(server.replyCodec.Encode(reply)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m22.Err
+		failure := __gp_m28.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m22.Value
+		encoded := __gp_m28.Value
 
 		context.Send(caller, term.Tuple(replyTag, term.ReferenceTerm{Value: reference}, encoded))
 		return transition
@@ -881,21 +1101,21 @@ func (server *Server[State, Request, Reply, Cast]) cast(
 	context *kernel.Context,
 	values []term.Term,
 ) kernel.StepResult {
-	switch __gp_m23 := any(server.castCodec.Decode(values[1])).(type) {
+	switch __gp_m29 := any(server.castCodec.Decode(values[1])).(type) {
 	case result.Err[Cast, Failure]:
-		failure := __gp_m23.Err
+		failure := __gp_m29.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[Cast, Failure]:
-		value := __gp_m23.Value
+		value := __gp_m29.Value
 
-		switch __gp_m24 := any(server.handleCast(context, value, server.state)).(type) {
+		switch __gp_m30 := any(server.handleCast(context, value, server.state)).(type) {
 		case result.Err[EventResult[State], Failure]:
-			failure := __gp_m24.Err
+			failure := __gp_m30.Err
 
 			return kernel.Stop{Reason: callbackFailure(failure)}
 		case result.Ok[EventResult[State], Failure]:
-			decision := __gp_m24.Value
+			decision := __gp_m30.Value
 
 			return server.applyEvent(decision)
 		default:
@@ -913,13 +1133,13 @@ func (server *Server[State, Request, Reply, Cast]) info(
 	if server.handleInfo == nil {
 		return kernel.Yield{}
 	}
-	switch __gp_m25 := any(server.handleInfo(context, signal, server.state)).(type) {
+	switch __gp_m31 := any(server.handleInfo(context, signal, server.state)).(type) {
 	case result.Err[EventResult[State], Failure]:
-		failure := __gp_m25.Err
+		failure := __gp_m31.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[EventResult[State], Failure]:
-		decision := __gp_m25.Value
+		decision := __gp_m31.Value
 
 		return server.applyEvent(decision)
 	default:
@@ -930,15 +1150,15 @@ func (server *Server[State, Request, Reply, Cast]) info(
 func (server *Server[State, Request, Reply, Cast]) applyEvent(
 	decision EventResult[State],
 ) kernel.StepResult {
-	switch __gp_m26 := any(decision).(type) {
+	switch __gp_m32 := any(decision).(type) {
 	case ContinueEvent[State]:
-		state := __gp_m26.StateValue
+		state := __gp_m32.StateValue
 
 		server.state = state
 		return kernel.Yield{}
 	case StopEvent[State]:
-		state := __gp_m26.StateValue
-		reason := __gp_m26.Reason
+		state := __gp_m32.StateValue
+		reason := __gp_m32.Reason
 
 		server.state = state
 		return kernel.Stop{Reason: effectiveReason(reason)}
@@ -1027,13 +1247,13 @@ func Cast[Value any](
 	if codec == nil {
 		return result.Err[ClientMutation, Failure]{Err: InvalidConfiguration{Detail: "cast codec is nil"}}
 	}
-	switch __gp_m28 := any(codec.Encode(value)).(type) {
+	switch __gp_m34 := any(codec.Encode(value)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m28.Err
+		failure := __gp_m34.Err
 
 		return result.Err[ClientMutation, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m28.Value
+		encoded := __gp_m34.Value
 
 		switch any(context.Send(server, term.Tuple(castTag, encoded))).(type) {
 		case kernel.Delivered:
@@ -1059,21 +1279,21 @@ func BeginCall[Request any](
 	if codec == nil {
 		return result.Err[term.Reference, Failure]{Err: InvalidConfiguration{Detail: "request codec is nil"}}
 	}
-	switch __gp_m30 := any(codec.Encode(request)).(type) {
+	switch __gp_m36 := any(codec.Encode(request)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m30.Err
+		failure := __gp_m36.Err
 
 		return result.Err[term.Reference, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m30.Value
+		encoded := __gp_m36.Value
 
-		switch __gp_m31 := any(context.Monitor(server)).(type) {
+		switch __gp_m37 := any(context.Monitor(server)).(type) {
 		case result.Err[term.Reference, kernel.Failure]:
-			cause := __gp_m31.Err
+			cause := __gp_m37.Err
 
 			return result.Err[term.Reference, Failure]{Err: KernelFailure{Cause: cause}}
 		case result.Ok[term.Reference, kernel.Failure]:
-			reference := __gp_m31.Value
+			reference := __gp_m37.Value
 
 			context.Send(server, term.Tuple(
 				callTag,
@@ -1144,35 +1364,35 @@ func ReceiveReply[Reply any](
 	received := context.Receive(func(signal kernel.Signal) bool {
 		return replySignalFor(signal, reference)
 	})
-	switch __gp_m32 := any(received).(type) {
+	switch __gp_m38 := any(received).(type) {
 	case option.None[kernel.Signal]:
 
 		return result.Ok[ReplyPoll[Reply], Failure]{Value: Pending[Reply]{}}
 	case option.Some[kernel.Signal]:
-		signal := __gp_m32.Value
+		signal := __gp_m38.Value
 
-		switch __gp_m33 := any(signal).(type) {
+		switch __gp_m39 := any(signal).(type) {
 		case kernel.DownSignal:
-			reason := __gp_m33.Reason
+			reason := __gp_m39.Reason
 
 			return result.Ok[ReplyPoll[Reply], Failure]{Value: ServerDown[Reply]{Reason: reason}}
 		case kernel.UserSignal:
-			message := __gp_m33.Message
+			message := __gp_m39.Message
 
-			switch __gp_m34 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
+			switch __gp_m40 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
 			case option.None[[]term.Term]:
 
 				return result.Ok[ReplyPoll[Reply], Failure]{Value: Pending[Reply]{}}
 			case option.Some[[]term.Term]:
-				values := __gp_m34.Value
+				values := __gp_m40.Value
 
-				switch __gp_m35 := any(codec.Decode(values[2])).(type) {
+				switch __gp_m41 := any(codec.Decode(values[2])).(type) {
 				case result.Err[Reply, Failure]:
-					failure := __gp_m35.Err
+					failure := __gp_m41.Err
 
 					return result.Err[ReplyPoll[Reply], Failure]{Err: failure}
 				case result.Ok[Reply, Failure]:
-					reply := __gp_m35.Value
+					reply := __gp_m41.Value
 
 					context.Demonitor(reference, true)
 					return result.Ok[ReplyPoll[Reply], Failure]{Value: ReplyReceived[Reply]{Value: reply}}
@@ -1192,24 +1412,24 @@ func ReceiveReply[Reply any](
 }
 
 func replySignalFor(signal kernel.Signal, reference term.Reference) bool {
-	switch __gp_m36 := any(signal).(type) {
+	switch __gp_m42 := any(signal).(type) {
 	case kernel.DownSignal:
-		found := __gp_m36.Reference
+		found := __gp_m42.Reference
 
 		return found == reference
 	case kernel.UserSignal:
-		message := __gp_m36.Message
+		message := __gp_m42.Message
 
-		switch __gp_m37 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
+		switch __gp_m43 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
 		case option.None[[]term.Term]:
 
 			return false
 		case option.Some[[]term.Term]:
-			values := __gp_m37.Value
+			values := __gp_m43.Value
 
-			switch __gp_m38 := any(values[1]).(type) {
+			switch __gp_m44 := any(values[1]).(type) {
 			case term.ReferenceTerm:
-				found := __gp_m38.Value
+				found := __gp_m44.Value
 
 				return found == reference
 			default:
@@ -1230,16 +1450,16 @@ func taggedTuple(
 	tag string,
 	length int,
 ) option.Option[[]term.Term] {
-	switch __gp_m39 := any(value).(type) {
+	switch __gp_m45 := any(value).(type) {
 	case term.TupleTerm:
-		values := __gp_m39.Elements
+		values := __gp_m45.Elements
 
 		if len(values) != length {
 			return option.None[[]term.Term]{}
 		}
-		switch __gp_m40 := any(values[0]).(type) {
+		switch __gp_m46 := any(values[0]).(type) {
 		case term.AtomTerm:
-			name := __gp_m40.Name
+			name := __gp_m46.Name
 
 			if name == tag {
 				return option.Some[[]term.Term]{Value: values}

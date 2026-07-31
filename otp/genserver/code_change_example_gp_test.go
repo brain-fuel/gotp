@@ -6,15 +6,30 @@ package genserver
 import (
 	"testing"
 
+	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
 )
 
+func replaceCounterState(function term.Term, state int64) result.Result[int64, Failure] {
+	switch __gp_m0 := any(term.Int64(function)).(type) {
+	case option.None[int64]:
+		return result.Err[int64, Failure]{Err: CallbackFailure{Detail: "replacement is not int64"}}
+	case option.Some[int64]:
+		delta := __gp_m0.Value
+		return result.Ok[int64, Failure]{Value: state + delta}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func upgradeServer(t *testing.T, change CodeChangeHandler[int64]) *Server[int64, int64, int64, int64] {
 	t.Helper()
-	switch __gp_m0 := any(New(Config[int64, int64, int64, int64]{
+	switch __gp_m1 := any(New(Config[int64, int64, int64, int64]{
 		InitialState: 7, RequestCodec: Int64Codec{}, ReplyCodec: Int64Codec{}, CastCodec: Int64Codec{}, CodeChange: change,
+		StateCodec: Int64Codec{}, ModuleName: "sample",
+		ReplaceState: replaceCounterState,
 		HandleCall: func(*kernel.Context, int64, int64) result.Result[CallResult[int64, int64], Failure] {
 			return result.Ok[CallResult[int64, int64], Failure]{Value: ContinueCall[int64, int64]{ReplyValue: 0, StateValue: 0}}
 		},
@@ -23,11 +38,11 @@ func upgradeServer(t *testing.T, change CodeChangeHandler[int64]) *Server[int64,
 		},
 	})).(type) {
 	case result.Err[*Server[int64, int64, int64, int64], Failure]:
-		failure := __gp_m0.Err
+		failure := __gp_m1.Err
 		t.Fatal(Error(failure))
 		return nil
 	case result.Ok[*Server[int64, int64, int64, int64], Failure]:
-		server := __gp_m0.Value
+		server := __gp_m1.Value
 		return server
 	default:
 		panic("goplus: impossible enum value in match")
@@ -42,12 +57,12 @@ func TestCodeChangeAtomicallyMigratesState(t *testing.T) {
 		}
 		return result.Ok[int64, Failure]{Value: state + 5}
 	})
-	switch __gp_m1 := any(server.ChangeCode(term.MustAtom("v1"), term.Integer(5))).(type) {
+	switch __gp_m2 := any(server.ChangeCode(term.MustAtom("v1"), term.Integer(5))).(type) {
 	case result.Err[int64, Failure]:
-		failure := __gp_m1.Err
+		failure := __gp_m2.Err
 		t.Fatal(Error(failure))
 	case result.Ok[int64, Failure]:
-		state := __gp_m1.Value
+		state := __gp_m2.Value
 		if state != 12 || server.State() != 12 {
 			t.Fatalf("state = %d/%d", state, server.State())
 		}
