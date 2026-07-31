@@ -651,6 +651,20 @@ func otpIntegerRemainder(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpIntegerShift(arguments []term.Term, right bool) vm.ExternalCallOutcome {
+	var value *big.Int
+	match term.IntegerValue(arguments[0]) { case option.None: return otpBadarith(); case option.Some(found): value = found }
+	match term.IntegerValue(arguments[1]) {
+	case option.None: return otpBadarith()
+	case option.Some(distance):
+		if !distance.IsInt64() { return otpBadarith() }
+		shift := distance.Int64()
+		if shift < 0 { right = !right; shift = -shift }
+		if right { return vm.ExternalCallReturned(term.MustBigInteger(new(big.Int).Rsh(value, uint(shift)))) }
+		return vm.ExternalCallReturned(term.MustBigInteger(new(big.Int).Lsh(value, uint(shift))))
+	}
+}
+
 func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
 	match term.Compare(arguments[0], arguments[1]) {
 	case result.Err(_): return otpBadarg()
@@ -701,6 +715,8 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "tuple_size", Arity: 1}, Implementation: otpTupleSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "rem", Arity: 2}, Implementation: otpIntegerRemainder},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsr", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, true) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsl", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, false) }},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "map_next", Arity: 3}, Implementation: otpMapNext},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "cmp_term", Arity: 2}, Implementation: otpCompareTerm},
 		{Target: vm.ExternalFunction{Module: "maps", Function: "get", Arity: 2}, Implementation: otpMapGet},

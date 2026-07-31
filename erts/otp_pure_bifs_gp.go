@@ -1322,12 +1322,46 @@ func otpIntegerRemainder(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpIntegerShift(arguments []term.Term, right bool) vm.ExternalCallOutcome {
+	var value *big.Int
+	switch __gp_m64 := any(term.IntegerValue(arguments[0])).(type) {
+	case option.None[*big.Int]:
+		return otpBadarith()
+	case option.Some[*big.Int]:
+		found := __gp_m64.Value
+		value = found
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m65 := any(term.IntegerValue(arguments[1])).(type) {
+	case option.None[*big.Int]:
+		return otpBadarith()
+	case option.Some[*big.Int]:
+		distance := __gp_m65.Value
+
+		if !distance.IsInt64() {
+			return otpBadarith()
+		}
+		shift := distance.Int64()
+		if shift < 0 {
+			right = !right
+			shift = -shift
+		}
+		if right {
+			return vm.ExternalCallReturned{Value: term.MustBigInteger(new(big.Int).Rsh(value, uint(shift)))}
+		}
+		return vm.ExternalCallReturned{Value: term.MustBigInteger(new(big.Int).Lsh(value, uint(shift)))}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
-	switch __gp_m64 := any(term.Compare(arguments[0], arguments[1])).(type) {
+	switch __gp_m66 := any(term.Compare(arguments[0], arguments[1])).(type) {
 	case result.Err[term.Ordering, term.OrderFailure]:
 		return otpBadarg()
 	case result.Ok[term.Ordering, term.OrderFailure]:
-		order := __gp_m64.Value
+		order := __gp_m66.Value
 
 		switch any(order).(type) {
 		case term.TermLess:
@@ -1347,40 +1381,40 @@ func otpCompareTerm(arguments []term.Term) vm.ExternalCallOutcome {
 func otpLooseEqual(arguments []term.Term) vm.ExternalCallOutcome {
 	equal := term.Equal(arguments[0], arguments[1])
 	if !equal {
-		switch __gp_m66 := any(otpNumberOf(arguments[0])).(type) {
+		switch __gp_m68 := any(otpNumberOf(arguments[0])).(type) {
 		case option.None[otpNumber]:
 
 		case option.Some[otpNumber]:
-			left := __gp_m66.Value
+			left := __gp_m68.Value
 
-			switch __gp_m67 := any(otpNumberOf(arguments[1])).(type) {
+			switch __gp_m69 := any(otpNumberOf(arguments[1])).(type) {
 			case option.None[otpNumber]:
 
 			case option.Some[otpNumber]:
-				right := __gp_m67.Value
+				right := __gp_m69.Value
 
-				switch __gp_m68 := any(left).(type) {
+				switch __gp_m70 := any(left).(type) {
 				case otpInteger:
-					leftInteger := __gp_m68.value
-					switch __gp_m69 := any(right).(type) {
+					leftInteger := __gp_m70.value
+					switch __gp_m71 := any(right).(type) {
 					case otpInteger:
-						rightInteger := __gp_m69.value
+						rightInteger := __gp_m71.value
 						equal = leftInteger.Cmp(rightInteger) == 0
 					case otpFloat:
-						rightFloat := __gp_m69.value
+						rightFloat := __gp_m71.value
 						rational, exact := new(big.Rat).SetString(strconv.FormatFloat(rightFloat, 'g', -1, 64))
 						equal = exact && rational.Cmp(new(big.Rat).SetInt(leftInteger)) == 0
 					default:
 						panic("goplus: impossible enum value in match")
 					}
 				case otpFloat:
-					leftFloat := __gp_m68.value
-					switch __gp_m70 := any(right).(type) {
+					leftFloat := __gp_m70.value
+					switch __gp_m72 := any(right).(type) {
 					case otpFloat:
-						rightFloat := __gp_m70.value
+						rightFloat := __gp_m72.value
 						equal = leftFloat == rightFloat
 					case otpInteger:
-						rightInteger := __gp_m70.value
+						rightInteger := __gp_m72.value
 						rational, exact := new(big.Rat).SetString(strconv.FormatFloat(leftFloat, 'g', -1, 64))
 						equal = exact && rational.Cmp(new(big.Rat).SetInt(rightInteger)) == 0
 					default:
@@ -1435,6 +1469,8 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "tuple_size", Arity: 1}, Implementation: otpTupleSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "rem", Arity: 2}, Implementation: otpIntegerRemainder},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsr", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, true) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsl", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, false) }},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "map_next", Arity: 3}, Implementation: otpMapNext},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "cmp_term", Arity: 2}, Implementation: otpCompareTerm},
 		{Target: vm.ExternalFunction{Module: "maps", Function: "get", Arity: 2}, Implementation: otpMapGet},

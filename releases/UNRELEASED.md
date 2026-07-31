@@ -163,3 +163,6 @@ This document is not a release and does not authorize a tag or publication.
   modules, including their higher-order operations with BEAM closures.
 - Added core `tuple_size`, `map_get`, `is_map_key`, numeric `==`, and `is_list`
   BIF behavior required by those modules.
+- Executed every export of the pinned `gb_sets` and `gb_trees` modules against
+  OTP-produced opaque tree values, including callback and iterator operations.
+- Added arbitrary-precision `bsr` and `bsl` behavior used by tree balancing.

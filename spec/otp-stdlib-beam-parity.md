@@ -65,3 +65,14 @@ return value, and exception remains exact.
 - `ordsets` callback corpus: `sha256:326efe35a809b3fa490c2a4931a253739c3fcf85783e7160e3f43302e4ec53c6`
 - `queue` corpus: `sha256:ffbbdde72db7e5c355b1e95de987848e4f9f485be8d3b25a30fe573335c562cf`
 - `queue` callback corpus: `sha256:f80edf1d4484b834c1b1b753587901f1ce95d59ba7d9f5d4a6ce8b3e5596c98d`
+
+## Balanced-tree evidence
+
+The opaque set and tree values in these corpora are produced by OTP and passed
+through ETF unchanged. This tests GoTP against the pinned representation as
+well as the public behavior.
+
+- `gb_sets` corpus: `sha256:baebc4e244a273240ed379539f14d51b627eba3ce253b36e4c6861d733c29ef0`
+- `gb_sets` callback corpus: `sha256:15b68c00cf4f96d5e604af76ed8d01a0e5480a8cf6afb26ef9b041211dc526d7`
+- `gb_trees` corpus: `sha256:909bcb16c572321f2bb4792cf2f2fc4294eac7712c420fb101a5c93f1f24f318`
+- `gb_trees` callback corpus: `sha256:4e764c8238d7b8e28d0568a66fbe600c16774665de8a8be4b32b6f554e08a4e3`
