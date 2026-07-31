@@ -105,3 +105,12 @@ This document is not a release and does not authorize a tag or publication.
 - Added typed current-code removal with lease-aware soft rejection and forced
   owner termination and literal-generation reclamation; release `remove` now
   uses this state transition directly.
+
+### Process-owned message buffers
+
+- Added a generic Go+ std typed buffer whose removal/reset/release operations
+  clear GC-visible references and support allocation reuse.
+- Migrated VM selective-receive fragments to the typed buffer and release the
+  entire mailbox fragment group on completion, uncaught exception, or failure.
+- Register, continuation, heap, signal-queue, binary, and scheduler-cache memory
+  remain open; no ERTS memory parity claim is made.

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"goforge.dev/goplus/std/clock"
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -410,7 +411,7 @@ type VMProcess struct {
 	state           VMProcessState
 	reductions      int
 	instructions    int
-	receiveMessages []kernel.MessageEnvelope
+	receiveMessages memory.Buffer[kernel.MessageEnvelope]
 	receiveCursor   int
 	clock           clock.Clock
 	timer           *kernel.WakeTimer
@@ -478,11 +479,12 @@ func newVMProcess(
 
 			var initial VMProcessState = VMProcessRunning{}
 			return result.Ok[*VMProcess, AdapterFailure]{Value: &VMProcess{
-				continuation: continuation,
-				quantum:      quantum,
-				state:        initial,
-				clock:        source,
-				callRegistry: registry,
+				continuation:    continuation,
+				quantum:         quantum,
+				state:           initial,
+				clock:           source,
+				callRegistry:    registry,
+				receiveMessages: memory.NewBuffer[kernel.MessageEnvelope](8),
 			}}
 		default:
 			panic("goplus: impossible enum value in match")
@@ -651,6 +653,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.instructions = progress.TotalInstructions
 				var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
 				process.state = raised
+				process.receiveMessages.Release()
 				return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 			case vm.ExecutionCompleted:
 				value := __gp_m11.Value
@@ -660,6 +663,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				process.instructions = progress.TotalInstructions
 				var completed VMProcessState = VMProcessCompleted{Value: value, TotalReductions: process.reductions, TotalInstructions: progress.TotalInstructions}
 				process.state = completed
+				process.receiveMessages.Release()
 				return kernel.Stop{Reason: term.MustAtom("normal")}
 			default:
 				panic("goplus: impossible enum value in match")
@@ -682,6 +686,7 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 
 		var raised VMProcessState = VMProcessRaised{Class: term.Clone(class), Reason: term.Clone(reason), TotalReductions: process.reductions, TotalInstructions: process.instructions}
 		process.state = raised
+		process.receiveMessages.Release()
 		return kernel.Stop{Reason: vmExceptionReason(class, reason)}
 	case vm.InvalidConfiguration, vm.ImmediateOutOfRange, vm.HeapIndexOutOfRange, vm.MemoryFailure, vm.InvalidProgram, vm.RegisterOutOfRange, vm.UninitializedRegister, vm.MissingConstant, vm.MissingLabel, vm.StepLimitExceeded, vm.UnsupportedOpcode:
 
@@ -755,23 +760,29 @@ func (process *VMProcess) finishTimer() vm.TimerMutation {
 
 // assayxport:unit gotp.erts.selective-receive
 func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome {
-	if process.receiveCursor < len(process.receiveMessages) {
-		return vm.ReceiveMessage{Value: term.Clone(
-			process.receiveMessages[process.receiveCursor].Message,
-		)}
+	if process.receiveCursor < process.receiveMessages.Len() {
+		switch __gp_m15 := any(process.receiveMessages.At(process.receiveCursor)).(type) {
+		case option.None[kernel.MessageEnvelope]:
+			return vm.ReceiveEmpty{}
+		case option.Some[kernel.MessageEnvelope]:
+			envelope := __gp_m15.Value
+			return vm.ReceiveMessage{Value: term.Clone(envelope.Message)}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	}
-	switch __gp_m15 := any(context.ReceiveMessage(nil)).(type) {
+	switch __gp_m16 := any(context.ReceiveMessage(nil)).(type) {
 	case option.None[kernel.MessageEnvelope]:
 
 		return vm.ReceiveEmpty{}
 	case option.Some[kernel.MessageEnvelope]:
-		envelope := __gp_m15.Value
+		envelope := __gp_m16.Value
 
 		stored := kernel.MessageEnvelope{
 			Message: term.Clone(envelope.Message),
 			From:    envelope.From,
 		}
-		process.receiveMessages = append(process.receiveMessages, stored)
+		process.receiveMessages.Append(stored)
 		return vm.ReceiveMessage{Value: term.Clone(stored.Message)}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -779,7 +790,7 @@ func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome
 }
 
 func (process *VMProcess) advanceMessage() vm.AdvanceOutcome {
-	if process.receiveCursor >= len(process.receiveMessages) {
+	if process.receiveCursor >= process.receiveMessages.Len() {
 		return vm.AdvanceRejected{Detail: "no current message"}
 	}
 	process.receiveCursor++
@@ -787,14 +798,16 @@ func (process *VMProcess) advanceMessage() vm.AdvanceOutcome {
 }
 
 func (process *VMProcess) removeMessage() vm.RemoveOutcome {
-	if process.receiveCursor >= len(process.receiveMessages) {
+	if process.receiveCursor >= process.receiveMessages.Len() {
 		return vm.RemoveRejected{Detail: "no current message"}
 	}
-	copy(
-		process.receiveMessages[process.receiveCursor:],
-		process.receiveMessages[process.receiveCursor+1:],
-	)
-	process.receiveMessages = process.receiveMessages[:len(process.receiveMessages)-1]
+	switch any(process.receiveMessages.Remove(process.receiveCursor)).(type) {
+	case option.None[kernel.MessageEnvelope]:
+		return vm.RemoveRejected{Detail: "no current message"}
+	case option.Some[kernel.MessageEnvelope]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	process.receiveCursor = 0
 	return vm.ReceiveMessageRemoved{}
 }
@@ -802,6 +815,7 @@ func (process *VMProcess) removeMessage() vm.RemoveOutcome {
 func (process *VMProcess) fail(detail string) kernel.StepResult {
 	var failed VMProcessState = VMProcessFailed{Detail: detail, TotalReductions: process.reductions, TotalInstructions: process.instructions}
 	process.state = failed
+	process.receiveMessages.Release()
 	return kernel.Stop{Reason: vmFailureReason(detail)}
 }
 

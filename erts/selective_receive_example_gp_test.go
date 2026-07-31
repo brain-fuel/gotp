@@ -68,9 +68,8 @@ func TestVMSelectiveReceivePreservesSkippedMessage(t *testing.T) {
 
 					t.Fatal("selective receive VM did not complete")
 				}
-				if len(process.receiveMessages) != 1 ||
-					!term.Equal(process.receiveMessages[0].Message, term.Integer(1)) {
-					t.Fatalf("preserved messages=%#v", process.receiveMessages)
+				if process.receiveMessages.Len() != 0 || process.receiveMessages.Cap() != 0 {
+					t.Fatalf("terminal receive memory=%d/%d", process.receiveMessages.Len(), process.receiveMessages.Cap())
 				}
 			default:
 				panic("goplus: impossible enum value in match")

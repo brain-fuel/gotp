@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"goforge.dev/goplus/std/clock"
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -49,7 +50,7 @@ type VMProcess struct {
 	state        VMProcessState
 	reductions   int
 	instructions int
-	receiveMessages []kernel.MessageEnvelope
+	receiveMessages memory.Buffer[kernel.MessageEnvelope]
 	receiveCursor int
 	clock           clock.Clock
 	timer           *kernel.WakeTimer
@@ -114,6 +115,7 @@ func newVMProcess(
 				state: initial,
 				clock: source,
 				callRegistry: registry,
+				receiveMessages: memory.NewBuffer[kernel.MessageEnvelope](8),
 			})
 		}
 	}
@@ -238,6 +240,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				progress.TotalInstructions,
 			)
 			process.state = raised
+			process.receiveMessages.Release()
 			return kernel.Stop(vmExceptionReason(class, reason))
 		case vm.ExecutionCompleted(value, progress):
 			process.reductions += progress.Reductions
@@ -248,6 +251,7 @@ func (process *VMProcess) resume(context *kernel.Context) kernel.StepResult {
 				progress.TotalInstructions,
 			)
 			process.state = completed
+			process.receiveMessages.Release()
 			return kernel.Stop(term.MustAtom("normal"))
 		}
 	}
@@ -266,6 +270,7 @@ func (process *VMProcess) failVM(failure vm.Failure) kernel.StepResult {
 			process.instructions,
 		)
 		process.state = raised
+		process.receiveMessages.Release()
 		return kernel.Stop(vmExceptionReason(class, reason))
 	case vm.InvalidConfiguration(_), vm.ImmediateOutOfRange(_), vm.HeapIndexOutOfRange(_, _), vm.MemoryFailure(_), vm.InvalidProgram(_), vm.RegisterOutOfRange(_, _), vm.UninitializedRegister(_, _), vm.MissingConstant(_, _), vm.MissingLabel(_), vm.StepLimitExceeded(_), vm.UnsupportedOpcode(_, _, _):
 		return process.fail(failure.Error())
@@ -325,10 +330,8 @@ func (process *VMProcess) finishTimer() vm.TimerMutation {
 
 // assayxport:unit gotp.erts.selective-receive
 func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome {
-	if process.receiveCursor < len(process.receiveMessages) {
-		return vm.ReceiveMessage(term.Clone(
-			process.receiveMessages[process.receiveCursor].Message,
-		))
+	if process.receiveCursor < process.receiveMessages.Len() {
+		match process.receiveMessages.At(process.receiveCursor) { case option.None: return vm.ReceiveEmpty(); case option.Some(envelope): return vm.ReceiveMessage(term.Clone(envelope.Message)) }
 	}
 	match context.ReceiveMessage(nil) {
 	case option.None:
@@ -338,13 +341,13 @@ func (process *VMProcess) peekMessage(context *kernel.Context) vm.ReceiveOutcome
 			Message: term.Clone(envelope.Message),
 			From: envelope.From,
 		}
-		process.receiveMessages = append(process.receiveMessages, stored)
+		process.receiveMessages.Append(stored)
 		return vm.ReceiveMessage(term.Clone(stored.Message))
 	}
 }
 
 func (process *VMProcess) advanceMessage() vm.AdvanceOutcome {
-	if process.receiveCursor >= len(process.receiveMessages) {
+	if process.receiveCursor >= process.receiveMessages.Len() {
 		return vm.AdvanceRejected("no current message")
 	}
 	process.receiveCursor++
@@ -352,14 +355,10 @@ func (process *VMProcess) advanceMessage() vm.AdvanceOutcome {
 }
 
 func (process *VMProcess) removeMessage() vm.RemoveOutcome {
-	if process.receiveCursor >= len(process.receiveMessages) {
+	if process.receiveCursor >= process.receiveMessages.Len() {
 		return vm.RemoveRejected("no current message")
 	}
-	copy(
-		process.receiveMessages[process.receiveCursor:],
-		process.receiveMessages[process.receiveCursor+1:],
-	)
-	process.receiveMessages = process.receiveMessages[:len(process.receiveMessages)-1]
+	match process.receiveMessages.Remove(process.receiveCursor) { case option.None: return vm.RemoveRejected("no current message"); case option.Some(_): }
 	process.receiveCursor = 0
 	return vm.ReceiveMessageRemoved()
 }
@@ -371,6 +370,7 @@ func (process *VMProcess) fail(detail string) kernel.StepResult {
 		process.instructions,
 	)
 	process.state = failed
+	process.receiveMessages.Release()
 	return kernel.Stop(vmFailureReason(detail))
 }
 
