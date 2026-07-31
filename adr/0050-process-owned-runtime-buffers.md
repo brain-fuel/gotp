@@ -31,6 +31,13 @@ their existing order laws. Process termination releases mailbox backing
 storage, while scheduler-owned run and remote-signal queues reset cleared slots
 and retain capacity for reuse.
 
+Each VM continuation now owns an arena-backed process heap plus typed root
+buffers. BEAM heap checks are total capacity checks; list and tuple construction
+reserve arena words and retain immutable Go term roots. Binary roots larger than
+64 bytes are classified into an off-heap ownership buffer. Terminal continuation
+release resets the arena generation and drops both root buffers as one process
+lifetime group.
+
 ## Traceability
 
 - Decision: `adr:0050-process-owned-runtime-buffers`.
@@ -41,9 +48,11 @@ and retain capacity for reuse.
 - VM laws: `test:gotp.vm.register-memory-laws`.
 - Stack laws: `test:gotp.vm.stack-memory-laws`.
 - Kernel queue laws: `test:gotp.kernel.queue-memory-laws`.
+- Process heap laws: `test:gotp.vm.process-memory-laws`.
 
 ## Remaining obligations
 
-Process heap term storage, off-heap binaries, and scheduler-local caches other
-than the run and remote-signal queues still use ordinary Go allocations. This
-decision does not establish ERTS process-memory parity.
+Full BEAM garbage collection, heap growth, generational copying, binary
+reference counting, and scheduler-local caches other than the run and
+remote-signal queues remain incomplete. This decision does not establish ERTS
+process-memory parity.

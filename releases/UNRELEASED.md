@@ -123,3 +123,6 @@ This document is not a release and does not authorize a tag or publication.
 - Migrated kernel mailboxes, the scheduler run queue, and staged remote signals
   to clearing typed buffers; terminal processes release mailbox storage while
   scheduler-owned queues retain cleared capacity for reuse.
+- Integrated the arena-backed process heap with BEAM heap checks and list/tuple
+  construction, with grouped immutable roots and explicit off-heap ownership
+  for binaries larger than 64 bytes.

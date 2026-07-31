@@ -7,6 +7,7 @@ import (
 	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
+	"goforge.dev/gotp/term"
 )
 
 type Word uint64
@@ -45,6 +46,79 @@ type HeapMutation enum {
 type ProcessHeap struct {
 	arena *memory.Arena
 }
+
+const offHeapBinaryThreshold = 64
+
+type ProcessMemory struct {
+	heap       *ProcessHeap
+	roots      memory.Buffer[term.Term]
+	offHeap    memory.Buffer[term.Term]
+}
+
+func NewProcessMemory(capacity int) result.Result[*ProcessMemory, Failure] {
+	match NewProcessHeap(capacity) {
+	case result.Err(failure):
+		return result.Err[*ProcessMemory, Failure](failure)
+	case result.Ok(heap):
+		return result.Ok[*ProcessMemory, Failure](&ProcessMemory{
+			heap: heap,
+			roots: memory.NewBuffer[term.Term](64),
+			offHeap: memory.NewBuffer[term.Term](8),
+		})
+	}
+}
+
+func (process *ProcessMemory) Ensure(words int) result.Result[HeapMutation, Failure] {
+	if words < 0 {
+		return result.Err[HeapMutation, Failure](InvalidConfiguration("negative heap reservation"))
+	}
+	stats := process.heap.Stats()
+	if words > (stats.Capacity-stats.Used)/wordBytes {
+		return result.Err[HeapMutation, Failure](MemoryFailure(memory.CapacityExhausted()))
+	}
+	return result.Ok[HeapMutation, Failure](HeapMutated())
+}
+
+func (process *ProcessMemory) Track(value term.Term, words int) result.Result[HeapMutation, Failure] {
+	match process.heap.Allocate(words) {
+	case result.Err(failure):
+		return result.Err[HeapMutation, Failure](failure)
+	case result.Ok(_):
+		owned := term.Clone(value)
+		process.roots.Append(owned)
+		process.trackOffHeap(owned)
+		return result.Ok[HeapMutation, Failure](HeapMutated())
+	}
+}
+
+func (process *ProcessMemory) trackOffHeap(value term.Term) {
+	match value {
+	case term.BinaryTerm(raw):
+		if len(raw) > offHeapBinaryThreshold { process.offHeap.Append(value) }
+	case term.TupleTerm(elements):
+		for _, element := range elements { process.trackOffHeap(element) }
+	case term.ProperListTerm(elements):
+		for _, element := range elements { process.trackOffHeap(element) }
+	case term.ImproperListTerm(elements, tail):
+		for _, element := range elements { process.trackOffHeap(element) }
+		process.trackOffHeap(tail)
+	case term.MapTerm(entries):
+		for _, entry := range entries { process.trackOffHeap(entry.Key); process.trackOffHeap(entry.Value) }
+	case term.FunTerm(function):
+		for _, captured := range function.Environment { process.trackOffHeap(captured) }
+	case term.InvalidTerm, term.IntegerTerm(_), term.FloatTerm(_), term.AtomTerm(_), term.PIDTerm(_), term.ReferenceTerm(_), term.PortTerm(_):
+	}
+}
+
+func (process *ProcessMemory) Reset() result.Result[HeapMutation, Failure] {
+	process.roots.Release()
+	process.offHeap.Release()
+	return process.heap.Reset()
+}
+
+func (process *ProcessMemory) Stats() memory.Stats { return process.heap.Stats() }
+func (process *ProcessMemory) RootCount() int { return process.roots.Len() }
+func (process *ProcessMemory) OffHeapCount() int { return process.offHeap.Len() }
 
 func NewProcessHeap(capacity int) result.Result[*ProcessHeap, Failure] {
 	match memory.New(memory.Config{

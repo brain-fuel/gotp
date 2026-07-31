@@ -14,6 +14,7 @@ import (
 type MachineConfig struct {
 	XRegisters int
 	StepLimit  int
+	HeapBytes  int
 	Atoms      map[uint64]string
 	Literals   map[uint64]term.Term
 	Imports    map[uint64]ExternalFunction
@@ -70,6 +71,7 @@ type Machine struct {
 	root      *machineImage
 	modules   map[string]*machineImage
 	handlers  memory.Buffer[exceptionHandler]
+	processMemory *ProcessMemory
 	nextHandler uint64
 	pc        int
 	steps     int
@@ -85,6 +87,9 @@ func NewMachine(
 	}
 	if config.StepLimit <= 0 {
 		config.StepLimit = 1_000_000
+	}
+	if config.HeapBytes <= 0 {
+		config.HeapBytes = 1 << 20
 	}
 	labels := make(map[uint64]int)
 	for index, instruction := range program {
@@ -152,6 +157,13 @@ func NewMachine(
 			modules[name] = image
 		}
 	}
+	var processMemory *ProcessMemory
+	match NewProcessMemory(config.HeapBytes) {
+	case result.Err(failure):
+		return result.Err[*Machine, Failure](failure)
+	case result.Ok(owned):
+		processMemory = owned
+	}
 	return result.Ok[*Machine, Failure](&Machine{
 		program: root.program,
 		labels: root.labels,
@@ -159,6 +171,7 @@ func NewMachine(
 		y: memory.NewBuffer[option.Option[term.Term]](64),
 		returns: memory.NewBuffer[returnFrame](32),
 		handlers: memory.NewBuffer[exceptionHandler](8),
+		processMemory: processMemory,
 		atoms: root.atoms,
 		literals: root.literals,
 		imports: root.imports,
@@ -181,7 +194,7 @@ func (machine *Machine) SetX(
 	return result.Ok[MachineMutation, Failure](MachineMutated())
 }
 
-func (machine *Machine) resetProcessMemory() { machine.releaseAllCode(); for index := 0; index < machine.x.Len(); index++ { machine.x.Set(index, option.None[term.Term]()) }; machine.y.Release(); machine.returns.Release(); machine.handlers.Release() }
+func (machine *Machine) resetProcessMemory() { machine.releaseAllCode(); for index := 0; index < machine.x.Len(); index++ { machine.x.Set(index, option.None[term.Term]()) }; machine.y.Release(); machine.returns.Release(); machine.handlers.Release(); if machine.processMemory != nil { machine.processMemory.Reset() } }
 
 func (machine *Machine) X(index int) result.Result[term.Term, Failure] {
 	return machine.register(machine.x, "x", index)

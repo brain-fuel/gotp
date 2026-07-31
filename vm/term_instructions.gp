@@ -20,15 +20,26 @@ func executeCoreTermInstruction(
 	case "line":
 		machine.pc++
 	case "test_heap":
-		// Runtime terms are immutable Go values; ProcessHeap-backed terms will
-		// replace this proof obligation when heap residency reaches the VM.
-		machine.pc++
+		match heapWordCount(instruction, 0) {
+		case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+		case result.Ok(words):
+			match machine.processMemory.Ensure(words) {
+			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+			case result.Ok(HeapMutated): machine.pc++
+			}
+		}
 	case "allocate_heap":
-		match machine.allocate(instruction, 0) {
-		case result.Err(failure):
-			return result.Err[instructionOutcome, Failure](failure)
-		case result.Ok(MachineMutated):
-			machine.pc++
+		match heapWordCount(instruction, 1) {
+		case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+		case result.Ok(words):
+			match machine.processMemory.Ensure(words) {
+			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+			case result.Ok(HeapMutated):
+				match machine.allocate(instruction, 0) {
+				case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+				case result.Ok(MachineMutated): machine.pc++
+				}
+			}
 		}
 	case "trim":
 		match machine.deallocate(instruction, 0) {
@@ -351,6 +362,10 @@ func putList(machine *Machine, instruction beam.Instruction) result.Result[instr
 			return result.Err[instructionOutcome, Failure](failure)
 		case result.Ok(tail):
 			value := prependList(head, tail)
+			match machine.processMemory.Track(value, 2) {
+			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+			case result.Ok(HeapMutated):
+			}
 			match machine.assign(instruction.Operands[2], value) {
 			case result.Err(failure):
 				return result.Err[instructionOutcome, Failure](failure)
@@ -426,12 +441,60 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 			elements[index] = value
 		}
 	}
-	match machine.assign(instruction.Operands[0], term.Tuple(elements...)) {
+	value := term.Tuple(elements...)
+	match machine.processMemory.Track(value, len(elements)+1) {
+	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(HeapMutated):
+	}
+	match machine.assign(instruction.Operands[0], value) {
 	case result.Err(failure):
 		return result.Err[instructionOutcome, Failure](failure)
 	case result.Ok(MachineMutated):
 		machine.pc++
 		return result.Ok[instructionOutcome, Failure](InstructionContinues())
+	}
+}
+
+type heapAllocation enum {
+	HeapWords(Count uint64)
+	FloatSlots(Count uint64)
+	FunSlots(Count uint64)
+}
+
+func heapWordCount(instruction beam.Instruction, operandIndex int) result.Result[int, Failure] {
+	if operandIndex < 0 || operandIndex >= len(instruction.Operands) {
+		return result.Err[int, Failure](InvalidProgram("missing heap allocation operand"))
+	}
+	match instruction.Operands[operandIndex] {
+	case beam.UnsignedOperand(_):
+		return allocationCount(instruction, operandIndex)
+	case beam.AllocationListOperand(raw):
+		words := uint64(0)
+		for _, entry := range raw {
+			match classifyHeapAllocation(entry) {
+			case result.Err(failure): return result.Err[int, Failure](failure)
+			case result.Ok(allocation):
+				match allocation {
+				case HeapWords(count):
+					if count > uint64(maxInt())-words { return result.Err[int, Failure](InvalidProgram("heap allocation count overflows int")) }
+					words += count
+				case FloatSlots(_), FunSlots(_):
+				}
+			}
+		}
+		return result.Ok[int, Failure](int(words))
+	case _:
+		return result.Err[int, Failure](InvalidProgram("invalid heap allocation operand"))
+	}
+}
+
+// OTP-29.0.4 beam_asm:encode_alloc_list_1 defines kinds 0, 1, and 2.
+func classifyHeapAllocation(entry beam.Allocation) result.Result[heapAllocation, Failure] {
+	switch entry.Kind {
+	case 0: return result.Ok[heapAllocation, Failure](HeapWords(entry.Count))
+	case 1: return result.Ok[heapAllocation, Failure](FloatSlots(entry.Count))
+	case 2: return result.Ok[heapAllocation, Failure](FunSlots(entry.Count))
+	default: return result.Err[heapAllocation, Failure](InvalidProgram("unknown heap allocation kind"))
 	}
 }
 

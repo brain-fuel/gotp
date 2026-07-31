@@ -4,26 +4,66 @@
 package vm
 
 import (
+	"bytes"
 	"testing"
 	"testing/quick"
 
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
+	"goforge.dev/gotp/term"
 )
+
+func TestProcessMemoryGroupsHeapAndOffHeapRoots(t *testing.T) {
+	switch __gp_m0 := any(NewProcessMemory(4096)).(type) {
+	case result.Err[*ProcessMemory, Failure]:
+		failure := __gp_m0.Err
+		t.Fatal(Error(failure))
+	case result.Ok[*ProcessMemory, Failure]:
+		process := __gp_m0.Value
+
+		value := term.Tuple(term.Binary(bytes.Repeat([]byte{7}, offHeapBinaryThreshold+1)))
+		switch __gp_m1 := any(process.Track(value, 2)).(type) {
+		case result.Err[HeapMutation, Failure]:
+			failure := __gp_m1.Err
+			t.Fatal(Error(failure))
+		case result.Ok[HeapMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		if process.RootCount() != 1 || process.OffHeapCount() != 1 || process.Stats().Used != 2*wordBytes {
+			t.Fatalf("roots/offheap/used = %d/%d/%d", process.RootCount(), process.OffHeapCount(), process.Stats().Used)
+		}
+		switch __gp_m2 := any(process.Reset()).(type) {
+		case result.Err[HeapMutation, Failure]:
+			failure := __gp_m2.Err
+			t.Fatal(Error(failure))
+		case result.Ok[HeapMutation, Failure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		if process.RootCount() != 0 || process.OffHeapCount() != 0 || process.Stats().Used != 0 {
+			t.Fatalf("released roots/offheap/used = %d/%d/%d", process.RootCount(), process.OffHeapCount(), process.Stats().Used)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
 
 func TestSmallIntegerRoundTripLaw(t *testing.T) {
 	law := func(raw int64) bool {
 		value := raw >> 3
-		switch __gp_m0 := any(SmallInteger(value)).(type) {
+		switch __gp_m3 := any(SmallInteger(value)).(type) {
 		case result.Err[Word, Failure]:
 
 			return false
 		case result.Ok[Word, Failure]:
-			word := __gp_m0.Value
+			word := __gp_m3.Value
 
-			switch __gp_m1 := any(word.SmallInteger()).(type) {
+			switch __gp_m4 := any(word.SmallInteger()).(type) {
 			case option.Some[int64]:
-				decoded := __gp_m1.Value
+				decoded := __gp_m4.Value
 
 				return decoded == value
 			case option.None[int64]:
@@ -36,9 +76,9 @@ func TestSmallIntegerRoundTripLaw(t *testing.T) {
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m2 := any(result.Of(true, quick.Check(law, nil))).(type) {
+	switch __gp_m5 := any(result.Of(true, quick.Check(law, nil))).(type) {
 	case result.Err[bool, error]:
-		cause := __gp_m2.Err
+		cause := __gp_m5.Err
 
 		t.Fatal(cause)
 	case result.Ok[bool, error]:
@@ -49,34 +89,34 @@ func TestSmallIntegerRoundTripLaw(t *testing.T) {
 }
 
 func TestProcessHeapStoresImmediateWord(t *testing.T) {
-	switch __gp_m3 := any(NewProcessHeap(4096)).(type) {
+	switch __gp_m6 := any(NewProcessHeap(4096)).(type) {
 	case result.Err[*ProcessHeap, Failure]:
-		failure := __gp_m3.Err
+		failure := __gp_m6.Err
 
 		t.Fatal(Error(failure))
 	case result.Ok[*ProcessHeap, Failure]:
-		heap := __gp_m3.Value
+		heap := __gp_m6.Value
 
 		defer heap.Close()
-		switch __gp_m4 := any(heap.Allocate(2)).(type) {
+		switch __gp_m7 := any(heap.Allocate(2)).(type) {
 		case result.Err[HeapRef, Failure]:
-			failure := __gp_m4.Err
+			failure := __gp_m7.Err
 
 			t.Fatal(Error(failure))
 		case result.Ok[HeapRef, Failure]:
-			reference := __gp_m4.Value
+			reference := __gp_m7.Value
 
-			switch __gp_m5 := any(SmallInteger(-42)).(type) {
+			switch __gp_m8 := any(SmallInteger(-42)).(type) {
 			case result.Err[Word, Failure]:
-				failure := __gp_m5.Err
+				failure := __gp_m8.Err
 
 				t.Fatal(Error(failure))
 			case result.Ok[Word, Failure]:
-				word := __gp_m5.Value
+				word := __gp_m8.Value
 
-				switch __gp_m6 := any(heap.Store(reference, 1, word)).(type) {
+				switch __gp_m9 := any(heap.Store(reference, 1, word)).(type) {
 				case result.Err[HeapMutation, Failure]:
-					failure := __gp_m6.Err
+					failure := __gp_m9.Err
 
 					t.Fatal(Error(failure))
 				case result.Ok[HeapMutation, Failure]:
@@ -84,17 +124,17 @@ func TestProcessHeapStoresImmediateWord(t *testing.T) {
 				default:
 					panic("goplus: impossible enum value in match")
 				}
-				switch __gp_m7 := any(heap.Load(reference, 1)).(type) {
+				switch __gp_m10 := any(heap.Load(reference, 1)).(type) {
 				case result.Err[Word, Failure]:
-					failure := __gp_m7.Err
+					failure := __gp_m10.Err
 
 					t.Fatal(Error(failure))
 				case result.Ok[Word, Failure]:
-					loaded := __gp_m7.Value
+					loaded := __gp_m10.Value
 
-					switch __gp_m8 := any(loaded.SmallInteger()).(type) {
+					switch __gp_m11 := any(loaded.SmallInteger()).(type) {
 					case option.Some[int64]:
-						value := __gp_m8.Value
+						value := __gp_m11.Value
 
 						if value != -42 {
 							t.Fatalf("loaded = %d", value)
@@ -108,9 +148,9 @@ func TestProcessHeapStoresImmediateWord(t *testing.T) {
 				default:
 					panic("goplus: impossible enum value in match")
 				}
-				switch __gp_m9 := any(heap.Reset()).(type) {
+				switch __gp_m12 := any(heap.Reset()).(type) {
 				case result.Err[HeapMutation, Failure]:
-					failure := __gp_m9.Err
+					failure := __gp_m12.Err
 
 					t.Fatal(Error(failure))
 				case result.Ok[HeapMutation, Failure]:
