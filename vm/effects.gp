@@ -54,6 +54,19 @@ type ExternalCallCapability enum {
 	ExternalCallsAllowed()
 }
 
+type LinkedCodeOutcome enum {
+	LinkedCodeUnchanged()
+	LinkedCodeResolved(Image ModuleImage, Leave func())
+	LinkedCodeRejected(Detail string)
+}
+
+type LinkedCodeEffect func(Target ExternalFunction) LinkedCodeOutcome
+
+type LinkedCodeCapability enum {
+	LinkedCodeUnavailable()
+	LinkedCodeAllowed()
+}
+
 type SendOutcome enum {
 	MessageSent(Value term.Term)
 	SendRejected(Detail string)
@@ -112,6 +125,7 @@ type HostCapabilities struct {
 	Receive ReceiveCapability
 	Timer   TimerCapability
 	ExternalCalls ExternalCallCapability
+	LinkedCode LinkedCodeCapability
 	send    SendEffect
 	peek    ReceivePeekEffect
 	advance ReceiveAdvanceEffect
@@ -120,6 +134,7 @@ type HostCapabilities struct {
 	timerCancel TimerMutationEffect
 	timerFinish TimerMutationEffect
 	externalCall ExternalCallEffect
+	linkedCode LinkedCodeEffect
 }
 
 func NoHostCapabilities() HostCapabilities {
@@ -127,11 +142,13 @@ func NoHostCapabilities() HostCapabilities {
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable()
 	var timerUnavailable TimerCapability = TimerUnavailable()
 	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable()
+	var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable()
 	return HostCapabilities{
 		Send: unavailable,
 		Receive: receiveUnavailable,
 		Timer: timerUnavailable,
 		ExternalCalls: callsUnavailable,
+		LinkedCode: linkedCodeUnavailable,
 	}
 }
 
@@ -144,11 +161,13 @@ func HostWithSend(effect SendEffect) result.Result[HostCapabilities, Failure] {
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable()
 	var timerUnavailable TimerCapability = TimerUnavailable()
 	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable()
+	var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable()
 	return result.Ok[HostCapabilities, Failure](HostCapabilities{
 		Send: allowed,
 		Receive: receiveUnavailable,
 		Timer: timerUnavailable,
 		ExternalCalls: callsUnavailable,
+		LinkedCode: linkedCodeUnavailable,
 		send: effect,
 	})
 }
@@ -162,11 +181,13 @@ func HostWithReceive(effects ReceiveEffects) result.Result[HostCapabilities, Fai
 		var receiveAllowed ReceiveCapability = ReceiveAllowed()
 		var timerUnavailable TimerCapability = TimerUnavailable()
 		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable()
+		var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable()
 		return result.Ok[HostCapabilities, Failure](HostCapabilities{
 			Send: sendUnavailable,
 			Receive: receiveAllowed,
 			Timer: timerUnavailable,
 			ExternalCalls: callsUnavailable,
+			LinkedCode: linkedCodeUnavailable,
 			peek: effects.Peek,
 			advance: effects.Advance,
 			remove: effects.Remove,
@@ -186,11 +207,13 @@ func HostWithMessaging(effects MessagingEffects) result.Result[HostCapabilities,
 		var receiveAllowed ReceiveCapability = ReceiveAllowed()
 		var timerUnavailable TimerCapability = TimerUnavailable()
 		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable()
+		var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable()
 		return result.Ok[HostCapabilities, Failure](HostCapabilities{
 			Send: sendAllowed,
 			Receive: receiveAllowed,
 			Timer: timerUnavailable,
 			ExternalCalls: callsUnavailable,
+			LinkedCode: linkedCodeUnavailable,
 			send: effects.Send,
 			peek: effects.Receive.Peek,
 			advance: effects.Receive.Advance,
@@ -210,6 +233,18 @@ func HostGrantExternalCalls(
 	var allowed ExternalCallCapability = ExternalCallsAllowed()
 	host.ExternalCalls = allowed
 	host.externalCall = effect
+	return result.Ok[HostCapabilities, Failure](host)
+}
+
+// assayxport:unit gotp.vm.linked-code-capability
+func HostGrantLinkedCode(
+	host HostCapabilities,
+	effect LinkedCodeEffect,
+) result.Result[HostCapabilities, Failure] {
+	if effect == nil { return result.Err[HostCapabilities, Failure](InvalidConfiguration("linked code effect is nil")) }
+	var allowed LinkedCodeCapability = LinkedCodeAllowed()
+	host.LinkedCode = allowed
+	host.linkedCode = effect
 	return result.Ok[HostCapabilities, Failure](host)
 }
 

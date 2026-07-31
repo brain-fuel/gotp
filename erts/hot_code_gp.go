@@ -11,6 +11,7 @@ import (
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
+	"goforge.dev/gotp/vm"
 )
 
 //goplus:enum HotCodeExitCapability
@@ -51,6 +52,11 @@ type NilHotCodeExit struct{}
 
 func (NilHotCodeExit) isHotCodeRuntimeFailure() {}
 
+//goplus:variant (HotCodeRuntimeFailure) NilLoadedHotCodeModule()
+type NilLoadedHotCodeModule struct{}
+
+func (NilLoadedHotCodeModule) isHotCodeRuntimeFailure() {}
+
 //goplus:variant (HotCodeRuntimeFailure) HotCodeStateFailure(Cause beam.HotCodeFailure)
 type HotCodeStateFailure struct {
 	Cause beam.HotCodeFailure
@@ -68,10 +74,11 @@ func (CodeReferenceNotOwned) isHotCodeRuntimeFailure() {}
 
 // HotCodeRuntimeFailureCases selects one handler per HotCodeRuntimeFailure variant for HotCodeRuntimeFailureFold.
 type HotCodeRuntimeFailureCases[R any] struct {
-	NilHotCodeKernel      func() R
-	NilHotCodeExit        func() R
-	HotCodeStateFailure   func(Cause beam.HotCodeFailure) R
-	CodeReferenceNotOwned func(Owner term.PID, Generation uint64) R
+	NilHotCodeKernel       func() R
+	NilHotCodeExit         func() R
+	NilLoadedHotCodeModule func() R
+	HotCodeStateFailure    func(Cause beam.HotCodeFailure) R
+	CodeReferenceNotOwned  func(Owner term.PID, Generation uint64) R
 }
 
 // HotCodeRuntimeFailureFold reduces HotCodeRuntimeFailure by one-level case analysis.
@@ -81,6 +88,8 @@ func HotCodeRuntimeFailureFold[R any](h HotCodeRuntimeFailure, cs HotCodeRuntime
 		return cs.NilHotCodeKernel()
 	case NilHotCodeExit:
 		return cs.NilHotCodeExit()
+	case NilLoadedHotCodeModule:
+		return cs.NilLoadedHotCodeModule()
 	case HotCodeStateFailure:
 		return cs.HotCodeStateFailure(m.Cause)
 	case CodeReferenceNotOwned:
@@ -93,10 +102,11 @@ func HotCodeRuntimeFailureFold[R any](h HotCodeRuntimeFailure, cs HotCodeRuntime
 // HotCodeRuntimeFailureEqOverrides carries optional per-variant hooks for HotCodeRuntimeFailureEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type HotCodeRuntimeFailureEqOverrides struct {
-	NilHotCodeKernel      func(x, y NilHotCodeKernel) (eq, handled bool)
-	NilHotCodeExit        func(x, y NilHotCodeExit) (eq, handled bool)
-	HotCodeStateFailure   func(x, y HotCodeStateFailure) (eq, handled bool)
-	CodeReferenceNotOwned func(x, y CodeReferenceNotOwned) (eq, handled bool)
+	NilHotCodeKernel       func(x, y NilHotCodeKernel) (eq, handled bool)
+	NilHotCodeExit         func(x, y NilHotCodeExit) (eq, handled bool)
+	NilLoadedHotCodeModule func(x, y NilLoadedHotCodeModule) (eq, handled bool)
+	HotCodeStateFailure    func(x, y HotCodeStateFailure) (eq, handled bool)
+	CodeReferenceNotOwned  func(x, y CodeReferenceNotOwned) (eq, handled bool)
 }
 
 // HotCodeRuntimeFailureEqualWith reports structural equality of a and b under ov.
@@ -124,6 +134,18 @@ func HotCodeRuntimeFailureEqualWith(a, b HotCodeRuntimeFailure, ov HotCodeRuntim
 		}
 		if ov.NilHotCodeExit != nil {
 			if eq, handled := ov.NilHotCodeExit(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case NilLoadedHotCodeModule:
+		y, ok := any(b).(NilLoadedHotCodeModule)
+		if !ok {
+			return false
+		}
+		if ov.NilLoadedHotCodeModule != nil {
+			if eq, handled := ov.NilLoadedHotCodeModule(x, y); handled {
 				return eq
 			}
 		}
@@ -176,6 +198,8 @@ func HotCodeRuntimeFailureError(failure HotCodeRuntimeFailure) string {
 		return "gotp/erts: hot-code kernel is nil"
 	case NilHotCodeExit:
 		return "gotp/erts: hot-code exit capability is nil"
+	case NilLoadedHotCodeModule:
+		return "gotp/erts: loaded hot-code module is nil"
 	case HotCodeStateFailure:
 		cause := __gp_m0.Cause
 		return beam.HotCodeFailureError(cause)
@@ -200,6 +224,7 @@ type HotCodePurgeReport struct {
 type HotCodeRuntime struct {
 	store  beam.CodeStore
 	owners map[uint64]map[term.PID]int
+	images map[uint64]vm.ModuleImage
 	exits  HotCodeExitCapability
 }
 
@@ -220,17 +245,69 @@ func NewHotCodeRuntime(exits HotCodeExitCapability) result.Result[*HotCodeRuntim
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]{Value: &HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, exits: exits}}
+	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]{Value: &HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, images: map[uint64]vm.ModuleImage{}, exits: exits}}
+}
+
+func (runtime *HotCodeRuntime) InstallLoaded(module *LoadedModule) result.Result[beam.CodeHandle, HotCodeRuntimeFailure] {
+	if module == nil {
+		return result.Err[beam.CodeHandle, HotCodeRuntimeFailure]{Err: NilLoadedHotCodeModule{}}
+	}
+	switch __gp_m2 := any(runtime.Install(&beam.Module{Name: module.name, Digest: module.digest})).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m2.Err
+		return result.Err[beam.CodeHandle, HotCodeRuntimeFailure]{Err: failure}
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+		handle := __gp_m2.Value
+		runtime.images[handle.Generation] = module.image()
+		return result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]{Value: handle}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (runtime *HotCodeRuntime) LinkedCode(owner term.PID) vm.LinkedCodeEffect {
+	return func(target vm.ExternalFunction) vm.LinkedCodeOutcome {
+		switch __gp_m3 := any(runtime.Enter(owner, target.Module)).(type) {
+		case result.Err[HotCodeEntry, HotCodeRuntimeFailure]:
+			failure := __gp_m3.Err
+			return vm.LinkedCodeRejected{Detail: HotCodeRuntimeFailureError(failure)}
+		case result.Ok[HotCodeEntry, HotCodeRuntimeFailure]:
+			entry := __gp_m3.Value
+
+			image, present := runtime.images[entry.Reference.Generation]
+			switch __gp_m4 := any(option.Of(image, present)).(type) {
+			case option.None[vm.ModuleImage]:
+
+				runtime.Leave(owner, entry.Reference)
+				return vm.LinkedCodeRejected{Detail: "loaded generation has no VM image"}
+			case option.Some[vm.ModuleImage]:
+				image := __gp_m4.Value
+
+				released := false
+				return vm.LinkedCodeResolved{Image: image, Leave: func() {
+					if released {
+						return
+					}
+					released = true
+					runtime.Leave(owner, entry.Reference)
+				}}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
 }
 
 // assayxport:unit gotp.erts.hot-code
 func (runtime *HotCodeRuntime) Install(image *beam.Module) result.Result[beam.CodeHandle, HotCodeRuntimeFailure] {
-	switch __gp_m2 := any(runtime.store.Install(image)).(type) {
+	switch __gp_m5 := any(runtime.store.Install(image)).(type) {
 	case result.Err[beam.CodeInstallTransition, beam.HotCodeFailure]:
-		cause := __gp_m2.Err
+		cause := __gp_m5.Err
 		return result.Err[beam.CodeHandle, HotCodeRuntimeFailure]{Err: HotCodeStateFailure{Cause: cause}}
 	case result.Ok[beam.CodeInstallTransition, beam.HotCodeFailure]:
-		transition := __gp_m2.Value
+		transition := __gp_m5.Value
 		runtime.store = transition.Store
 		return result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]{Value: transition.Current}
 	default:
@@ -239,12 +316,12 @@ func (runtime *HotCodeRuntime) Install(image *beam.Module) result.Result[beam.Co
 }
 
 func (runtime *HotCodeRuntime) Enter(owner term.PID, module string) result.Result[HotCodeEntry, HotCodeRuntimeFailure] {
-	switch __gp_m3 := any(runtime.store.EnterCurrent(module)).(type) {
+	switch __gp_m6 := any(runtime.store.EnterCurrent(module)).(type) {
 	case result.Err[beam.CodeEnterTransition, beam.HotCodeFailure]:
-		cause := __gp_m3.Err
+		cause := __gp_m6.Err
 		return result.Err[HotCodeEntry, HotCodeRuntimeFailure]{Err: HotCodeStateFailure{Cause: cause}}
 	case result.Ok[beam.CodeEnterTransition, beam.HotCodeFailure]:
-		transition := __gp_m3.Value
+		transition := __gp_m6.Value
 
 		runtime.store = transition.Store
 		owners, present := runtime.owners[transition.Reference.Generation]
@@ -265,12 +342,12 @@ func (runtime *HotCodeRuntime) Leave(owner term.PID, reference beam.CodeReferenc
 	if !present || count < 1 {
 		return result.Err[bool, HotCodeRuntimeFailure]{Err: CodeReferenceNotOwned{Owner: owner, Generation: reference.Generation}}
 	}
-	switch __gp_m4 := any(runtime.store.Leave(reference)).(type) {
+	switch __gp_m7 := any(runtime.store.Leave(reference)).(type) {
 	case result.Err[beam.CodeStore, beam.HotCodeFailure]:
-		cause := __gp_m4.Err
+		cause := __gp_m7.Err
 		return result.Err[bool, HotCodeRuntimeFailure]{Err: HotCodeStateFailure{Cause: cause}}
 	case result.Ok[beam.CodeStore, beam.HotCodeFailure]:
-		store := __gp_m4.Value
+		store := __gp_m7.Value
 		runtime.store = store
 	default:
 		panic("goplus: impossible enum value in match")
@@ -287,8 +364,24 @@ func (runtime *HotCodeRuntime) Leave(owner term.PID, reference beam.CodeReferenc
 }
 
 func (runtime *HotCodeRuntime) SoftPurge(module string) HotCodePurgeReport {
+	old := runtime.store.Old(module)
 	transition := runtime.store.SoftPurge(module)
 	runtime.store = transition.Store
+	switch any(transition.State).(type) {
+	case beam.OldCodeVersionPurged:
+		switch __gp_m9 := any(old).(type) {
+		case option.Some[beam.CodeHandle]:
+			handle := __gp_m9.Value
+			delete(runtime.images, handle.Generation)
+		case option.None[beam.CodeHandle]:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	case beam.NoOldCodeVersion, beam.OldCodeVersionBusy:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
 	return HotCodePurgeReport{State: transition.State}
 }
 
@@ -297,16 +390,16 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 	transition := runtime.store.Purge(module)
 	runtime.store = transition.Store
 	exited := 0
-	switch __gp_m5 := any(old).(type) {
+	switch __gp_m10 := any(old).(type) {
 	case option.None[beam.CodeHandle]:
 
 	case option.Some[beam.CodeHandle]:
-		handle := __gp_m5.Value
+		handle := __gp_m10.Value
 
 		owners := runtime.owners[handle.Generation]
-		switch __gp_m6 := any(runtime.exits).(type) {
+		switch __gp_m11 := any(runtime.exits).(type) {
 		case HotCodeExitWith:
-			exit := __gp_m6.Exit
+			exit := __gp_m11.Exit
 
 			for owner := range owners {
 				exit(owner, term.MustAtom("killed"))
@@ -316,6 +409,7 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 			panic("goplus: impossible enum value in match")
 		}
 		delete(runtime.owners, handle.Generation)
+		delete(runtime.images, handle.Generation)
 	default:
 		panic("goplus: impossible enum value in match")
 	}

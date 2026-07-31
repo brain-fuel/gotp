@@ -25,6 +25,7 @@ type exceptionHandler struct {
 	token       uint64
 	kind        exceptionHandlerKind
 	image       *machineImage
+	codeLeave   func()
 	pc          int
 	returnDepth int
 	yDepth      int
@@ -59,6 +60,7 @@ func executeExceptionSetup(machine *Machine, instruction beam.Instruction) resul
 		token: token,
 		kind: kind,
 		image: machine.current,
+		codeLeave: machine.currentCodeLeave,
 		pc: handlerPC,
 		returnDepth: len(machine.returnPCs),
 		yDepth: len(machine.y),
@@ -185,12 +187,16 @@ func (machine *Machine) unwindException(class term.Term, reason term.Term) resul
 			trace: term.List(),
 		})
 		machine.handlers = machine.handlers[:index + 1]
+		if machine.current != handler.image { machine.leaveCurrentCode() }
+		for depth := len(machine.returnCodeLeaves) - 1; depth > handler.returnDepth; depth-- { if machine.returnCodeLeaves[depth] != nil { machine.returnCodeLeaves[depth]() } }
 		machine.returnPCs = machine.returnPCs[:handler.returnDepth]
 		machine.returnImages = machine.returnImages[:handler.returnDepth]
+		machine.returnCodeLeaves = machine.returnCodeLeaves[:handler.returnDepth]
 		if len(machine.y) > handler.yDepth {
 			machine.y = machine.y[:handler.yDepth]
 		}
 		machine.activate(handler.image)
+		machine.currentCodeLeave = handler.codeLeave
 		machine.pc = handler.pc
 		return result.Ok[bool, Failure](true)
 	}

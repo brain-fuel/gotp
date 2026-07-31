@@ -522,6 +522,129 @@ func ExternalCallCapabilityEqual(a, b ExternalCallCapability) bool {
 	return ExternalCallCapabilityEqualWith(a, b, ExternalCallCapabilityEqOverrides{})
 }
 
+//goplus:enum LinkedCodeOutcome
+type LinkedCodeOutcome interface{ isLinkedCodeOutcome() }
+
+//goplus:variant (LinkedCodeOutcome) LinkedCodeUnchanged()
+type LinkedCodeUnchanged struct{}
+
+func (LinkedCodeUnchanged) isLinkedCodeOutcome() {}
+
+//goplus:variant (LinkedCodeOutcome) LinkedCodeResolved(Image ModuleImage, Leave func())
+type LinkedCodeResolved struct {
+	Image ModuleImage
+	Leave func()
+}
+
+func (LinkedCodeResolved) isLinkedCodeOutcome() {}
+
+//goplus:variant (LinkedCodeOutcome) LinkedCodeRejected(Detail string)
+type LinkedCodeRejected struct {
+	Detail string
+}
+
+func (LinkedCodeRejected) isLinkedCodeOutcome() {}
+
+// LinkedCodeOutcomeCases selects one handler per LinkedCodeOutcome variant for LinkedCodeOutcomeFold.
+type LinkedCodeOutcomeCases[R any] struct {
+	LinkedCodeUnchanged func() R
+	LinkedCodeResolved  func(Image ModuleImage, Leave func()) R
+	LinkedCodeRejected  func(Detail string) R
+}
+
+// LinkedCodeOutcomeFold reduces LinkedCodeOutcome by one-level case analysis.
+func LinkedCodeOutcomeFold[R any](l LinkedCodeOutcome, cs LinkedCodeOutcomeCases[R]) R {
+	switch m := any(l).(type) {
+	case LinkedCodeUnchanged:
+		return cs.LinkedCodeUnchanged()
+	case LinkedCodeResolved:
+		return cs.LinkedCodeResolved(m.Image, m.Leave)
+	case LinkedCodeRejected:
+		return cs.LinkedCodeRejected(m.Detail)
+	default:
+		panic("goplus: impossible enum value in LinkedCodeOutcomeFold")
+	}
+}
+
+type LinkedCodeEffect func(Target ExternalFunction) LinkedCodeOutcome
+
+//goplus:enum LinkedCodeCapability
+type LinkedCodeCapability interface{ isLinkedCodeCapability() }
+
+//goplus:variant (LinkedCodeCapability) LinkedCodeUnavailable()
+type LinkedCodeUnavailable struct{}
+
+func (LinkedCodeUnavailable) isLinkedCodeCapability() {}
+
+//goplus:variant (LinkedCodeCapability) LinkedCodeAllowed()
+type LinkedCodeAllowed struct{}
+
+func (LinkedCodeAllowed) isLinkedCodeCapability() {}
+
+// LinkedCodeCapabilityCases selects one handler per LinkedCodeCapability variant for LinkedCodeCapabilityFold.
+type LinkedCodeCapabilityCases[R any] struct {
+	LinkedCodeUnavailable func() R
+	LinkedCodeAllowed     func() R
+}
+
+// LinkedCodeCapabilityFold reduces LinkedCodeCapability by one-level case analysis.
+func LinkedCodeCapabilityFold[R any](l LinkedCodeCapability, cs LinkedCodeCapabilityCases[R]) R {
+	switch any(l).(type) {
+	case LinkedCodeUnavailable:
+		return cs.LinkedCodeUnavailable()
+	case LinkedCodeAllowed:
+		return cs.LinkedCodeAllowed()
+	default:
+		panic("goplus: impossible enum value in LinkedCodeCapabilityFold")
+	}
+}
+
+// LinkedCodeCapabilityEqOverrides carries optional per-variant hooks for LinkedCodeCapabilityEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type LinkedCodeCapabilityEqOverrides struct {
+	LinkedCodeUnavailable func(x, y LinkedCodeUnavailable) (eq, handled bool)
+	LinkedCodeAllowed     func(x, y LinkedCodeAllowed) (eq, handled bool)
+}
+
+// LinkedCodeCapabilityEqualWith reports structural equality of a and b under ov.
+func LinkedCodeCapabilityEqualWith(a, b LinkedCodeCapability, ov LinkedCodeCapabilityEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case LinkedCodeUnavailable:
+		y, ok := any(b).(LinkedCodeUnavailable)
+		if !ok {
+			return false
+		}
+		if ov.LinkedCodeUnavailable != nil {
+			if eq, handled := ov.LinkedCodeUnavailable(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case LinkedCodeAllowed:
+		y, ok := any(b).(LinkedCodeAllowed)
+		if !ok {
+			return false
+		}
+		if ov.LinkedCodeAllowed != nil {
+			if eq, handled := ov.LinkedCodeAllowed(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// LinkedCodeCapabilityEqual reports structural equality of a and b.
+func LinkedCodeCapabilityEqual(a, b LinkedCodeCapability) bool {
+	return LinkedCodeCapabilityEqualWith(a, b, LinkedCodeCapabilityEqOverrides{})
+}
+
 //goplus:enum SendOutcome
 type SendOutcome interface{ isSendOutcome() }
 
@@ -1056,6 +1179,7 @@ type HostCapabilities struct {
 	Receive       ReceiveCapability
 	Timer         TimerCapability
 	ExternalCalls ExternalCallCapability
+	LinkedCode    LinkedCodeCapability
 	send          SendEffect
 	peek          ReceivePeekEffect
 	advance       ReceiveAdvanceEffect
@@ -1064,6 +1188,7 @@ type HostCapabilities struct {
 	timerCancel   TimerMutationEffect
 	timerFinish   TimerMutationEffect
 	externalCall  ExternalCallEffect
+	linkedCode    LinkedCodeEffect
 }
 
 func NoHostCapabilities() HostCapabilities {
@@ -1071,11 +1196,13 @@ func NoHostCapabilities() HostCapabilities {
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable{}
 	var timerUnavailable TimerCapability = TimerUnavailable{}
 	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
+	var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable{}
 	return HostCapabilities{
 		Send:          unavailable,
 		Receive:       receiveUnavailable,
 		Timer:         timerUnavailable,
 		ExternalCalls: callsUnavailable,
+		LinkedCode:    linkedCodeUnavailable,
 	}
 }
 
@@ -1088,11 +1215,13 @@ func HostWithSend(effect SendEffect) result.Result[HostCapabilities, Failure] {
 	var receiveUnavailable ReceiveCapability = ReceiveUnavailable{}
 	var timerUnavailable TimerCapability = TimerUnavailable{}
 	var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
+	var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable{}
 	return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
 		Send:          allowed,
 		Receive:       receiveUnavailable,
 		Timer:         timerUnavailable,
 		ExternalCalls: callsUnavailable,
+		LinkedCode:    linkedCodeUnavailable,
 		send:          effect,
 	}}
 }
@@ -1109,11 +1238,13 @@ func HostWithReceive(effects ReceiveEffects) result.Result[HostCapabilities, Fai
 		var receiveAllowed ReceiveCapability = ReceiveAllowed{}
 		var timerUnavailable TimerCapability = TimerUnavailable{}
 		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
+		var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable{}
 		return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
 			Send:          sendUnavailable,
 			Receive:       receiveAllowed,
 			Timer:         timerUnavailable,
 			ExternalCalls: callsUnavailable,
+			LinkedCode:    linkedCodeUnavailable,
 			peek:          effects.Peek,
 			advance:       effects.Advance,
 			remove:        effects.Remove,
@@ -1138,11 +1269,13 @@ func HostWithMessaging(effects MessagingEffects) result.Result[HostCapabilities,
 		var receiveAllowed ReceiveCapability = ReceiveAllowed{}
 		var timerUnavailable TimerCapability = TimerUnavailable{}
 		var callsUnavailable ExternalCallCapability = ExternalCallsUnavailable{}
+		var linkedCodeUnavailable LinkedCodeCapability = LinkedCodeUnavailable{}
 		return result.Ok[HostCapabilities, Failure]{Value: HostCapabilities{
 			Send:          sendAllowed,
 			Receive:       receiveAllowed,
 			Timer:         timerUnavailable,
 			ExternalCalls: callsUnavailable,
+			LinkedCode:    linkedCodeUnavailable,
 			send:          effects.Send,
 			peek:          effects.Receive.Peek,
 			advance:       effects.Receive.Advance,
@@ -1164,6 +1297,20 @@ func HostGrantExternalCalls(
 	var allowed ExternalCallCapability = ExternalCallsAllowed{}
 	host.ExternalCalls = allowed
 	host.externalCall = effect
+	return result.Ok[HostCapabilities, Failure]{Value: host}
+}
+
+// assayxport:unit gotp.vm.linked-code-capability
+func HostGrantLinkedCode(
+	host HostCapabilities,
+	effect LinkedCodeEffect,
+) result.Result[HostCapabilities, Failure] {
+	if effect == nil {
+		return result.Err[HostCapabilities, Failure]{Err: InvalidConfiguration{Detail: "linked code effect is nil"}}
+	}
+	var allowed LinkedCodeCapability = LinkedCodeAllowed{}
+	host.LinkedCode = allowed
+	host.linkedCode = effect
 	return result.Ok[HostCapabilities, Failure]{Value: host}
 }
 

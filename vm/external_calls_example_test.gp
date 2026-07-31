@@ -281,6 +281,56 @@ func TestNativeCallOverridesLinkedBeamExport(t *testing.T) {
 	}
 }
 
+// assayxport:law gotp.vm.hot-code-call-laws
+func TestLinkedCodeResolverEntersCurrentGeneration(t *testing.T) {
+	target := ExternalFunction{Module: "linked", Function: "answer", Arity: 0}
+	current := ModuleImage{
+		Name: "linked",
+		Program: []beam.Instruction{
+			externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(2)}),
+			externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+			externalCallInstruction("return"),
+		},
+		Atoms: map[uint64]string{1: "current"},
+		Exports: map[ExternalFunction]uint64{target: 2},
+	}
+	released := 0
+	match HostGrantLinkedCode(NoHostCapabilities(), func(found ExternalFunction) LinkedCodeOutcome {
+		if found != target { return LinkedCodeRejected("unexpected target") }
+		return LinkedCodeResolved(current, func() { released++ })
+	}) {
+	case result.Err(failure): t.Fatal(failure)
+	case result.Ok(host):
+		value := runLinkedExternalMachine(t, linkedExternalMachine(true), host)
+		if !term.Equal(value, term.MustAtom("current")) { t.Fatalf("resolved result = %v", value) }
+		if released != 1 { t.Fatalf("tail-call lease releases = %d", released) }
+	}
+}
+
+func TestLinkedCodeResolverPreservesOldCallerReturnImage(t *testing.T) {
+	target := ExternalFunction{Module: "linked", Function: "answer", Arity: 0}
+	current := ModuleImage{Name: "linked", Program: []beam.Instruction{
+		externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(2)}),
+		externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+		externalCallInstruction("return"),
+	}, Atoms: map[uint64]string{1: "current"}, Exports: map[ExternalFunction]uint64{target: 2}}
+	released := 0
+	match HostGrantLinkedCode(NoHostCapabilities(), func(ExternalFunction) LinkedCodeOutcome { return LinkedCodeResolved(current, func() { released++ }) }) {
+	case result.Err(failure): t.Fatal(failure)
+	case result.Ok(host):
+		value := runLinkedExternalMachine(t, linkedExternalMachine(false), host)
+		if !term.Equal(value, term.MustAtom("caller")) { t.Fatalf("caller return image = %v", value) }
+		if released != 1 { t.Fatalf("ordinary-call lease releases = %d", released) }
+	}
+}
+
+func TestLinkedCodeCapabilityRejectsNilEffect(t *testing.T) {
+	match HostGrantLinkedCode(NoHostCapabilities(), nil) {
+	case result.Err(_):
+	case result.Ok(_): t.Fatal("nil linked-code effect was accepted")
+	}
+}
+
 func TestUnboundNativeCallFallsBackToLinkedExport(t *testing.T) {
 	hostResult := HostGrantExternalCalls(NoHostCapabilities(), func(_ ExternalFunction, _ []term.Term) ExternalCallOutcome {
 		return ExternalCallUnbound()

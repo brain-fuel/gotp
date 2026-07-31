@@ -150,7 +150,7 @@ func executeExternalCall(
 	switch any(capability).(type) {
 	case ExternalCallsUnavailable:
 
-		return machine.executeLinkedCall(target, tail)
+		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallsAllowed:
 
 		if host.externalCall == nil {
@@ -163,7 +163,7 @@ func executeExternalCall(
 	switch __gp_m7 := any(called).(type) {
 	case ExternalCallUnbound:
 
-		return machine.executeLinkedCall(target, tail)
+		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallRaised:
 		class := __gp_m7.Class
 		reason := __gp_m7.Reason
@@ -202,8 +202,54 @@ func executeExternalCall(
 func (machine *Machine) executeLinkedCall(
 	target ExternalFunction,
 	tail bool,
+	host HostCapabilities,
 ) result.Result[instructionOutcome, Failure] {
-	switch __gp_m9 := any(machine.linkedFunction(target)).(type) {
+	var resolvedLeave func()
+	switch any(host.LinkedCode).(type) {
+	case LinkedCodeUnavailable:
+
+	case LinkedCodeAllowed:
+
+		if host.linkedCode == nil {
+			return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "linked code effect is nil"}}
+		}
+		switch __gp_m10 := any(host.linkedCode(target)).(type) {
+		case LinkedCodeUnchanged:
+
+		case LinkedCodeRejected:
+			detail := __gp_m10.Detail
+			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "linked code rejected " + target.Module + ": " + detail}}
+		case LinkedCodeResolved:
+			config := __gp_m10.Image
+			leave := __gp_m10.Leave
+
+			if leave == nil {
+				return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "linked code leave effect is nil"}}
+			}
+			if config.Name == "" {
+				config.Name = target.Module
+			}
+			if config.Name != target.Module {
+				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "resolved linked module identity differs from target"}}
+			}
+			switch __gp_m11 := any(newMachineImage(config)).(type) {
+			case result.Err[*machineImage, Failure]:
+				failure := __gp_m11.Err
+				return result.Err[instructionOutcome, Failure]{Err: failure}
+			case result.Ok[*machineImage, Failure]:
+				image := __gp_m11.Value
+				machine.modules[target.Module] = image
+				resolvedLeave = leave
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m12 := any(machine.linkedFunction(target)).(type) {
 	case option.None[linkedCallTarget]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
@@ -213,12 +259,14 @@ func (machine *Machine) executeLinkedCall(
 			target.Arity,
 		)}}
 	case option.Some[linkedCallTarget]:
-		destination := __gp_m9.Value
+		destination := __gp_m12.Value
 
 		if !tail {
 			machine.pushReturn(machine.pc + 1)
+		} else if machine.current != destination.image {
+			machine.leaveCurrentCode()
 		}
-		machine.activate(destination.image)
+		machine.activateLinkedCode(destination.image, resolvedLeave)
 		machine.pc = destination.pc
 		return result.Ok[instructionOutcome, Failure]{Value: instructionContinues{}}
 	default:

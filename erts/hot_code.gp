@@ -8,6 +8,7 @@ import (
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
+	"goforge.dev/gotp/vm"
 )
 
 type HotCodeExitCapability enum {
@@ -17,6 +18,7 @@ type HotCodeExitCapability enum {
 type HotCodeRuntimeFailure enum {
 	NilHotCodeKernel()
 	NilHotCodeExit()
+	NilLoadedHotCodeModule()
 	HotCodeStateFailure(Cause beam.HotCodeFailure)
 	CodeReferenceNotOwned(Owner term.PID, Generation uint64)
 }
@@ -25,6 +27,7 @@ func (failure HotCodeRuntimeFailure) Error() string {
 	match failure {
 	case NilHotCodeKernel: return "gotp/erts: hot-code kernel is nil"
 	case NilHotCodeExit: return "gotp/erts: hot-code exit capability is nil"
+	case NilLoadedHotCodeModule: return "gotp/erts: loaded hot-code module is nil"
 	case HotCodeStateFailure(cause): return cause.Error()
 	case CodeReferenceNotOwned(_, generation): return "gotp/erts: code reference is not owned for generation " + fmt.Sprint(generation)
 	}
@@ -43,6 +46,7 @@ type HotCodePurgeReport struct {
 type HotCodeRuntime struct {
 	store beam.CodeStore
 	owners map[uint64]map[term.PID]int
+	images map[uint64]vm.ModuleImage
 	exits HotCodeExitCapability
 }
 
@@ -55,7 +59,37 @@ func NewHotCodeRuntime(exits HotCodeExitCapability) result.Result[*HotCodeRuntim
 	match exits {
 	case HotCodeExitWith(exit): if exit == nil { return result.Err[*HotCodeRuntime, HotCodeRuntimeFailure](NilHotCodeExit()) }
 	}
-	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure](&HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, exits: exits})
+	return result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure](&HotCodeRuntime{store: beam.NewCodeStore(), owners: map[uint64]map[term.PID]int{}, images: map[uint64]vm.ModuleImage{}, exits: exits})
+}
+
+func (runtime *HotCodeRuntime) InstallLoaded(module *LoadedModule) result.Result[beam.CodeHandle, HotCodeRuntimeFailure] {
+	if module == nil { return result.Err[beam.CodeHandle, HotCodeRuntimeFailure](NilLoadedHotCodeModule()) }
+	match runtime.Install(&beam.Module{Name: module.name, Digest: module.digest}) {
+	case result.Err(failure): return result.Err[beam.CodeHandle, HotCodeRuntimeFailure](failure)
+	case result.Ok(handle): runtime.images[handle.Generation] = module.image(); return result.Ok[beam.CodeHandle, HotCodeRuntimeFailure](handle)
+	}
+}
+
+func (runtime *HotCodeRuntime) LinkedCode(owner term.PID) vm.LinkedCodeEffect {
+	return func(target vm.ExternalFunction) vm.LinkedCodeOutcome {
+		match runtime.Enter(owner, target.Module) {
+		case result.Err(failure): return vm.LinkedCodeRejected(failure.Error())
+		case result.Ok(entry):
+			image, present := runtime.images[entry.Reference.Generation]
+			match option.Of(image, present) {
+			case option.None:
+				runtime.Leave(owner, entry.Reference)
+				return vm.LinkedCodeRejected("loaded generation has no VM image")
+			case option.Some(image):
+				released := false
+				return vm.LinkedCodeResolved(image, func() {
+					if released { return }
+					released = true
+					runtime.Leave(owner, entry.Reference)
+				})
+			}
+		}
+	}
 }
 
 // assayxport:unit gotp.erts.hot-code
@@ -92,8 +126,13 @@ func (runtime *HotCodeRuntime) Leave(owner term.PID, reference beam.CodeReferenc
 }
 
 func (runtime *HotCodeRuntime) SoftPurge(module string) HotCodePurgeReport {
+	old := runtime.store.Old(module)
 	transition := runtime.store.SoftPurge(module)
 	runtime.store = transition.Store
+	match transition.State {
+	case beam.OldCodeVersionPurged(_): match old { case option.Some(handle): delete(runtime.images, handle.Generation); case option.None: }
+	case beam.NoOldCodeVersion, beam.OldCodeVersionBusy(_):
+	}
 	return HotCodePurgeReport{State: transition.State}
 }
 
@@ -111,6 +150,7 @@ func (runtime *HotCodeRuntime) Purge(module string) HotCodePurgeReport {
 			for owner := range owners { exit(owner, term.MustAtom("killed")); exited++ }
 		}
 		delete(runtime.owners, handle.Generation)
+		delete(runtime.images, handle.Generation)
 	}
 	return HotCodePurgeReport{State: transition.State, Exited: exited}
 }

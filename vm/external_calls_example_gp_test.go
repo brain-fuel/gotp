@@ -423,18 +423,96 @@ func TestNativeCallOverridesLinkedBeamExport(t *testing.T) {
 	}
 }
 
+// assayxport:law gotp.vm.hot-code-call-laws
+func TestLinkedCodeResolverEntersCurrentGeneration(t *testing.T) {
+	target := ExternalFunction{Module: "linked", Function: "answer", Arity: 0}
+	current := ModuleImage{
+		Name: "linked",
+		Program: []beam.Instruction{
+			externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(2)}),
+			externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+			externalCallInstruction("return"),
+		},
+		Atoms:   map[uint64]string{1: "current"},
+		Exports: map[ExternalFunction]uint64{target: 2},
+	}
+	released := 0
+	switch __gp_m24 := any(HostGrantLinkedCode(NoHostCapabilities(), func(found ExternalFunction) LinkedCodeOutcome {
+		if found != target {
+			return LinkedCodeRejected{Detail: "unexpected target"}
+		}
+		return LinkedCodeResolved{Image: current, Leave: func() { released++ }}
+	})).(type) {
+	case result.Err[HostCapabilities, Failure]:
+		failure := __gp_m24.Err
+		t.Fatal(failure)
+	case result.Ok[HostCapabilities, Failure]:
+		host := __gp_m24.Value
+
+		value := runLinkedExternalMachine(t, linkedExternalMachine(true), host)
+		if !term.Equal(value, term.MustAtom("current")) {
+			t.Fatalf("resolved result = %v", value)
+		}
+		if released != 1 {
+			t.Fatalf("tail-call lease releases = %d", released)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestLinkedCodeResolverPreservesOldCallerReturnImage(t *testing.T) {
+	target := ExternalFunction{Module: "linked", Function: "answer", Arity: 0}
+	current := ModuleImage{Name: "linked", Program: []beam.Instruction{
+		externalCallInstruction("label", beam.LabelOperand{Index: big.NewInt(2)}),
+		externalCallInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+		externalCallInstruction("return"),
+	}, Atoms: map[uint64]string{1: "current"}, Exports: map[ExternalFunction]uint64{target: 2}}
+	released := 0
+	switch __gp_m25 := any(HostGrantLinkedCode(NoHostCapabilities(), func(ExternalFunction) LinkedCodeOutcome {
+		return LinkedCodeResolved{Image: current, Leave: func() { released++ }}
+	})).(type) {
+	case result.Err[HostCapabilities, Failure]:
+		failure := __gp_m25.Err
+		t.Fatal(failure)
+	case result.Ok[HostCapabilities, Failure]:
+		host := __gp_m25.Value
+
+		value := runLinkedExternalMachine(t, linkedExternalMachine(false), host)
+		if !term.Equal(value, term.MustAtom("caller")) {
+			t.Fatalf("caller return image = %v", value)
+		}
+		if released != 1 {
+			t.Fatalf("ordinary-call lease releases = %d", released)
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestLinkedCodeCapabilityRejectsNilEffect(t *testing.T) {
+	switch any(HostGrantLinkedCode(NoHostCapabilities(), nil)).(type) {
+	case result.Err[HostCapabilities, Failure]:
+
+	case result.Ok[HostCapabilities, Failure]:
+		t.Fatal("nil linked-code effect was accepted")
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func TestUnboundNativeCallFallsBackToLinkedExport(t *testing.T) {
 	hostResult := HostGrantExternalCalls(NoHostCapabilities(), func(_ ExternalFunction, _ []term.Term) ExternalCallOutcome {
 		return ExternalCallUnbound{}
 	})
 	var host HostCapabilities
-	switch __gp_m24 := any(hostResult).(type) {
+	switch __gp_m27 := any(hostResult).(type) {
 	case result.Err[HostCapabilities, Failure]:
-		failure := __gp_m24.Err
+		failure := __gp_m27.Err
 
 		t.Fatal(failure)
 	case result.Ok[HostCapabilities, Failure]:
-		granted := __gp_m24.Value
+		granted := __gp_m27.Value
 
 		host = granted
 	default:

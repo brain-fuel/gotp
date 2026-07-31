@@ -49,3 +49,6 @@ This document is not a release and does not authorize a tag or publication.
   and EI macros across Darwin ARM64, Linux AMD64/ARM64, and Windows AMD64.
 - Added an immutable two-version hot-code state machine with generation-scoped
   execution references, soft-purge safety, and forced-purge invalidation laws.
+- Added generation-leased VM linked calls that enter current code while return
+  frames retain old code, plus atomic typed `gen_server` `code_change` state
+  migration and purged-generation VM image reclamation.

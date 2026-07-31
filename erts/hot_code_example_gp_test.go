@@ -4,12 +4,14 @@
 package erts
 
 import (
+	"math/big"
 	"testing"
 
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
+	"goforge.dev/gotp/vm"
 )
 
 func hotCodeModule(digest string) *beam.Module { return &beam.Module{Name: "sample", Digest: digest} }
@@ -158,6 +160,75 @@ func TestHotCodeRejectsNilExitCapability(t *testing.T) {
 		}
 	case result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]:
 		t.Fatal("nil exit capability was accepted")
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func TestHotCodeResolverLeasesCurrentVMGeneration(t *testing.T) {
+	var runtime *HotCodeRuntime
+	switch __gp_m14 := any(NewHotCodeRuntime(HotCodeExitWith{Exit: func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered{} }})).(type) {
+	case result.Err[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		failure := __gp_m14.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[*HotCodeRuntime, HotCodeRuntimeFailure]:
+		created := __gp_m14.Value
+		runtime = created
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	target := vm.ExternalFunction{Module: "sample", Function: "run", Arity: 0}
+	loaded := &LoadedModule{name: "sample", digest: "v1", config: vm.MachineConfig{Exports: map[vm.ExternalFunction]uint64{target: 1}}, instructions: []beam.Instruction{{Opcode: beam.Opcode{Name: "label", Arity: 1}, Operands: []beam.Operand{beam.LabelOperand{Index: big.NewInt(1)}}}}}
+	switch __gp_m15 := any(runtime.InstallLoaded(loaded)).(type) {
+	case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+		failure := __gp_m15.Err
+		t.Fatal(HotCodeRuntimeFailureError(failure))
+	case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	owner := term.PID{Node: 1, Number: 9, Creation: 1}
+	switch __gp_m16 := any(runtime.LinkedCode(owner)(target)).(type) {
+	case vm.LinkedCodeRejected:
+		detail := __gp_m16.Detail
+		t.Fatal(detail)
+	case vm.LinkedCodeUnchanged:
+		t.Fatal("resolver left code unchanged")
+	case vm.LinkedCodeResolved:
+		image := __gp_m16.Image
+		leave := __gp_m16.Leave
+
+		if image.Name != "sample" {
+			t.Fatalf("image = %s", image.Name)
+		}
+		switch __gp_m17 := any(runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "v2"})).(type) {
+		case result.Err[beam.CodeHandle, HotCodeRuntimeFailure]:
+			failure := __gp_m17.Err
+			t.Fatal(HotCodeRuntimeFailureError(failure))
+		case result.Ok[beam.CodeHandle, HotCodeRuntimeFailure]:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m18 := any(runtime.SoftPurge("sample").State).(type) {
+		case beam.OldCodeVersionBusy:
+			count := __gp_m18.References
+			if count != 1 {
+				t.Fatalf("references = %d", count)
+			}
+		default:
+			t.Fatal("soft purge did not report busy old code")
+		}
+		leave()
+		leave()
+		switch __gp_m19 := any(runtime.SoftPurge("sample").State).(type) {
+		case beam.OldCodeVersionPurged:
+			count := __gp_m19.InvalidatedReferences
+			if count != 0 {
+				t.Fatalf("invalidated = %d", count)
+			}
+		default:
+			t.Fatal("soft purge did not remove old code")
+		}
 	default:
 		panic("goplus: impossible enum value in match")
 	}

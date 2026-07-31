@@ -90,6 +90,7 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 	machine.steps = 0
 	machine.returnPCs = machine.returnPCs[:0]
 	machine.returnImages = machine.returnImages[:0]
+	machine.releaseAllCode()
 	machine.handlers = machine.handlers[:0]
 	machine.nextHandler = 0
 	if machine.root != nil {
@@ -164,6 +165,7 @@ func (continuation *Continuation) ResumeWithHost(
 						continue
 					}
 				}
+				machine.releaseAllCode()
 				return result.Ok[ExecutionSlice, Failure](ExecutionRaised(
 					term.Clone(class),
 					term.Clone(reason),
@@ -187,6 +189,7 @@ func (continuation *Continuation) ResumeWithHost(
 					TotalInstructions: machine.steps,
 				}))
 			case InstructionHalts:
+				machine.releaseAllCode()
 				continuation.completed = true
 				match machine.X(0) {
 				case result.Err(failure):

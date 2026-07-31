@@ -123,6 +123,12 @@ type InfoHandler[State any] func(
 	State,
 ) result.Result[EventResult[State], Failure]
 
+type CodeChangeHandler[State any] func(
+	OldVersion term.Term,
+	StateValue State,
+	Extra term.Term,
+) result.Result[State, Failure]
+
 type Config[State, Request, Reply, Cast any] struct {
 	InitialState State
 	RequestCodec Codec[Request]
@@ -131,6 +137,7 @@ type Config[State, Request, Reply, Cast any] struct {
 	HandleCall   CallHandler[State, Request, Reply]
 	HandleCast   CastHandler[State, Cast]
 	HandleInfo   InfoHandler[State]
+	CodeChange   CodeChangeHandler[State]
 }
 
 type Server[State, Request, Reply, Cast any] struct {
@@ -141,6 +148,7 @@ type Server[State, Request, Reply, Cast any] struct {
 	handleCall   CallHandler[State, Request, Reply]
 	handleCast   CastHandler[State, Cast]
 	handleInfo   InfoHandler[State]
+	codeChange   CodeChangeHandler[State]
 }
 
 func New[State, Request, Reply, Cast any](
@@ -161,7 +169,7 @@ func New[State, Request, Reply, Cast any](
 			state: config.InitialState, requestCodec: config.RequestCodec,
 			replyCodec: config.ReplyCodec, castCodec: config.CastCodec,
 			handleCall: config.HandleCall, handleCast: config.HandleCast,
-			handleInfo: config.HandleInfo,
+			handleInfo: config.HandleInfo, codeChange: config.CodeChange,
 		},
 	)
 }
@@ -193,6 +201,18 @@ func (server *Server[State, Request, Reply, Cast]) Behavior() kernel.Behavior {
 
 func (server *Server[State, Request, Reply, Cast]) State() State {
 	return server.state
+}
+
+// assayxport:unit gotp.otp.gen-server-code-change
+func (server *Server[State, Request, Reply, Cast]) ChangeCode(
+	oldVersion term.Term,
+	extra term.Term,
+) result.Result[State, Failure] {
+	if server.codeChange == nil { return result.Err[State, Failure](InvalidConfiguration("code_change callback is nil")) }
+	match server.codeChange(oldVersion.Clone(), server.state, extra.Clone()) {
+	case result.Err(failure): return result.Err[State, Failure](failure)
+	case result.Ok(state): server.state = state; return result.Ok[State, Failure](state)
+	}
 }
 
 func (server *Server[State, Request, Reply, Cast]) call(

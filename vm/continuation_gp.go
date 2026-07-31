@@ -401,6 +401,7 @@ func (machine *Machine) Start(entryLabel uint64) result.Result[*Continuation, Fa
 	machine.steps = 0
 	machine.returnPCs = machine.returnPCs[:0]
 	machine.returnImages = machine.returnImages[:0]
+	machine.releaseAllCode()
 	machine.handlers = machine.handlers[:0]
 	machine.nextHandler = 0
 	if machine.root != nil {
@@ -484,6 +485,7 @@ func (continuation *Continuation) ResumeWithHost(
 				default:
 					panic("goplus: impossible enum value in match")
 				}
+				machine.releaseAllCode()
 				return result.Ok[ExecutionSlice, Failure]{Value: ExecutionRaised{Class: term.Clone(class), Reason: term.Clone(reason), Progress: ExecutionProgress{
 					Reductions:        reductions,
 					Instructions:      instructions,
@@ -511,6 +513,7 @@ func (continuation *Continuation) ResumeWithHost(
 				}}}
 			case instructionHalts:
 
+				machine.releaseAllCode()
 				continuation.completed = true
 				switch __gp_m5 := any(machine.X(0)).(type) {
 				case result.Err[term.Term, Failure]:

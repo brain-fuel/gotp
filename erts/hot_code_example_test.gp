@@ -1,12 +1,14 @@
 package erts
 
 import (
+	"math/big"
 	"testing"
 
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/beam"
 	"goforge.dev/gotp/kernel"
 	"goforge.dev/gotp/term"
+	"goforge.dev/gotp/vm"
 )
 
 func hotCodeModule(digest string) *beam.Module { return &beam.Module{Name: "sample", Digest: digest} }
@@ -55,5 +57,24 @@ func TestHotCodeRejectsNilExitCapability(t *testing.T) {
 	match NewHotCodeRuntime(HotCodeExitWith(nil)) {
 	case result.Err(failure): match failure { case NilHotCodeExit: case _: t.Fatalf("failure = %s", failure.Error()) }
 	case result.Ok(_): t.Fatal("nil exit capability was accepted")
+	}
+}
+
+func TestHotCodeResolverLeasesCurrentVMGeneration(t *testing.T) {
+	var runtime *HotCodeRuntime
+	match NewHotCodeRuntime(HotCodeExitWith(func(term.PID, term.Term) kernel.Delivery { return kernel.Delivered() })) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(created): runtime = created }
+	target := vm.ExternalFunction{Module: "sample", Function: "run", Arity: 0}
+	loaded := &LoadedModule{name: "sample", digest: "v1", config: vm.MachineConfig{Exports: map[vm.ExternalFunction]uint64{target: 1}}, instructions: []beam.Instruction{{Opcode: beam.Opcode{Name: "label", Arity: 1}, Operands: []beam.Operand{beam.LabelOperand{Index: big.NewInt(1)}}}}}
+	match runtime.InstallLoaded(loaded) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+	owner := term.PID{Node: 1, Number: 9, Creation: 1}
+	match runtime.LinkedCode(owner)(target) {
+	case vm.LinkedCodeRejected(detail): t.Fatal(detail)
+	case vm.LinkedCodeUnchanged: t.Fatal("resolver left code unchanged")
+	case vm.LinkedCodeResolved(image, leave):
+		if image.Name != "sample" { t.Fatalf("image = %s", image.Name) }
+		match runtime.InstallLoaded(&LoadedModule{name: "sample", digest: "v2"}) { case result.Err(failure): t.Fatal(failure.Error()); case result.Ok(_): }
+		match runtime.SoftPurge("sample").State { case beam.OldCodeVersionBusy(count): if count != 1 { t.Fatalf("references = %d", count) }; case _: t.Fatal("soft purge did not report busy old code") }
+		leave(); leave()
+		match runtime.SoftPurge("sample").State { case beam.OldCodeVersionPurged(count): if count != 0 { t.Fatalf("invalidated = %d", count) }; case _: t.Fatal("soft purge did not remove old code") }
 	}
 }

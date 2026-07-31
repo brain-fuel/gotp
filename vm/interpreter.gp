@@ -63,7 +63,9 @@ type Machine struct {
 	functions map[uint64]beam.FunctionTemplate
 	returnPCs []int
 	returnImages []*machineImage
+	returnCodeLeaves []func()
 	current   *machineImage
+	currentCodeLeave func()
 	root      *machineImage
 	modules   map[string]*machineImage
 	handlers  []exceptionHandler
@@ -612,18 +614,39 @@ func (machine *Machine) activate(image *machineImage) {
 func (machine *Machine) pushReturn(pc int) {
 	machine.returnPCs = append(machine.returnPCs, pc)
 	machine.returnImages = append(machine.returnImages, machine.current)
+	machine.returnCodeLeaves = append(machine.returnCodeLeaves, machine.currentCodeLeave)
 }
 
 func (machine *Machine) returnToCaller() bool {
 	if len(machine.returnPCs) == 0 {
+		machine.leaveCurrentCode()
 		return false
 	}
 	last := len(machine.returnPCs) - 1
 	image := machine.returnImages[last]
+	leave := machine.returnCodeLeaves[last]
 	pc := machine.returnPCs[last]
+	machine.leaveCurrentCode()
 	machine.returnPCs = machine.returnPCs[:last]
 	machine.returnImages = machine.returnImages[:last]
+	machine.returnCodeLeaves = machine.returnCodeLeaves[:last]
 	machine.activate(image)
+	machine.currentCodeLeave = leave
 	machine.pc = pc
 	return true
+}
+
+func (machine *Machine) activateLinkedCode(image *machineImage, leave func()) {
+	machine.activate(image)
+	machine.currentCodeLeave = leave
+}
+
+func (machine *Machine) leaveCurrentCode() {
+	if machine.currentCodeLeave != nil { leave := machine.currentCodeLeave; machine.currentCodeLeave = nil; leave() }
+}
+
+func (machine *Machine) releaseAllCode() {
+	machine.leaveCurrentCode()
+	for index := len(machine.returnCodeLeaves) - 1; index >= 0; index-- { if machine.returnCodeLeaves[index] != nil { machine.returnCodeLeaves[index]() } }
+	machine.returnCodeLeaves = machine.returnCodeLeaves[:0]
 }

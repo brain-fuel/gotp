@@ -114,7 +114,7 @@ func executeExternalCall(
 	var capability ExternalCallCapability = host.ExternalCalls
 	match capability {
 	case ExternalCallsUnavailable:
-		return machine.executeLinkedCall(target, tail)
+		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallsAllowed:
 		if host.externalCall == nil {
 			return result.Err[instructionOutcome, Failure](InvalidConfiguration("external call capability effect is nil"))
@@ -123,7 +123,7 @@ func executeExternalCall(
 	var called ExternalCallOutcome = host.externalCall(target, arguments)
 	match called {
 	case ExternalCallUnbound:
-		return machine.executeLinkedCall(target, tail)
+		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallRaised(class, reason):
 		return result.Err[instructionOutcome, Failure](RaisedException(term.Clone(class), term.Clone(reason)))
 	case ExternalCallRejected(detail):
@@ -150,7 +150,26 @@ func executeExternalCall(
 func (machine *Machine) executeLinkedCall(
 	target ExternalFunction,
 	tail bool,
+	host HostCapabilities,
 ) result.Result[instructionOutcome, Failure] {
+	var resolvedLeave func()
+	match host.LinkedCode {
+	case LinkedCodeUnavailable:
+	case LinkedCodeAllowed:
+		if host.linkedCode == nil { return result.Err[instructionOutcome, Failure](InvalidConfiguration("linked code effect is nil")) }
+		match host.linkedCode(target) {
+		case LinkedCodeUnchanged:
+		case LinkedCodeRejected(detail): return result.Err[instructionOutcome, Failure](InvalidProgram("linked code rejected " + target.Module + ": " + detail))
+		case LinkedCodeResolved(config, leave):
+			if leave == nil { return result.Err[instructionOutcome, Failure](InvalidConfiguration("linked code leave effect is nil")) }
+			if config.Name == "" { config.Name = target.Module }
+			if config.Name != target.Module { return result.Err[instructionOutcome, Failure](InvalidProgram("resolved linked module identity differs from target")) }
+			match newMachineImage(config) {
+			case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+			case result.Ok(image): machine.modules[target.Module] = image; resolvedLeave = leave
+			}
+		}
+	}
 	match machine.linkedFunction(target) {
 	case option.None:
 		return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf(
@@ -162,8 +181,10 @@ func (machine *Machine) executeLinkedCall(
 	case option.Some(destination):
 		if !tail {
 			machine.pushReturn(machine.pc + 1)
+		} else if machine.current != destination.image {
+			machine.leaveCurrentCode()
 		}
-		machine.activate(destination.image)
+		machine.activateLinkedCode(destination.image, resolvedLeave)
 		machine.pc = destination.pc
 		return result.Ok[instructionOutcome, Failure](InstructionContinues())
 	}

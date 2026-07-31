@@ -17,13 +17,22 @@ Clone BEAM module images at transition and observation boundaries. This keeps
 the value-state invariant independent of mutation through exported interop
 structures. An ERTS adapter associates references with process identities and
 uses an explicit exit capability to terminate each forced-purge process once.
+VM linked-code resolution acquires a generation lease at each fully qualified
+call. Return frames preserve the caller image and lease; return, tail-call,
+halt, and exception-unwind paths release abandoned generations exactly once.
+The ERTS resolver serves the `LoadedModule` image owned by that same generation.
+
+Typed `gen_server` callbacks expose atomic `code_change(OldVsn, State, Extra)`
+migration: failed callbacks preserve the prior state and successful callbacks
+publish the replacement state as one transition.
 
 ## Consequences
 
 The core two-version and soft-purge rules are total, deterministic, and free of
-ambient effects. Release handling, `code_change` callbacks, live process
-instruction-pointer integration, and literal-area reclamation remain explicit
-work under the partial `system.hot-code` ledger capability.
+ambient effects. Purging drops generation-owned VM images and literals after
+leases drain. The complete `sys` suspend/change/resume protocol, release
+handlers, application upgrade scripts, and emulator-level literal arenas remain
+explicit work under the partial `system.hot-code` ledger capability.
 
 ## Evidence
 
@@ -34,3 +43,8 @@ sequences.
 
 `test:gotp.erts.hot-code-laws` proves reference ownership, effect-free soft
 purge, one exit per affected process, and the OTP `killed` forced-purge reason.
+
+`test:gotp.vm.hot-code-call-laws` proves current-generation resolution, old
+caller continuation, and exactly-once lease release for ordinary and tail
+calls. `test:gotp.otp.gen-server-code-change-laws` proves atomic typed state
+migration and rollback on callback failure.
