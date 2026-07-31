@@ -148,7 +148,7 @@ func ValidateOTPDeclarationInventory(inventory OTPDeclarationInventory) result.R
 }
 
 func InventoryDeclarationID(declaration OTPPublicDeclaration) string {
-	name := hex.EncodeToString([]byte(declaration.Name))
+	name := "x" + hex.EncodeToString([]byte(declaration.Name))
 	return "otp.declaration." + declaration.Kind + "." + strings.ToLower(declaration.Application) + "." + strings.ToLower(declaration.Module) + "." + name + "." + strconv.Itoa(declaration.Arity)
 }
 
