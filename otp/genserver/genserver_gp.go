@@ -5,7 +5,10 @@ package genserver
 
 import (
 	"fmt"
+	"math/big"
+	"time"
 
+	"goforge.dev/goplus/std/clock"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -404,6 +407,24 @@ type CodeChangeHandler[State any] func(
 type StateReplaceHandler[State any] func(Function term.Term, StateValue State) result.Result[State, Failure]
 type TerminateHandler[State any] func(Reason term.Term, StateValue State) result.Result[bool, Failure]
 
+type DebugOutputEffect func(Event term.Term, State term.Term)
+
+//goplus:enum DebugOutputCapability
+//goplus:derive off
+type DebugOutputCapability interface{ isDebugOutputCapability() }
+
+//goplus:variant (DebugOutputCapability) DebugOutputUnavailable()
+type DebugOutputUnavailable struct{}
+
+func (DebugOutputUnavailable) isDebugOutputCapability() {}
+
+//goplus:variant (DebugOutputCapability) DebugOutputWith(Effect DebugOutputEffect)
+type DebugOutputWith struct {
+	Effect DebugOutputEffect
+}
+
+func (DebugOutputWith) isDebugOutputCapability() {}
+
 //goplus:enum systemRequest
 type systemRequest interface{ isSystemRequest() }
 
@@ -450,6 +471,13 @@ type systemTerminate struct {
 
 func (systemTerminate) isSystemRequest() {}
 
+//goplus:variant (systemRequest) SystemDebug(Command term.Term)
+type systemDebug struct {
+	command term.Term
+}
+
+func (systemDebug) isSystemRequest() {}
+
 //goplus:variant (systemRequest) UnknownSystemRequest(Request term.Term)
 type unknownSystemRequest struct {
 	request term.Term
@@ -466,6 +494,7 @@ type systemRequestCases[R any] struct {
 	SystemReplaceState   func(Function term.Term) R
 	SystemGetStatus      func() R
 	SystemTerminate      func(Reason term.Term) R
+	SystemDebug          func(Command term.Term) R
 	UnknownSystemRequest func(Request term.Term) R
 }
 
@@ -486,6 +515,8 @@ func systemRequestFold[R any](s systemRequest, cs systemRequestCases[R]) R {
 		return cs.SystemGetStatus()
 	case systemTerminate:
 		return cs.SystemTerminate(m.reason)
+	case systemDebug:
+		return cs.SystemDebug(m.command)
 	case unknownSystemRequest:
 		return cs.UnknownSystemRequest(m.request)
 	default:
@@ -503,6 +534,7 @@ type systemRequestEqOverrides struct {
 	SystemReplaceState   func(x, y systemReplaceState) (eq, handled bool)
 	SystemGetStatus      func(x, y systemGetStatus) (eq, handled bool)
 	SystemTerminate      func(x, y systemTerminate) (eq, handled bool)
+	SystemDebug          func(x, y systemDebug) (eq, handled bool)
 	UnknownSystemRequest func(x, y unknownSystemRequest) (eq, handled bool)
 }
 
@@ -608,6 +640,20 @@ func systemRequestEqualWith(a, b systemRequest, ov systemRequestEqOverrides) boo
 			return false
 		}
 		return true
+	case systemDebug:
+		y, ok := any(b).(systemDebug)
+		if !ok {
+			return false
+		}
+		if ov.SystemDebug != nil {
+			if eq, handled := ov.SystemDebug(x, y); handled {
+				return eq
+			}
+		}
+		if x.command != y.command {
+			return false
+		}
+		return true
 	case unknownSystemRequest:
 		y, ok := any(b).(unknownSystemRequest)
 		if !ok {
@@ -652,6 +698,8 @@ type Config[State, Request, Reply, Cast any] struct {
 	Terminate    TerminateHandler[State]
 	ModuleName   string
 	Parent       option.Option[term.PID]
+	Clock        clock.Clock
+	DebugOutput  DebugOutputCapability
 }
 
 type Server[State, Request, Reply, Cast any] struct {
@@ -668,7 +716,20 @@ type Server[State, Request, Reply, Cast any] struct {
 	terminate    TerminateHandler[State]
 	moduleName   string
 	parent       option.Option[term.PID]
+	clock        clock.Clock
+	debugOutput  DebugOutputCapability
+	debug        debugState
 	suspended    bool
+}
+
+type debugState struct {
+	trace       bool
+	logLimit    int
+	events      []term.Term
+	statistics  bool
+	started     time.Time
+	messagesIn  uint64
+	messagesOut uint64
 }
 
 func New[State, Request, Reply, Cast any](
@@ -684,6 +745,14 @@ func New[State, Request, Reply, Cast any](
 	if parent == nil {
 		parent = option.None[term.PID]{}
 	}
+	source := config.Clock
+	if source == nil {
+		source = clock.Real{}
+	}
+	debugOutput := config.DebugOutput
+	if debugOutput == nil {
+		debugOutput = DebugOutputUnavailable{}
+	}
 	return result.Ok[*Server[State, Request, Reply, Cast], Failure]{Value: &Server[State, Request, Reply, Cast]{
 		state: config.InitialState, requestCodec: config.RequestCodec,
 		replyCodec: config.ReplyCodec, castCodec: config.CastCodec,
@@ -691,6 +760,7 @@ func New[State, Request, Reply, Cast any](
 		handleInfo: config.HandleInfo, codeChange: config.CodeChange,
 		stateCodec: config.StateCodec, replaceState: config.ReplaceState,
 		terminate: config.Terminate, moduleName: config.ModuleName, parent: parent,
+		clock: source, debugOutput: debugOutput,
 	}}
 }
 
@@ -707,6 +777,7 @@ func (server *Server[State, Request, Reply, Cast]) Behavior() kernel.Behavior {
 		case option.Some[kernel.Signal]:
 			signal := __gp_m2.Value
 
+			server.debugEvent(term.Tuple(term.MustAtom("in"), debugSignalTerm(signal)))
 			switch __gp_m3 := any(server.system(context, signal)).(type) {
 			case option.Some[kernel.StepResult]:
 				transition := __gp_m3.Value
@@ -834,13 +905,18 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 				}
 			}
 			transition = kernel.Stop{Reason: term.Clone(reason)}
+		case systemDebug:
+			command := __gp_m8.command
+			response = server.debugCommand(command)
 		case unknownSystemRequest:
 			request := __gp_m8.request
 			response = term.Tuple(errorReply, term.Tuple(term.MustAtom("unknown_system_msg"), term.Clone(request)))
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-		context.Send(envelope.replyTo, term.Tuple(term.Clone(envelope.tag), response))
+		reply := term.Tuple(term.Clone(envelope.tag), response)
+		context.Send(envelope.replyTo, reply)
+		server.debugEvent(term.Tuple(term.MustAtom("out"), reply, term.PIDTerm{Value: envelope.replyTo}))
 		return option.Some[kernel.StepResult]{Value: transition}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -890,32 +966,279 @@ func (server *Server[State, Request, Reply, Cast]) systemStatus(context *kernel.
 	if server.suspended {
 		systemState = term.MustAtom("suspended")
 	}
-	return term.Tuple(term.MustAtom("status"), term.PIDTerm{Value: context.Self()}, term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, term.List(), state))
+	return term.Tuple(term.MustAtom("status"), term.PIDTerm{Value: context.Self()}, term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, server.debugStatus(), state))
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugCommand(command term.Term) term.Term {
+	switch __gp_m16 := any(command).(type) {
+	case term.AtomTerm:
+		name := __gp_m16.Name
+
+		if name == "no_debug" {
+			server.debug = debugState{}
+			return okReply
+		}
+	case term.TupleTerm:
+		values := __gp_m16.Elements
+
+		if len(values) != 2 {
+			return term.MustAtom("unknown_debug")
+		}
+		switch __gp_m17 := any(values[0]).(type) {
+		case term.AtomTerm:
+			kind := __gp_m17.Name
+
+			switch kind {
+			case "trace":
+				switch __gp_m18 := any(values[1]).(type) {
+				case term.AtomTerm:
+					flag := __gp_m18.Name
+					switch flag {
+					case "true":
+						switch any(server.debugOutput).(type) {
+						case DebugOutputUnavailable:
+							return systemFailure("debug_output_unavailable")
+						case DebugOutputWith:
+							server.debug.trace = true
+							return okReply
+						default:
+							panic("goplus: impossible enum value in match")
+						}
+					case "false":
+						server.debug.trace = false
+						return okReply
+					}
+				default:
+				}
+			case "log":
+				return server.debugLogCommand(values[1])
+			case "statistics":
+				return server.debugStatisticsCommand(values[1])
+			}
+		default:
+
+		}
+	default:
+
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugLogCommand(flag term.Term) term.Term {
+	switch __gp_m20 := any(flag).(type) {
+	case term.AtomTerm:
+		name := __gp_m20.Name
+
+		switch name {
+		case "true":
+			server.debug.logLimit = 10
+			server.trimDebugLog()
+			return okReply
+		case "false":
+			server.debug.logLimit = 0
+			server.debug.events = nil
+			return okReply
+		case "get":
+			return term.Tuple(okReply, term.List(server.debug.events...))
+		case "print":
+			switch __gp_m21 := any(server.debugOutput).(type) {
+			case DebugOutputUnavailable:
+				return systemFailure("debug_output_unavailable")
+			case DebugOutputWith:
+				effect := __gp_m21.Effect
+				for _, event := range server.debug.events {
+					effect(term.Clone(event), server.debugStateTerm())
+				}
+				return okReply
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		}
+	case term.TupleTerm:
+		values := __gp_m20.Elements
+
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("true")) {
+			switch __gp_m22 := any(term.Int64(values[1])).(type) {
+			case option.Some[int64]:
+				limit := __gp_m22.Value
+				if limit > 0 && limit <= int64(^uint(0)>>1) {
+					server.debug.logLimit = int(limit)
+					server.trimDebugLog()
+					return okReply
+				}
+			case option.None[int64]:
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		}
+	default:
+
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStatisticsCommand(flag term.Term) term.Term {
+	switch __gp_m23 := any(flag).(type) {
+	case term.AtomTerm:
+		name := __gp_m23.Name
+
+		switch name {
+		case "true":
+			server.debug.statistics = true
+			server.debug.started = server.clock.Now()
+			server.debug.messagesIn = 0
+			server.debug.messagesOut = 0
+			return okReply
+		case "false":
+			server.debug.statistics = false
+			return okReply
+		case "get":
+			if !server.debug.statistics {
+				return term.Tuple(okReply, term.MustAtom("no_statistics"))
+			}
+			return term.Tuple(okReply, term.List(
+				term.Tuple(term.MustAtom("start_time"), systemDateTime(server.debug.started)),
+				term.Tuple(term.MustAtom("current_time"), systemDateTime(server.clock.Now())),
+				term.Tuple(term.MustAtom("reductions"), term.Integer(0)),
+				term.Tuple(term.MustAtom("messages_in"), term.MustBigInteger(new(big.Int).SetUint64(server.debug.messagesIn))),
+				term.Tuple(term.MustAtom("messages_out"), term.MustBigInteger(new(big.Int).SetUint64(server.debug.messagesOut))),
+			))
+		}
+	default:
+
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugEvent(event term.Term) {
+	switch __gp_m24 := any(event).(type) {
+	case term.TupleTerm:
+		values := __gp_m24.Elements
+		if len(values) > 0 {
+			switch __gp_m25 := any(values[0]).(type) {
+			case term.AtomTerm:
+				direction := __gp_m25.Name
+				switch direction {
+				case "in":
+					if server.debug.statistics {
+						server.debug.messagesIn++
+					}
+				case "out":
+					if server.debug.statistics {
+						server.debug.messagesOut++
+					}
+				}
+			default:
+			}
+		}
+	default:
+	}
+	if server.debug.logLimit > 0 {
+		server.debug.events = append(server.debug.events, term.Clone(event))
+		server.trimDebugLog()
+	}
+	if server.debug.trace {
+		switch __gp_m26 := any(server.debugOutput).(type) {
+		case DebugOutputWith:
+			effect := __gp_m26.Effect
+			effect(term.Clone(event), server.debugStateTerm())
+		case DebugOutputUnavailable:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+}
+
+func (server *Server[State, Request, Reply, Cast]) trimDebugLog() {
+	if server.debug.logLimit <= 0 {
+		server.debug.events = nil
+		return
+	}
+	if len(server.debug.events) > server.debug.logLimit {
+		server.debug.events = append([]term.Term{}, server.debug.events[len(server.debug.events)-server.debug.logLimit:]...)
+	}
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStateTerm() term.Term {
+	state := server.encodedSystemState()
+	switch __gp_m27 := any(state).(type) {
+	case term.TupleTerm:
+		values := __gp_m27.Elements
+		if len(values) == 2 && term.Equal(values[0], okReply) {
+			return term.Clone(values[1])
+		}
+	default:
+	}
+	return state
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStatus() term.Term {
+	items := []term.Term{}
+	if server.debug.trace {
+		items = append(items, term.Tuple(term.MustAtom("trace"), term.MustAtom("true")))
+	}
+	if server.debug.logLimit > 0 {
+		items = append(items, term.Tuple(term.MustAtom("log"), term.Integer(int64(server.debug.logLimit))))
+	}
+	if server.debug.statistics {
+		items = append(items, term.Tuple(term.MustAtom("statistics"), term.MustAtom("true")))
+	}
+	return term.List(items...)
+}
+
+func debugSignalTerm(signal kernel.Signal) term.Term {
+	switch __gp_m28 := any(signal).(type) {
+	case kernel.UserSignal:
+		message := __gp_m28.Message
+		return term.Clone(message)
+	case kernel.ExitSignal:
+		from := __gp_m28.From
+		reason := __gp_m28.Reason
+		return term.Tuple(term.MustAtom("EXIT"), term.PIDTerm{Value: from}, term.Clone(reason))
+	case kernel.DownSignal:
+		reason := __gp_m28.Reason
+		reference := __gp_m28.Reference
+		target := __gp_m28.Target
+		return term.Tuple(term.MustAtom("DOWN"), term.ReferenceTerm{Value: reference}, term.PIDTerm{Value: target}, term.Clone(reason))
+	case kernel.DownNamedSignal:
+		reason := __gp_m28.Reason
+		reference := __gp_m28.Reference
+		target := __gp_m28.Target
+		return term.Tuple(term.MustAtom("DOWN"), term.ReferenceTerm{Value: reference}, term.MustAtom(target), term.Clone(reason))
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func systemDateTime(value time.Time) term.Term {
+	year, month, day := value.Date()
+	hour, minute, second := value.Clock()
+	return term.Tuple(term.Tuple(term.Integer(int64(year)), term.Integer(int64(month)), term.Integer(int64(day))), term.Tuple(term.Integer(int64(hour)), term.Integer(int64(minute)), term.Integer(int64(second))))
 }
 
 func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
-	switch __gp_m16 := any(signal).(type) {
+	switch __gp_m29 := any(signal).(type) {
 	case kernel.UserSignal:
-		from := __gp_m16.From
-		message := __gp_m16.Message
+		from := __gp_m29.From
+		message := __gp_m29.Message
 
-		switch __gp_m17 := any(message).(type) {
+		switch __gp_m30 := any(message).(type) {
 		case term.TupleTerm:
-			values := __gp_m17.Elements
+			values := __gp_m30.Elements
 
 			if len(values) != 3 || !term.Equal(values[0], systemTag) {
 				return option.None[systemEnvelope]{}
 			}
-			switch __gp_m18 := any(values[1]).(type) {
+			switch __gp_m31 := any(values[1]).(type) {
 			case term.TupleTerm:
-				reply := __gp_m18.Elements
+				reply := __gp_m31.Elements
 
 				if len(reply) != 2 {
 					return option.None[systemEnvelope]{}
 				}
-				switch __gp_m19 := any(reply[0]).(type) {
+				switch __gp_m32 := any(reply[0]).(type) {
 				case term.PIDTerm:
-					replyTo := __gp_m19.Value
+					replyTo := __gp_m32.Value
 
 					if replyTo != from {
 						return option.None[systemEnvelope]{}
@@ -936,9 +1259,9 @@ func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope
 }
 
 func systemRequestFromTerm(request term.Term) systemRequest {
-	switch __gp_m20 := any(request).(type) {
+	switch __gp_m33 := any(request).(type) {
 	case term.AtomTerm:
-		name := __gp_m20.Name
+		name := __gp_m33.Name
 
 		switch name {
 		case "suspend":
@@ -951,7 +1274,7 @@ func systemRequestFromTerm(request term.Term) systemRequest {
 			return systemGetStatus{}
 		}
 	case term.TupleTerm:
-		values := __gp_m20.Elements
+		values := __gp_m33.Elements
 
 		if len(values) == 4 && term.Equal(values[0], term.MustAtom("change_code")) {
 			return systemChangeCode{module: term.Clone(values[1]), oldVersion: term.Clone(values[2]), extra: term.Clone(values[3])}
@@ -961,6 +1284,9 @@ func systemRequestFromTerm(request term.Term) systemRequest {
 		}
 		if len(values) == 2 && term.Equal(values[0], term.MustAtom("terminate")) {
 			return systemTerminate{reason: term.Clone(values[1])}
+		}
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("debug")) {
+			return systemDebug{command: term.Clone(values[1])}
 		}
 	default:
 
@@ -981,12 +1307,12 @@ func (server *Server[State, Request, Reply, Cast]) ChangeCode(
 	if server.codeChange == nil {
 		return result.Err[State, Failure]{Err: InvalidConfiguration{Detail: "code_change callback is nil"}}
 	}
-	switch __gp_m21 := any(server.codeChange(term.Clone(oldVersion), server.state, term.Clone(extra))).(type) {
+	switch __gp_m34 := any(server.codeChange(term.Clone(oldVersion), server.state, term.Clone(extra))).(type) {
 	case result.Err[State, Failure]:
-		failure := __gp_m21.Err
+		failure := __gp_m34.Err
 		return result.Err[State, Failure]{Err: failure}
 	case result.Ok[State, Failure]:
-		state := __gp_m21.Value
+		state := __gp_m34.Value
 		server.state = state
 		return result.Ok[State, Failure]{Value: state}
 	default:
@@ -1000,9 +1326,9 @@ func (server *Server[State, Request, Reply, Cast]) call(
 	values []term.Term,
 ) kernel.StepResult {
 	var caller term.PID
-	switch __gp_m22 := any(values[1]).(type) {
+	switch __gp_m35 := any(values[1]).(type) {
 	case term.PIDTerm:
-		found := __gp_m22.Value
+		found := __gp_m35.Value
 
 		caller = found
 	default:
@@ -1010,18 +1336,18 @@ func (server *Server[State, Request, Reply, Cast]) call(
 		return server.info(context, signal)
 	}
 	var reference term.Reference
-	switch __gp_m23 := any(values[2]).(type) {
+	switch __gp_m36 := any(values[2]).(type) {
 	case term.ReferenceTerm:
-		found := __gp_m23.Value
+		found := __gp_m36.Value
 
 		reference = found
 	default:
 
 		return server.info(context, signal)
 	}
-	switch __gp_m24 := any(signal).(type) {
+	switch __gp_m37 := any(signal).(type) {
 	case kernel.UserSignal:
-		from := __gp_m24.From
+		from := __gp_m37.From
 
 		if caller != from {
 			return server.info(context, signal)
@@ -1030,21 +1356,21 @@ func (server *Server[State, Request, Reply, Cast]) call(
 
 		return server.info(context, signal)
 	}
-	switch __gp_m25 := any(server.requestCodec.Decode(values[3])).(type) {
+	switch __gp_m38 := any(server.requestCodec.Decode(values[3])).(type) {
 	case result.Err[Request, Failure]:
-		failure := __gp_m25.Err
+		failure := __gp_m38.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[Request, Failure]:
-		request := __gp_m25.Value
+		request := __gp_m38.Value
 
-		switch __gp_m26 := any(server.handleCall(context, request, server.state)).(type) {
+		switch __gp_m39 := any(server.handleCall(context, request, server.state)).(type) {
 		case result.Err[CallResult[State, Reply], Failure]:
-			failure := __gp_m26.Err
+			failure := __gp_m39.Err
 
 			return kernel.Stop{Reason: callbackFailure(failure)}
 		case result.Ok[CallResult[State, Reply], Failure]:
-			decision := __gp_m26.Value
+			decision := __gp_m39.Value
 
 			return server.completeCall(context, caller, reference, decision)
 		default:
@@ -1063,18 +1389,18 @@ func (server *Server[State, Request, Reply, Cast]) completeCall(
 ) kernel.StepResult {
 	var reply Reply
 	var transition kernel.StepResult
-	switch __gp_m27 := any(decision).(type) {
+	switch __gp_m40 := any(decision).(type) {
 	case ContinueCall[State, Reply]:
-		value := __gp_m27.ReplyValue
-		state := __gp_m27.StateValue
+		value := __gp_m40.ReplyValue
+		state := __gp_m40.StateValue
 
 		reply = value
 		server.state = state
 		transition = kernel.Yield{}
 	case StopCall[State, Reply]:
-		value := __gp_m27.ReplyValue
-		state := __gp_m27.StateValue
-		reason := __gp_m27.Reason
+		value := __gp_m40.ReplyValue
+		state := __gp_m40.StateValue
+		reason := __gp_m40.Reason
 
 		reply = value
 		server.state = state
@@ -1082,15 +1408,17 @@ func (server *Server[State, Request, Reply, Cast]) completeCall(
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m28 := any(server.replyCodec.Encode(reply)).(type) {
+	switch __gp_m41 := any(server.replyCodec.Encode(reply)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m28.Err
+		failure := __gp_m41.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m28.Value
+		encoded := __gp_m41.Value
 
-		context.Send(caller, term.Tuple(replyTag, term.ReferenceTerm{Value: reference}, encoded))
+		message := term.Tuple(replyTag, term.ReferenceTerm{Value: reference}, encoded)
+		context.Send(caller, message)
+		server.debugEvent(term.Tuple(term.MustAtom("out"), message, term.PIDTerm{Value: caller}))
 		return transition
 	default:
 		panic("goplus: impossible enum value in match")
@@ -1101,21 +1429,21 @@ func (server *Server[State, Request, Reply, Cast]) cast(
 	context *kernel.Context,
 	values []term.Term,
 ) kernel.StepResult {
-	switch __gp_m29 := any(server.castCodec.Decode(values[1])).(type) {
+	switch __gp_m42 := any(server.castCodec.Decode(values[1])).(type) {
 	case result.Err[Cast, Failure]:
-		failure := __gp_m29.Err
+		failure := __gp_m42.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[Cast, Failure]:
-		value := __gp_m29.Value
+		value := __gp_m42.Value
 
-		switch __gp_m30 := any(server.handleCast(context, value, server.state)).(type) {
+		switch __gp_m43 := any(server.handleCast(context, value, server.state)).(type) {
 		case result.Err[EventResult[State], Failure]:
-			failure := __gp_m30.Err
+			failure := __gp_m43.Err
 
 			return kernel.Stop{Reason: callbackFailure(failure)}
 		case result.Ok[EventResult[State], Failure]:
-			decision := __gp_m30.Value
+			decision := __gp_m43.Value
 
 			return server.applyEvent(decision)
 		default:
@@ -1133,13 +1461,13 @@ func (server *Server[State, Request, Reply, Cast]) info(
 	if server.handleInfo == nil {
 		return kernel.Yield{}
 	}
-	switch __gp_m31 := any(server.handleInfo(context, signal, server.state)).(type) {
+	switch __gp_m44 := any(server.handleInfo(context, signal, server.state)).(type) {
 	case result.Err[EventResult[State], Failure]:
-		failure := __gp_m31.Err
+		failure := __gp_m44.Err
 
 		return kernel.Stop{Reason: callbackFailure(failure)}
 	case result.Ok[EventResult[State], Failure]:
-		decision := __gp_m31.Value
+		decision := __gp_m44.Value
 
 		return server.applyEvent(decision)
 	default:
@@ -1150,15 +1478,15 @@ func (server *Server[State, Request, Reply, Cast]) info(
 func (server *Server[State, Request, Reply, Cast]) applyEvent(
 	decision EventResult[State],
 ) kernel.StepResult {
-	switch __gp_m32 := any(decision).(type) {
+	switch __gp_m45 := any(decision).(type) {
 	case ContinueEvent[State]:
-		state := __gp_m32.StateValue
+		state := __gp_m45.StateValue
 
 		server.state = state
 		return kernel.Yield{}
 	case StopEvent[State]:
-		state := __gp_m32.StateValue
-		reason := __gp_m32.Reason
+		state := __gp_m45.StateValue
+		reason := __gp_m45.Reason
 
 		server.state = state
 		return kernel.Stop{Reason: effectiveReason(reason)}
@@ -1247,13 +1575,13 @@ func Cast[Value any](
 	if codec == nil {
 		return result.Err[ClientMutation, Failure]{Err: InvalidConfiguration{Detail: "cast codec is nil"}}
 	}
-	switch __gp_m34 := any(codec.Encode(value)).(type) {
+	switch __gp_m47 := any(codec.Encode(value)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m34.Err
+		failure := __gp_m47.Err
 
 		return result.Err[ClientMutation, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m34.Value
+		encoded := __gp_m47.Value
 
 		switch any(context.Send(server, term.Tuple(castTag, encoded))).(type) {
 		case kernel.Delivered:
@@ -1279,21 +1607,21 @@ func BeginCall[Request any](
 	if codec == nil {
 		return result.Err[term.Reference, Failure]{Err: InvalidConfiguration{Detail: "request codec is nil"}}
 	}
-	switch __gp_m36 := any(codec.Encode(request)).(type) {
+	switch __gp_m49 := any(codec.Encode(request)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m36.Err
+		failure := __gp_m49.Err
 
 		return result.Err[term.Reference, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		encoded := __gp_m36.Value
+		encoded := __gp_m49.Value
 
-		switch __gp_m37 := any(context.Monitor(server)).(type) {
+		switch __gp_m50 := any(context.Monitor(server)).(type) {
 		case result.Err[term.Reference, kernel.Failure]:
-			cause := __gp_m37.Err
+			cause := __gp_m50.Err
 
 			return result.Err[term.Reference, Failure]{Err: KernelFailure{Cause: cause}}
 		case result.Ok[term.Reference, kernel.Failure]:
-			reference := __gp_m37.Value
+			reference := __gp_m50.Value
 
 			context.Send(server, term.Tuple(
 				callTag,
@@ -1364,35 +1692,35 @@ func ReceiveReply[Reply any](
 	received := context.Receive(func(signal kernel.Signal) bool {
 		return replySignalFor(signal, reference)
 	})
-	switch __gp_m38 := any(received).(type) {
+	switch __gp_m51 := any(received).(type) {
 	case option.None[kernel.Signal]:
 
 		return result.Ok[ReplyPoll[Reply], Failure]{Value: Pending[Reply]{}}
 	case option.Some[kernel.Signal]:
-		signal := __gp_m38.Value
+		signal := __gp_m51.Value
 
-		switch __gp_m39 := any(signal).(type) {
+		switch __gp_m52 := any(signal).(type) {
 		case kernel.DownSignal:
-			reason := __gp_m39.Reason
+			reason := __gp_m52.Reason
 
 			return result.Ok[ReplyPoll[Reply], Failure]{Value: ServerDown[Reply]{Reason: reason}}
 		case kernel.UserSignal:
-			message := __gp_m39.Message
+			message := __gp_m52.Message
 
-			switch __gp_m40 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
+			switch __gp_m53 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
 			case option.None[[]term.Term]:
 
 				return result.Ok[ReplyPoll[Reply], Failure]{Value: Pending[Reply]{}}
 			case option.Some[[]term.Term]:
-				values := __gp_m40.Value
+				values := __gp_m53.Value
 
-				switch __gp_m41 := any(codec.Decode(values[2])).(type) {
+				switch __gp_m54 := any(codec.Decode(values[2])).(type) {
 				case result.Err[Reply, Failure]:
-					failure := __gp_m41.Err
+					failure := __gp_m54.Err
 
 					return result.Err[ReplyPoll[Reply], Failure]{Err: failure}
 				case result.Ok[Reply, Failure]:
-					reply := __gp_m41.Value
+					reply := __gp_m54.Value
 
 					context.Demonitor(reference, true)
 					return result.Ok[ReplyPoll[Reply], Failure]{Value: ReplyReceived[Reply]{Value: reply}}
@@ -1412,24 +1740,24 @@ func ReceiveReply[Reply any](
 }
 
 func replySignalFor(signal kernel.Signal, reference term.Reference) bool {
-	switch __gp_m42 := any(signal).(type) {
+	switch __gp_m55 := any(signal).(type) {
 	case kernel.DownSignal:
-		found := __gp_m42.Reference
+		found := __gp_m55.Reference
 
 		return found == reference
 	case kernel.UserSignal:
-		message := __gp_m42.Message
+		message := __gp_m55.Message
 
-		switch __gp_m43 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
+		switch __gp_m56 := any(taggedTuple(message, "$gen_reply", 3)).(type) {
 		case option.None[[]term.Term]:
 
 			return false
 		case option.Some[[]term.Term]:
-			values := __gp_m43.Value
+			values := __gp_m56.Value
 
-			switch __gp_m44 := any(values[1]).(type) {
+			switch __gp_m57 := any(values[1]).(type) {
 			case term.ReferenceTerm:
-				found := __gp_m44.Value
+				found := __gp_m57.Value
 
 				return found == reference
 			default:
@@ -1450,16 +1778,16 @@ func taggedTuple(
 	tag string,
 	length int,
 ) option.Option[[]term.Term] {
-	switch __gp_m45 := any(value).(type) {
+	switch __gp_m58 := any(value).(type) {
 	case term.TupleTerm:
-		values := __gp_m45.Elements
+		values := __gp_m58.Elements
 
 		if len(values) != length {
 			return option.None[[]term.Term]{}
 		}
-		switch __gp_m46 := any(values[0]).(type) {
+		switch __gp_m59 := any(values[0]).(type) {
 		case term.AtomTerm:
-			name := __gp_m46.Name
+			name := __gp_m59.Name
 
 			if name == tag {
 				return option.Some[[]term.Term]{Value: values}

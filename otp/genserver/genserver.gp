@@ -2,7 +2,10 @@ package genserver
 
 import (
 	"fmt"
+	"math/big"
+	"time"
 
+	"goforge.dev/goplus/std/clock"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/kernel"
@@ -135,6 +138,14 @@ type CodeChangeHandler[State any] func(
 type StateReplaceHandler[State any] func(Function term.Term, StateValue State) result.Result[State, Failure]
 type TerminateHandler[State any] func(Reason term.Term, StateValue State) result.Result[bool, Failure]
 
+type DebugOutputEffect func(Event term.Term, State term.Term)
+
+//goplus:derive off
+type DebugOutputCapability enum {
+	DebugOutputUnavailable()
+	DebugOutputWith(Effect DebugOutputEffect)
+}
+
 type systemRequest enum {
 	SystemSuspend()
 	SystemResume()
@@ -143,6 +154,7 @@ type systemRequest enum {
 	SystemReplaceState(Function term.Term)
 	SystemGetStatus()
 	SystemTerminate(Reason term.Term)
+	SystemDebug(Command term.Term)
 	UnknownSystemRequest(Request term.Term)
 }
 
@@ -162,6 +174,8 @@ type Config[State, Request, Reply, Cast any] struct {
 	Terminate    TerminateHandler[State]
 	ModuleName   string
 	Parent       option.Option[term.PID]
+	Clock        clock.Clock
+	DebugOutput  DebugOutputCapability
 }
 
 type Server[State, Request, Reply, Cast any] struct {
@@ -178,7 +192,20 @@ type Server[State, Request, Reply, Cast any] struct {
 	terminate    TerminateHandler[State]
 	moduleName   string
 	parent       option.Option[term.PID]
+	clock        clock.Clock
+	debugOutput  DebugOutputCapability
+	debug        debugState
 	suspended    bool
+}
+
+type debugState struct {
+	trace bool
+	logLimit int
+	events []term.Term
+	statistics bool
+	started time.Time
+	messagesIn uint64
+	messagesOut uint64
 }
 
 func New[State, Request, Reply, Cast any](
@@ -196,6 +223,10 @@ func New[State, Request, Reply, Cast any](
 	}
 	parent := config.Parent
 	if parent == nil { parent = option.None[term.PID]() }
+	source := config.Clock
+	if source == nil { source = clock.Real{} }
+	debugOutput := config.DebugOutput
+	if debugOutput == nil { debugOutput = DebugOutputUnavailable() }
 	return result.Ok[*Server[State, Request, Reply, Cast], Failure](
 		&Server[State, Request, Reply, Cast]{
 			state: config.InitialState, requestCodec: config.RequestCodec,
@@ -204,6 +235,7 @@ func New[State, Request, Reply, Cast any](
 			handleInfo: config.HandleInfo, codeChange: config.CodeChange,
 			stateCodec: config.StateCodec, replaceState: config.ReplaceState,
 			terminate: config.Terminate, moduleName: config.ModuleName, parent: parent,
+			clock: source, debugOutput: debugOutput,
 		},
 	)
 }
@@ -216,6 +248,7 @@ func (server *Server[State, Request, Reply, Cast]) Behavior() kernel.Behavior {
 		case option.None:
 			return kernel.Wait()
 		case option.Some(signal):
+			server.debugEvent(term.Tuple(term.MustAtom("in"), debugSignalTerm(signal)))
 			match server.system(context, signal) { case option.Some(transition): return transition; case option.None: }
 			match signal {
 			case kernel.UserSignal(_, _, message):
@@ -271,9 +304,12 @@ func (server *Server[State, Request, Reply, Cast]) system(context *kernel.Contex
 		case SystemTerminate(reason):
 			if server.terminate != nil { match server.terminate(reason.Clone(), server.state) { case result.Err(_): case result.Ok(_): } }
 			transition = kernel.Stop(reason.Clone())
+		case SystemDebug(command): response = server.debugCommand(command)
 		case UnknownSystemRequest(request): response = term.Tuple(errorReply, term.Tuple(term.MustAtom("unknown_system_msg"), request.Clone()))
 		}
-		context.Send(envelope.replyTo, term.Tuple(envelope.tag.Clone(), response))
+		reply := term.Tuple(envelope.tag.Clone(), response)
+		context.Send(envelope.replyTo, reply)
+		server.debugEvent(term.Tuple(term.MustAtom("out"), reply, term.PIDTerm(envelope.replyTo)))
 		return option.Some[kernel.StepResult](transition)
 	}
 }
@@ -292,7 +328,102 @@ func (server *Server[State, Request, Reply, Cast]) systemStatus(context *kernel.
 	match state { case term.TupleTerm(values): if len(values) == 2 && term.Equal(values[0], okReply) { state = values[1] }; case _: }
 	systemState := term.MustAtom("running")
 	if server.suspended { systemState = term.MustAtom("suspended") }
-	return term.Tuple(term.MustAtom("status"), term.PIDTerm(context.Self()), term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, term.List(), state))
+	return term.Tuple(term.MustAtom("status"), term.PIDTerm(context.Self()), term.Tuple(term.MustAtom("module"), term.MustAtom(module)), term.List(term.List(), systemState, parent, server.debugStatus(), state))
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugCommand(command term.Term) term.Term {
+	match command {
+	case term.AtomTerm(name):
+		if name == "no_debug" { server.debug = debugState{}; return okReply }
+	case term.TupleTerm(values):
+		if len(values) != 2 { return term.MustAtom("unknown_debug") }
+		match values[0] {
+		case term.AtomTerm(kind):
+			switch kind {
+			case "trace":
+				match values[1] { case term.AtomTerm(flag): switch flag { case "true": match server.debugOutput { case DebugOutputUnavailable: return systemFailure("debug_output_unavailable"); case DebugOutputWith(_): server.debug.trace = true; return okReply }; case "false": server.debug.trace = false; return okReply }; case _: }
+			case "log": return server.debugLogCommand(values[1])
+			case "statistics": return server.debugStatisticsCommand(values[1])
+			}
+		case _:
+		}
+	case _:
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugLogCommand(flag term.Term) term.Term {
+	match flag {
+	case term.AtomTerm(name):
+		switch name {
+		case "true": server.debug.logLimit = 10; server.trimDebugLog(); return okReply
+		case "false": server.debug.logLimit = 0; server.debug.events = nil; return okReply
+		case "get": return term.Tuple(okReply, term.List(server.debug.events...))
+		case "print":
+			match server.debugOutput { case DebugOutputUnavailable: return systemFailure("debug_output_unavailable"); case DebugOutputWith(effect): for _, event := range server.debug.events { effect(event.Clone(), server.debugStateTerm()) }; return okReply }
+		}
+	case term.TupleTerm(values):
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("true")) {
+			match term.Int64(values[1]) { case option.Some(limit): if limit > 0 && limit <= int64(^uint(0)>>1) { server.debug.logLimit = int(limit); server.trimDebugLog(); return okReply }; case option.None: }
+		}
+	case _:
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStatisticsCommand(flag term.Term) term.Term {
+	match flag {
+	case term.AtomTerm(name):
+		switch name {
+		case "true": server.debug.statistics = true; server.debug.started = server.clock.Now(); server.debug.messagesIn = 0; server.debug.messagesOut = 0; return okReply
+		case "false": server.debug.statistics = false; return okReply
+		case "get":
+			if !server.debug.statistics { return term.Tuple(okReply, term.MustAtom("no_statistics")) }
+			return term.Tuple(okReply, term.List(
+				term.Tuple(term.MustAtom("start_time"), systemDateTime(server.debug.started)),
+				term.Tuple(term.MustAtom("current_time"), systemDateTime(server.clock.Now())),
+				term.Tuple(term.MustAtom("reductions"), term.Integer(0)),
+				term.Tuple(term.MustAtom("messages_in"), term.MustBigInteger(new(big.Int).SetUint64(server.debug.messagesIn))),
+				term.Tuple(term.MustAtom("messages_out"), term.MustBigInteger(new(big.Int).SetUint64(server.debug.messagesOut))),
+			))
+		}
+	case _:
+	}
+	return term.MustAtom("unknown_debug")
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugEvent(event term.Term) {
+	match event { case term.TupleTerm(values): if len(values) > 0 { match values[0] { case term.AtomTerm(direction): switch direction { case "in": if server.debug.statistics { server.debug.messagesIn++ }; case "out": if server.debug.statistics { server.debug.messagesOut++ } }; case _: } }; case _: }
+	if server.debug.logLimit > 0 { server.debug.events = append(server.debug.events, event.Clone()); server.trimDebugLog() }
+	if server.debug.trace { match server.debugOutput { case DebugOutputWith(effect): effect(event.Clone(), server.debugStateTerm()); case DebugOutputUnavailable: } }
+}
+
+func (server *Server[State, Request, Reply, Cast]) trimDebugLog() {
+	if server.debug.logLimit <= 0 { server.debug.events = nil; return }
+	if len(server.debug.events) > server.debug.logLimit { server.debug.events = append([]term.Term{}, server.debug.events[len(server.debug.events)-server.debug.logLimit:]...) }
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStateTerm() term.Term {
+	state := server.encodedSystemState()
+	match state { case term.TupleTerm(values): if len(values) == 2 && term.Equal(values[0], okReply) { return values[1].Clone() }; case _: }
+	return state
+}
+
+func (server *Server[State, Request, Reply, Cast]) debugStatus() term.Term {
+	items := []term.Term{}
+	if server.debug.trace { items = append(items, term.Tuple(term.MustAtom("trace"), term.MustAtom("true"))) }
+	if server.debug.logLimit > 0 { items = append(items, term.Tuple(term.MustAtom("log"), term.Integer(int64(server.debug.logLimit)))) }
+	if server.debug.statistics { items = append(items, term.Tuple(term.MustAtom("statistics"), term.MustAtom("true"))) }
+	return term.List(items...)
+}
+
+func debugSignalTerm(signal kernel.Signal) term.Term {
+	match signal { case kernel.UserSignal(_, _, message): return message.Clone(); case kernel.ExitSignal(from, _, reason, _): return term.Tuple(term.MustAtom("EXIT"), term.PIDTerm(from), reason.Clone()); case kernel.DownSignal(_, _, reason, reference, target): return term.Tuple(term.MustAtom("DOWN"), term.ReferenceTerm(reference), term.PIDTerm(target), reason.Clone()); case kernel.DownNamedSignal(_, _, reason, reference, target): return term.Tuple(term.MustAtom("DOWN"), term.ReferenceTerm(reference), term.MustAtom(target), reason.Clone()) }
+}
+
+func systemDateTime(value time.Time) term.Term {
+	year, month, day := value.Date(); hour, minute, second := value.Clock()
+	return term.Tuple(term.Tuple(term.Integer(int64(year)), term.Integer(int64(month)), term.Integer(int64(day))), term.Tuple(term.Integer(int64(hour)), term.Integer(int64(minute)), term.Integer(int64(second))))
 }
 
 func systemEnvelopeFromSignal(signal kernel.Signal) option.Option[systemEnvelope] {
@@ -326,6 +457,7 @@ func systemRequestFromTerm(request term.Term) systemRequest {
 		if len(values) == 4 && term.Equal(values[0], term.MustAtom("change_code")) { return SystemChangeCode(values[1].Clone(), values[2].Clone(), values[3].Clone()) }
 		if len(values) == 2 && term.Equal(values[0], term.MustAtom("replace_state")) { return SystemReplaceState(values[1].Clone()) }
 		if len(values) == 2 && term.Equal(values[0], term.MustAtom("terminate")) { return SystemTerminate(values[1].Clone()) }
+		if len(values) == 2 && term.Equal(values[0], term.MustAtom("debug")) { return SystemDebug(values[1].Clone()) }
 	case _:
 	}
 	return UnknownSystemRequest(request.Clone())
@@ -408,7 +540,9 @@ func (server *Server[State, Request, Reply, Cast]) completeCall(
 	case result.Err(failure):
 		return kernel.Stop(callbackFailure(failure))
 	case result.Ok(encoded):
-		context.Send(caller, term.Tuple(replyTag, term.ReferenceTerm(reference), encoded))
+		message := term.Tuple(replyTag, term.ReferenceTerm(reference), encoded)
+		context.Send(caller, message)
+		server.debugEvent(term.Tuple(term.MustAtom("out"), message, term.PIDTerm(caller)))
 		return transition
 	}
 }

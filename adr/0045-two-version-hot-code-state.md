@@ -35,9 +35,11 @@ dispatch after an acknowledged migration.
 The core two-version and soft-purge rules are total, deterministic, and free of
 ambient effects. Purging drops generation-owned VM images and literals after
 leases drain. System state inspection/replacement, OTP-shaped status reports,
-and acknowledged termination use explicit codecs and callbacks. Debug controls,
-release handlers, application upgrade scripts, and emulator-level literal
-arenas remain explicit work under the partial `system.hot-code` capability.
+and acknowledged termination use explicit codecs and callbacks. Trace, bounded
+log, and statistics controls use a sealed output capability and `std/clock`.
+File logging, executable custom debug functions, release handlers, application
+upgrade scripts, and emulator-level literal arenas remain explicit work under
+the partial `system.hot-code` capability.
 
 ## Evidence
 
@@ -59,3 +61,7 @@ suspended selective receive, suspended-only migration, and post-resume queued
 event dispatch.
 The same laws cover OTP-shaped get-state, replace-state, status, and terminate
 commands with atomic replacement rollback.
+
+`test:gotp.otp.gen-server-debug-laws` proves pinned debug-command decoding,
+trace effects, bounded newest-event retention, deterministic statistics,
+outgoing reply accounting, and complete debug-state reset.
