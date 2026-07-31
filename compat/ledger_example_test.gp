@@ -1,0 +1,49 @@
+package compat
+
+import (
+	"fmt"
+	"testing"
+	"testing/quick"
+
+	"goforge.dev/goplus/std/result"
+)
+
+func ExampleSummarize() {
+	payload := []byte(`{
+  "schema": "gotp.compatibility/v2",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "inventory_complete": false,
+  "items": [
+    {
+      "id": "runtime.processes",
+      "area": "erts",
+      "capability": "isolated lightweight processes",
+      "status": "partial",
+      "assurance": "BoundaryChecked"
+    }
+  ]
+}`)
+	match Parse(payload) {
+	case result.Ok(ledger):
+		summary := Summarize(ledger)
+		fmt.Println(summary.Complete, summary.Partial, summary.Total)
+	case result.Err(failure):
+		fmt.Println(FailureMessage(failure))
+	}
+	// Output:
+	// false 1 1
+}
+
+func TestStatusWireRoundTripProperty(t *testing.T) {
+	property := func(selector uint8) bool {
+		statuses := []Status{Missing(), Partial(), Conformant(), Unavailable()}
+		status := statuses[int(selector)%len(statuses)]
+		wire := statusToWire(status)
+		parsed, valid := statusFromWire(wire)
+		return valid && StatusName(parsed) == string(wire)
+	}
+	if err := quick.Check(property, nil); err != nil {
+		t.Fatal(err)
+	}
+}

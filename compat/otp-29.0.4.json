@@ -1,0 +1,23 @@
+{
+  "schema": "gotp.compatibility/v2",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "inventory_complete": false,
+  "items": [
+    {"id":"beam.code-loading","area":"erts","capability":"BEAM code loading and validation","status":"missing","assurance":"Foreign"},
+    {"id":"beam.instruction-semantics","area":"erts","capability":"BEAM instruction-set execution","status":"missing","assurance":"Foreign"},
+    {"id":"distribution.protocol","area":"erts","capability":"Erlang distribution protocol interoperability","status":"missing","assurance":"Foreign"},
+    {"id":"languages.beam-artifacts","area":"toolchain","capability":"run BEAM artifacts produced by Erlang, Elixir, Gleam, and LFE","status":"missing","assurance":"Foreign"},
+    {"id":"runtime.etf","area":"erts","capability":"External Term Format codec","status":"partial","assurance":"BoundaryChecked","evidence":[{"kind":"code","reference":"artifact://code/gotp.etf.codec"}]},
+    {"id":"runtime.memory","area":"erts","capability":"process-local heaps, arenas, pooling, and grouped reclamation","status":"partial","assurance":"ResourceSafe","evidence":[{"kind":"code","reference":"artifact://code/gotp.runtime.memory"}]},
+    {"id":"runtime.processes","area":"erts","capability":"isolated lightweight processes and mailboxes","status":"partial","assurance":"BoundaryChecked","evidence":[{"kind":"code","reference":"artifact://code/gotp.runtime.process"}]},
+    {"id":"runtime.scheduler","area":"erts","capability":"preemptive reduction-counted scheduling","status":"missing","assurance":"Foreign"},
+    {"id":"runtime.signals","area":"erts","capability":"links, monitors, exits, aliases, and signal ordering","status":"partial","assurance":"BoundaryChecked","evidence":[{"kind":"code","reference":"artifact://code/gotp.runtime.process"}]},
+    {"id":"stdlib.ets","area":"stdlib","capability":"ETS tables and match specifications","status":"missing","assurance":"Foreign"},
+    {"id":"stdlib.mnesia","area":"stdlib","capability":"Mnesia transactions, replication, and persistence","status":"missing","assurance":"Foreign"},
+    {"id":"stdlib.otp-behaviours","area":"stdlib","capability":"application, supervisor, gen_server, gen_statem, and peer behaviours","status":"partial","assurance":"BoundaryChecked","evidence":[{"kind":"code","reference":"artifact://code/gotp.otp.supervisor"}]},
+    {"id":"system.hot-code","area":"kernel","capability":"two-version hot code loading and release handling","status":"missing","assurance":"Foreign"},
+    {"id":"system.ports-nifs","area":"erts","capability":"ports, drivers, and NIF compatibility boundaries","status":"missing","assurance":"Foreign"},
+    {"id":"system.tracing","area":"erts","capability":"tracing, profiling, crash dumps, and observability","status":"missing","assurance":"Foreign"}
+  ]
+}

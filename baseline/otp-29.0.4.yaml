@@ -1,0 +1,70 @@
+schema: gotp.compatibility/v1
+upstream:
+  repository: https://github.com/erlang/otp
+  tag: OTP-29.0.4
+  license: Apache-2.0
+release_policy:
+  gate: pinned
+  rolling_audit_branch: master
+runtime_inventory:
+  - beam-container-and-generic-instructions
+  - terms-bifs-exceptions-and-guards
+  - processes-mailboxes-selective-receive-and-signals
+  - schedulers-reductions-dirty-work-and-timers
+  - links-monitors-aliases-and-priority-messages
+  - process-heaps-gc-binaries-literals-and-atoms
+  - ets-persistent-term-counters-and-atomics
+  - tracing-profiling-debugging-and-observability
+  - ports-nifs-drivers-and-external-processes
+  - hot-code-loading-purge-and-release-handling
+  - epmd-distribution-etf-fragmentation-and-tls
+  - jit-amd64-and-arm64
+applications:
+  - asn1
+  - common_test
+  - compiler
+  - crypto
+  - debugger
+  - dialyzer
+  - diameter
+  - edoc
+  - eldap
+  - erl_interface
+  - et
+  - eunit
+  - ftp
+  - inets
+  - jinterface
+  - kernel
+  - megaco
+  - mnesia
+  - observer
+  - odbc
+  - os_mon
+  - parsetools
+  - public_key
+  - reltool
+  - runtime_tools
+  - sasl
+  - snmp
+  - ssh
+  - ssl
+  - stdlib
+  - syntax_tools
+  - tftp
+  - tools
+  - wx
+  - xmerl
+platforms:
+  native:
+    operating_systems: [linux, darwin, windows]
+    architectures: [amd64, arm64]
+    required: [interpreter, jit, nif, driver]
+  wasm:
+    profiles: [browser, wasi]
+    required: [verified-aot, interpreter-fallback, explicit-capabilities]
+    unavailable_native_abis: [nif, driver]
+assurance:
+  foreign_code_default: BoundaryChecked
+  dangerous_nif_default: deny
+  dangerous_nif_logging: required

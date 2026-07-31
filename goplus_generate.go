@@ -1,0 +1,3 @@
+//go:generate go tool goplus gen ./...
+
+package gotp
