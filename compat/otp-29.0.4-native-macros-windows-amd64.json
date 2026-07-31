@@ -1,0 +1,3943 @@
+{
+  "schema": "gotp.otp-native-macros/v1",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "profile": "windows-amd64-llp64",
+  "source_digest": "1f7baba76aa2433b79cbc8c5ea681c5b72484e5a6b354cfb6e48acb2cd50782c",
+  "source_count": 8,
+  "macros": [
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "DRIVER_INIT",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ErlDrvEntry *erl_dyndriver_real_driver_init(void); TWinDynDriverCallbacks WinDynDriverCallbacks; __declspec(dllexport) ErlDrvEntry *driver_init(TWinDynDriverCallbacks *callbacks) { memcpy(\u0026WinDynDriverCallbacks,callbacks,sizeof(TWinDynDriverCallbacks)); return erl_dyndriver_real_driver_init(); } ErlDrvEntry *erl_dyndriver_real_driver_init(void)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "ERL_DRIVER_TYPES_ONLY",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "WDD_FTYPE",
+      "form": "function",
+      "arity": 1,
+      "replacement": "TWinDynDriver##FunctionName"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "WDD_TYPEDEF",
+      "form": "function",
+      "arity": 3,
+      "replacement": "typedef RetType WDD_FTYPE(FunctionName) Params"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "_ERL_WIN_DYN_DRIVER_H",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "add_driver_entry",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.add_driver_entry)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_alloc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_alloc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_alloc_binary",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_alloc_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_async",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_async)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_async_port_key",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_async_port_key)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_binary_dec_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_binary_dec_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_binary_get_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_binary_get_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_binary_inc_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_binary_inc_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_caller",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_caller)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_cancel_timer",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_cancel_timer)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_compare_monitors",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_compare_monitors)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_connected",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_connected)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_demonitor_process",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_demonitor_process)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_deq",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_deq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_dl_close",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_dl_close)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_dl_error",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_dl_error)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_dl_open",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_dl_open)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_dl_sym",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_dl_sym)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_enq",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_enq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_enq_bin",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_enq_bin)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_enqv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_enqv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_exit",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_exit)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_failure",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_failure)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_failure_atom",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_failure_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_failure_eof",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_failure_eof)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_failure_posix",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_failure_posix)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_free",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_free)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_free_binary",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_free_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_get_monitored_process",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_get_monitored_process)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_get_now",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_get_now)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_lock_driver",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_lock_driver)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_mk_atom",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_mk_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_mk_port",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_mk_port)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_mk_term_nil",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_mk_term_nil)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_monitor_process",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_monitor_process)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_output",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_output)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_output2",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_output2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_output_binary",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_output_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_output_term",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_output_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_outputv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_outputv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_dec_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_dec_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_get_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_get_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_inc_refc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_inc_refc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_lock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_lock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pdl_unlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pdl_unlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_peekq",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_peekq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_peekqv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_peekqv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pushq",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pushq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pushq_bin",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pushq_bin)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_pushqv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_pushqv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_read_timer",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_read_timer)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_realloc",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_realloc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_realloc_binary",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_realloc_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_select",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_select)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_send_term",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_send_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_set_timer",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_set_timer)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_sizeq",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_sizeq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_system_info",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_system_info)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_term_nil",
+      "form": "object",
+      "replacement": "(driver_mk_term_nil())"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "driver_vec_to_buf",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.driver_vec_to_buf)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_busy_msgq_limits",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_busy_msgq_limits)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_cond_broadcast",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_cond_broadcast)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_cond_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_cond_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_cond_destroy",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_cond_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_cond_signal",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_cond_signal)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_cond_wait",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_cond_wait)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_consume_timeslice",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_consume_timeslice)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_convert_time_unit",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_convert_time_unit)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_equal_tids",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_equal_tids)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_getenv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_getenv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_monotonic_time",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_monotonic_time)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_mutex_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_mutex_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_mutex_destroy",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_mutex_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_mutex_lock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_mutex_lock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_mutex_trylock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_mutex_trylock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_mutex_unlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_mutex_unlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_output_term",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_output_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_putenv",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_putenv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_destroy",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_rlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_rlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_runlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_runlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_rwlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_rwlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_rwunlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_rwunlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_tryrlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_tryrlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_rwlock_tryrwlock",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_rwlock_tryrwlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_send_term",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_send_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_exit",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_exit)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_join",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_join)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_opts_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_opts_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_opts_destroy",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_opts_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_thread_self",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_thread_self)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_time_offset",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_time_offset)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_tsd_get",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_tsd_get)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_tsd_key_create",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_tsd_key_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_tsd_key_destroy",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_tsd_key_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_drv_tsd_set",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_drv_tsd_set)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "erl_errno_id",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.erl_errno_id)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "get_port_flags",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.get_port_flags)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "null_func",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.null_func)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "remove_driver_entry",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.remove_driver_entry)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "set_busy_port",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.set_busy_port)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "set_port_control_flags",
+      "form": "object",
+      "replacement": "(WinDynDriverCallbacks.set_port_control_flags)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DO_READ",
+      "form": "object",
+      "replacement": "ERL_DRV_READ"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DO_WRITE",
+      "form": "object",
+      "replacement": "ERL_DRV_WRITE"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DRIVER_CALL_KEEP_BUFFER",
+      "form": "object",
+      "replacement": "0x1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DRIVER_INIT",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ErlDrvEntry *erl_dyndriver_real_driver_init(void); TWinDynDriverCallbacks WinDynDriverCallbacks; __declspec(dllexport) ErlDrvEntry *driver_init(TWinDynDriverCallbacks *callbacks) { memcpy(\u0026WinDynDriverCallbacks,callbacks,sizeof(TWinDynDriverCallbacks)); return erl_dyndriver_real_driver_init(); } ErlDrvEntry *erl_dyndriver_real_driver_init(void)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERLANG_DRIVER_NAME",
+      "form": "function",
+      "arity": 1,
+      "replacement": "driver_init"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRIVER_EXPORT",
+      "form": "object",
+      "replacement": "__attribute__ ((visibility(\"default\")))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRIVER_TYPES_ONLY",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ATOM",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BINARY",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 5)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUF2BINARY",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 14)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_DEPRECATED_FUNC",
+      "form": "object",
+      "replacement": "__attribute__((deprecated))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_BADARG",
+      "form": "object",
+      "replacement": "((ErlDrvData) -3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_ERRNO",
+      "form": "object",
+      "replacement": "((ErlDrvData) -2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_GENERAL",
+      "form": "object",
+      "replacement": "((ErlDrvData) -1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXT2TERM",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 12)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MAJOR_VERSION",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MARKER",
+      "form": "object",
+      "replacement": "(0xfeeeeeed)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MINOR_VERSION",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_NO_BUSY_MSGQ",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_SOFT_BUSY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_USE_INIT_ACK",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_USE_PORT_LOCKING",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLOAT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 11)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_INT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_INT64",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 15)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_LIST",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 8)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_MAP",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 17)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_MIN_REQUIRED_MAJOR_VERSION_ON_LOAD",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_NIL",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_PID",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 10)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_PORT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 4)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_READ",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_READ)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_STRING",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 6)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_STRING_CONS",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 9)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_TIME_ERROR",
+      "form": "object",
+      "replacement": "((ErlDrvSInt64) ERTS_NAPI_TIME_ERROR__)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_TUPLE",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 7)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_UINT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 13)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_UINT64",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 16)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_USE",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_STOP)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_USE_NO_CALLBACK",
+      "form": "object",
+      "replacement": "(ERL_DRV_USE | (ERL_DRV_USE \u003c\u003c 1))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_WRITE",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_WRITE)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "EXTERN",
+      "form": "object",
+      "replacement": "extern"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_CONTROL_FLAG_BINARY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_CONTROL_FLAG_HEAVY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_FLAG_BINARY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_FLAG_LINE",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "TERM_DATA",
+      "form": "function",
+      "arity": 1,
+      "replacement": "((ErlDrvTermData) (x))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "WIN32_DYNAMIC_ERL_DRIVER",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "__ERL_DRIVER_H__",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EHOSTUNREACH",
+      "form": "object",
+      "replacement": "110"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_ACCEPT_NAME",
+      "form": "object",
+      "replacement": "accept"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_DEPRECATED_ATTR",
+      "form": "object",
+      "replacement": "__attribute__((EI_DEPRECATED_ATTR_NAME))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_DEPRECATED_ATTR_NAME",
+      "form": "object",
+      "replacement": "deprecated"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_H",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_HAVE_DEPRECATED_ATTR__",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_HAVE_TIMEOUT",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_LONGLONG",
+      "form": "object",
+      "replacement": "__int64"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAXALIVELEN",
+      "form": "object",
+      "replacement": "(MAXATOMLEN - 2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAXHOSTNAMELEN",
+      "form": "object",
+      "replacement": "(MAXATOMLEN - 2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAX_COOKIE_SIZE",
+      "form": "object",
+      "replacement": "512"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_RPC_FETCH_STDOUT",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_SCLBK_FLG_FULL_IMPL",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_SCLBK_INF_TMO",
+      "form": "object",
+      "replacement": "(~((unsigned) 0))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_ULONGLONG",
+      "form": "object",
+      "replacement": "unsigned __int64"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EMSGSIZE",
+      "form": "object",
+      "replacement": "115"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ATOM_EXT",
+      "form": "object",
+      "replacement": "'d'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ATOM_UTF8_EXT",
+      "form": "object",
+      "replacement": "'v'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_BINARY_EXT",
+      "form": "object",
+      "replacement": "'m'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_BIT_BINARY_EXT",
+      "form": "object",
+      "replacement": "'M'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_CACHED_ATOM",
+      "form": "object",
+      "replacement": "'C'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_CONNECT_FAIL",
+      "form": "object",
+      "replacement": "-4"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_DEMONITOR_P",
+      "form": "object",
+      "replacement": "20"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ERROR",
+      "form": "object",
+      "replacement": "-1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT2",
+      "form": "object",
+      "replacement": "8"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT2_TT",
+      "form": "object",
+      "replacement": "18"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT_TT",
+      "form": "object",
+      "replacement": "13"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXPORT_EXT",
+      "form": "object",
+      "replacement": "'q'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_FLOAT_EXT",
+      "form": "object",
+      "replacement": "'c'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_FUN_EXT",
+      "form": "object",
+      "replacement": "'u'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_GROUP_LEADER",
+      "form": "object",
+      "replacement": "7"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_INTEGER_EXT",
+      "form": "object",
+      "replacement": "'b'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LARGE_BIG_EXT",
+      "form": "object",
+      "replacement": "'o'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LARGE_TUPLE_EXT",
+      "form": "object",
+      "replacement": "'i'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LINK",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LIST_EXT",
+      "form": "object",
+      "replacement": "'l'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MAP_EXT",
+      "form": "object",
+      "replacement": "'t'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MONITOR_P",
+      "form": "object",
+      "replacement": "19"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MONITOR_P_EXIT",
+      "form": "object",
+      "replacement": "21"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MSG",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEWER_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'Z'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_CACHE",
+      "form": "object",
+      "replacement": "'N'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_FUN_EXT",
+      "form": "object",
+      "replacement": "'p'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_PID_EXT",
+      "form": "object",
+      "replacement": "'X'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_PORT_EXT",
+      "form": "object",
+      "replacement": "'Y'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'r'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NIL_EXT",
+      "form": "object",
+      "replacement": "'j'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NODE_LINK",
+      "form": "object",
+      "replacement": "5"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_DAEMON",
+      "form": "object",
+      "replacement": "-2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_PORT",
+      "form": "object",
+      "replacement": "-3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_REMOTE",
+      "form": "object",
+      "replacement": "-6"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_TIMEOUT",
+      "form": "object",
+      "replacement": "-1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PASS_THROUGH",
+      "form": "object",
+      "replacement": "'p'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PID_EXT",
+      "form": "object",
+      "replacement": "'g'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PORT_EXT",
+      "form": "object",
+      "replacement": "'f'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'e'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REG_SEND",
+      "form": "object",
+      "replacement": "6"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REG_SEND_TT",
+      "form": "object",
+      "replacement": "16"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SEND",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SEND_TT",
+      "form": "object",
+      "replacement": "12"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_ATOM_EXT",
+      "form": "object",
+      "replacement": "'s'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_ATOM_UTF8_EXT",
+      "form": "object",
+      "replacement": "'w'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_BIG_EXT",
+      "form": "object",
+      "replacement": "'n'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_INTEGER_EXT",
+      "form": "object",
+      "replacement": "'a'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_TUPLE_EXT",
+      "form": "object",
+      "replacement": "'h'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_STRING_EXT",
+      "form": "object",
+      "replacement": "'k'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_TICK",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_TIMEOUT",
+      "form": "object",
+      "replacement": "-5"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_UNLINK",
+      "form": "object",
+      "replacement": "4"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_V4_PORT_EXT",
+      "form": "object",
+      "replacement": "'x'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ETIMEDOUT",
+      "form": "object",
+      "replacement": "138"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXATOMLEN",
+      "form": "object",
+      "replacement": "(255 + 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXATOMLEN_UTF8",
+      "form": "object",
+      "replacement": "(255*4 + 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXNODELEN",
+      "form": "object",
+      "replacement": "MAXATOMLEN"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "NEW_FLOAT_EXT",
+      "form": "object",
+      "replacement": "'F'"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "USE_EI_UNDOCUMENTED",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_encode_empty_list",
+      "form": "function",
+      "arity": 2,
+      "replacement": "ei_encode_list_header(buf,i,0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_send_encoded_timeout",
+      "form": "function",
+      "arity": 5,
+      "replacement": "ei_send_encoded_tmo((Fd),(To),(Msg),(MsgLen),(Ms))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_send_reg_encoded_timeout",
+      "form": "function",
+      "arity": 6,
+      "replacement": "ei_send_reg_encoded_tmo((Fd),(From),(To),(Msg),(MsgLen),(Ms))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "erl_errno",
+      "form": "object",
+      "replacement": "(*__erl_errno_place ())"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei_connect.h",
+      "name": "EI_CONNECT_H",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_API_FUNC_MACRO",
+      "form": "function",
+      "arity": 1,
+      "replacement": "(WinDynNifCallbacks.NAME)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT",
+      "form": "function",
+      "arity": 6,
+      "replacement": "ERL_NIF_INIT_PROLOGUE ERL_NIF_INIT_GLOB ERL_NIF_INIT_DECL(NAME); ERL_NIF_INIT_DECL(NAME) { static ErlNifEntry entry = { ERL_NIF_MAJOR_VERSION, ERL_NIF_MINOR_VERSION, #NAME, sizeof(FUNCS) / sizeof(*FUNCS), FUNCS, LOAD, RELOAD, UPGRADE, UNLOAD, ERL_NIF_VM_VARIANT, 1, sizeof(ErlNifResourceTypeInit), ERL_NIF_MIN_ERTS_VERSION }; ERL_NIF_INIT_BODY; return \u0026entry; } ERL_NIF_INIT_EPILOGUE"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_ARGS",
+      "form": "object",
+      "replacement": "TWinDynNifCallbacks* callbacks"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_BODY",
+      "form": "object",
+      "replacement": "memcpy(\u0026WinDynNifCallbacks,callbacks,sizeof(TWinDynNifCallbacks))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_DECL",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ERL_NAPI_EXPORT ErlNifEntry* nif_init(ERL_NIF_INIT_ARGS)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_EPILOGUE",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_GLOB",
+      "form": "object",
+      "replacement": "TWinDynNifCallbacks WinDynNifCallbacks;"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_PROLOGUE",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_IOVEC_SIZE",
+      "form": "object",
+      "replacement": "16"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MAJOR_VERSION",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MINOR_VERSION",
+      "form": "object",
+      "replacement": "18"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MIN_ERTS_VERSION",
+      "form": "object",
+      "replacement": "\"erts-14.0\""
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MIN_REQUIRED_MAJOR_VERSION_ON_LOAD",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_ERROR_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 6)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_FAILED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_INVALID_EVENT",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_NOTSUP",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 7)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_READ_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 4)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_STOP_CALLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_STOP_SCHEDULED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_WRITE_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 5)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_DIRTY_CPU_SCHEDULER",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_DIRTY_IO_SCHEDULER",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_NORMAL_SCHEDULER",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_UNDEFINED",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_TIME_ERROR",
+      "form": "object",
+      "replacement": "((ErlNifSInt64) ERTS_NAPI_TIME_ERROR__)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_VM_VARIANT",
+      "form": "object",
+      "replacement": "\"beam.vanilla\""
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "__ERL_NIF_H__",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_alloc",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_alloc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_alloc_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_alloc_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_alloc_env",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_alloc_env)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_alloc_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_alloc_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_binary_to_term",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_binary_to_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_clear_env",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_clear_env)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_compare",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_compare)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_compare_monitors",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_compare_monitors)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_compare_pids",
+      "form": "function",
+      "arity": 2,
+      "replacement": "(enif_compare((A)-\u003epid,(B)-\u003epid))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_broadcast",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_broadcast)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_name",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_name)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_signal",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_signal)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cond_wait",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cond_wait)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_consume_timeslice",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_consume_timeslice)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_convert_time_unit",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_convert_time_unit)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_cpu_time",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_cpu_time)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_demonitor_process",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_demonitor_process)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_dlopen",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_dlopen)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_dlsym",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_dlsym)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_dynamic_resource_call",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_dynamic_resource_call)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_equal_tids",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_equal_tids)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_fprintf",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_fprintf)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_free",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_free)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_free_env",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_free_env)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_free_iovec",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_free_iovec)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_atom",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_atom_cache_index",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_atom_cache_index)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_atom_length",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_atom_length)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_double",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_double)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_int",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_int)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_int64",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_int64)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_list_cell",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_list_cell)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_list_length",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_list_length)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_local_pid",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_local_pid)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_local_port",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_local_port)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_long",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_long)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_map_size",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_map_size)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_map_value",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_map_value)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_string",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_string)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_string_length",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_string_length)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_tuple",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_tuple)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_uint",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_uint)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_uint64",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_uint64)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_ulong",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_get_ulong)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_getenv",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_getenv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_has_pending_exception",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_has_pending_exception)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_hash",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_hash)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_init_resource_type",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_init_resource_type)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_inspect_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_inspect_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_inspect_iolist_as_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_inspect_iolist_as_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_inspect_iovec",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_inspect_iovec)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_deq",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_deq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_enq",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_enq)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_enq_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_enq_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_enqv",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_enqv)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_peek",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_peek)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_peek_head",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_peek_head)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_ioq_size",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_ioq_size)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_atom",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_current_process_alive",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_current_process_alive)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_empty_list",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_empty_list)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_exception",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_exception)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_fun",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_fun)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_identical",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_identical)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_list",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_list)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_map",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_map)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_number",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_number)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_pid",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_pid)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_pid_undefined",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_pid_undefined)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_port",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_port)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_port_alive",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_port_alive)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_process_alive",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_process_alive)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_ref",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_ref)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_is_tuple",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_is_tuple)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_keep_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_keep_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_atom",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_atom_len",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_atom_len)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_badarg",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_badarg)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_copy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_copy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_double",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_double)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_existing_atom",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_existing_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_existing_atom_len",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_existing_atom_len)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_int",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_int)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_int64",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_int64)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_list)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list1",
+      "form": "function",
+      "arity": 2,
+      "replacement": "enif_make_list(ENV,1,E1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list2",
+      "form": "function",
+      "arity": 3,
+      "replacement": "enif_make_list(ENV,2,E1,E2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list3",
+      "form": "function",
+      "arity": 4,
+      "replacement": "enif_make_list(ENV,3,E1,E2,E3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list4",
+      "form": "function",
+      "arity": 5,
+      "replacement": "enif_make_list(ENV,4,E1,E2,E3,E4)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list5",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_make_list(ENV,5,E1,E2,E3,E4,E5)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list6",
+      "form": "function",
+      "arity": 7,
+      "replacement": "enif_make_list(ENV,6,E1,E2,E3,E4,E5,E6)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list7",
+      "form": "function",
+      "arity": 8,
+      "replacement": "enif_make_list(ENV,7,E1,E2,E3,E4,E5,E6,E7)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list8",
+      "form": "function",
+      "arity": 9,
+      "replacement": "enif_make_list(ENV,8,E1,E2,E3,E4,E5,E6,E7,E8)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list9",
+      "form": "function",
+      "arity": 10,
+      "replacement": "enif_make_list(ENV,9,E1,E2,E3,E4,E5,E6,E7,E8,E9)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list_cell",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_list_cell)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_list_from_array",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_list_from_array)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_long",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_long)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_map_from_arrays",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_map_from_arrays)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_map_put",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_map_put)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_map_remove",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_map_remove)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_map_update",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_map_update)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_monitor_term",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_monitor_term)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_new_atom",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_new_atom)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_new_atom_len",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_new_atom_len)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_new_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_new_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_new_map",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_new_map)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_pid",
+      "form": "function",
+      "arity": 2,
+      "replacement": "((void)(ENV),(const ERL_NIF_TERM)((PID)-\u003epid))"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_ref",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_ref)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_resource_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_resource_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_reverse_list",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_reverse_list)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_string",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_string)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_string_len",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_string_len)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_sub_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_sub_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_tuple)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple1",
+      "form": "function",
+      "arity": 2,
+      "replacement": "enif_make_tuple(ENV,1,E1)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple2",
+      "form": "function",
+      "arity": 3,
+      "replacement": "enif_make_tuple(ENV,2,E1,E2)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple3",
+      "form": "function",
+      "arity": 4,
+      "replacement": "enif_make_tuple(ENV,3,E1,E2,E3)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple4",
+      "form": "function",
+      "arity": 5,
+      "replacement": "enif_make_tuple(ENV,4,E1,E2,E3,E4)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple5",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_make_tuple(ENV,5,E1,E2,E3,E4,E5)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple6",
+      "form": "function",
+      "arity": 7,
+      "replacement": "enif_make_tuple(ENV,6,E1,E2,E3,E4,E5,E6)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple7",
+      "form": "function",
+      "arity": 8,
+      "replacement": "enif_make_tuple(ENV,7,E1,E2,E3,E4,E5,E6,E7)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple8",
+      "form": "function",
+      "arity": 9,
+      "replacement": "enif_make_tuple(ENV,8,E1,E2,E3,E4,E5,E6,E7,E8)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple9",
+      "form": "function",
+      "arity": 10,
+      "replacement": "enif_make_tuple(ENV,9,E1,E2,E3,E4,E5,E6,E7,E8,E9)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_tuple_from_array",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_tuple_from_array)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_uint",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_uint)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_uint64",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_uint64)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_ulong",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_ulong)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_unique_integer",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_make_unique_integer)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_get_pair",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_get_pair)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_is_head",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_is_head)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_is_tail",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_is_tail)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_next",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_next)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_map_iterator_prev",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_map_iterator_prev)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_max_atom_cache_index",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_max_atom_cache_index)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_monitor_process",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_monitor_process)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_monotonic_time",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_monotonic_time)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_lock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_lock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_name",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_name)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_trylock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_trylock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_mutex_unlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_mutex_unlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_now_time",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_now_time)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_open_resource_type",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_open_resource_type)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_open_resource_type_x",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_open_resource_type_x)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_port_command",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_port_command)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_priv_data",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_priv_data)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_raise_exception",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_raise_exception)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_realloc",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_realloc)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_realloc_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_realloc_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_release_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_release_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_release_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_release_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_name",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_name)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_rlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_rlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_runlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_runlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_rwlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_rwlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_rwunlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_rwunlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_tryrlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_tryrlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_rwlock_tryrwlock",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_rwlock_tryrwlock)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_schedule_nif",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_schedule_nif)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_select)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_error",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_ERROR | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_read",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_READ | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_write",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_WRITE | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_x",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_select_x)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_self",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_self)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_send",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_send)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_set_option",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_set_option)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_set_pid_undefined",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_set_pid_undefined)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_sizeof_resource",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_sizeof_resource)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_snprintf",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_snprintf)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_system_info",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_system_info)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_term_size",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_term_size)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_term_to_binary",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_term_to_binary)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_term_type",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_term_type)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_exit",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_exit)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_join",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_join)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_name",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_name)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_opts_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_opts_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_opts_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_opts_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_self",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_self)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_thread_type",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_thread_type)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_time_offset",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_time_offset)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_tsd_get",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_tsd_get)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_tsd_key_create",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_tsd_key_create)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_tsd_key_destroy",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_tsd_key_destroy)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_tsd_set",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_tsd_set)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_vfprintf",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_vfprintf)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_vsnprintf",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_vsnprintf)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_whereis_pid",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_whereis_pid)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_whereis_port",
+      "form": "object",
+      "replacement": "ERL_NIF_API_FUNC_MACRO(enif_whereis_port)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_ALLOC_SIZE",
+      "form": "function",
+      "arity": 1
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_D",
+      "form": "function",
+      "arity": 2
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_U",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_UD",
+      "form": "function",
+      "arity": 2
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_US",
+      "form": "function",
+      "arity": 1
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_USD",
+      "form": "function",
+      "arity": 3
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_WUR",
+      "form": "object"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_EXPORT",
+      "form": "object",
+      "replacement": "__declspec(dllexport)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_SINT64_MAX__",
+      "form": "object",
+      "replacement": "9223372036854775807LL"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_SINT64_MIN__",
+      "form": "object",
+      "replacement": "(-ERL_NAPI_SINT64_MAX__ - 1LL)"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_MSEC__",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_NSEC__",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_SEC__",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_TIME_ERROR__",
+      "form": "object",
+      "replacement": "ERL_NAPI_SINT64_MIN__"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_USEC__",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "windows-amd64-llp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "__ERL_DRV_NIF_H__",
+      "form": "object"
+    }
+  ]
+}

@@ -7,6 +7,7 @@
 - Java decision: `adr:gotp.pinned-jinterface-binary-api`
 - Native-entry decision: `adr:gotp.pinned-native-loadable-entries`
 - Native ABI decision: `adr:gotp.pinned-darwin-arm64-native-abi`
+- Native macro decision: `adr:gotp.pinned-native-api-macros`
 - Deployable unit: `code:gotp.compat.ledger`
 - Upstream tag: `OTP-29.0.4`
 - Upstream commit: `1259612946cb36a8bf9614b289090bb32fbcbeb2`
@@ -46,8 +47,10 @@ public Erlang headers contribute 10,973 object macros, 110 function macros, 636
 records, and 61 types. Every unit has an explicit row in
 `compat/otp-29.0.4.json`. JInterface contributes 730 descriptor-exact public
 and protected JVM symbols. Production native sources contribute 15 NIF modules,
-279 Erlang-callable NIF functions, and 2 drivers. The current ledger contains
-59,204 rows, including 59,189 missing units and 15 coarse partial capabilities.
+279 Erlang-callable NIF functions, and 2 drivers. Four compiler-profiled native
+macro manifests add 1,047 NIF, driver, and EI obligations: 186 on each POSIX
+profile and 489 on Windows. The current ledger contains 60,251 rows, including
+60,236 missing units and 15 coarse partial capabilities.
 
 The ledger deliberately keeps `inventory_complete` false. Declaration
 semantics, protocols, tools, generated outputs, native and Java public symbols,
@@ -92,4 +95,14 @@ go run ./cmd/otpnativeabi /usr/bin/clang /path/to/otp-OTP-29.0.4 /tmp/otpnativea
 go run ./cmd/otpnativeabi /path/to/zig /path/to/otp-OTP-29.0.4 /tmp/otpnativeabi linux-amd64-lp64 > compat/otp-29.0.4-native-abi-linux-amd64.json
 go run ./cmd/otpnativeabi /path/to/zig /path/to/otp-OTP-29.0.4 /tmp/otpnativeabi linux-arm64-lp64 > compat/otp-29.0.4-native-abi-linux-arm64.json
 go run ./cmd/otpnativeabi /path/to/zig /path/to/otp-OTP-29.0.4 /tmp/otpnativeabi windows-amd64-llp64 > compat/otp-29.0.4-native-abi-windows-amd64.json
+```
+
+Generate an active macro dump with each pinned profile compiler, then normalize
+only macros declared by the canonical OTP headers:
+
+```sh
+go run ./cmd/otpnativemacros darwin-arm64-lp64 /path/to/otp-OTP-29.0.4 /tmp/native-macros-darwin-arm64.txt > compat/otp-29.0.4-native-macros-darwin-arm64.json
+go run ./cmd/otpnativemacros linux-amd64-lp64 /path/to/otp-OTP-29.0.4 /tmp/native-macros-linux-amd64.txt > compat/otp-29.0.4-native-macros-linux-amd64.json
+go run ./cmd/otpnativemacros linux-arm64-lp64 /path/to/otp-OTP-29.0.4 /tmp/native-macros-linux-arm64.txt > compat/otp-29.0.4-native-macros-linux-arm64.json
+go run ./cmd/otpnativemacros windows-amd64-llp64 /path/to/otp-OTP-29.0.4 /tmp/native-macros-windows-amd64.txt > compat/otp-29.0.4-native-macros-windows-amd64.json
 ```

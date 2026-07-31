@@ -45,3 +45,5 @@ This document is not a release and does not authorize a tag or publication.
 - Added compiler- and source-digest-pinned C ABI inventories for Darwin ARM64,
   Linux AMD64/ARM64, and Windows AMD64, covering 3,535 profile-qualified NIF,
   driver, and EI functions, types, layouts, enums, and variables.
+- Added compiler-profiled inventories of 1,047 active, OTP-owned NIF, driver,
+  and EI macros across Darwin ARM64, Linux AMD64/ARM64, and Windows AMD64.

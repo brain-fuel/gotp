@@ -1,0 +1,1507 @@
+{
+  "schema": "gotp.otp-native-macros/v1",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "profile": "darwin-arm64-lp64",
+  "source_digest": "75d6216a076a0e139263ecf4c99e085aea2f8a075c93a4582b7c9a7d195a90df",
+  "source_count": 8,
+  "macros": [
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver-windows",
+      "source_path": "erts/emulator/sys/win32/erl_win_dyn_driver.h",
+      "name": "DRIVER_INIT",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ERL_DRIVER_EXPORT ErlDrvEntry* ERLANG_DRIVER_NAME(DRIVER_NAME)(void); ERL_DRIVER_EXPORT ErlDrvEntry* ERLANG_DRIVER_NAME(DRIVER_NAME)(void)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DO_READ",
+      "form": "object",
+      "replacement": "ERL_DRV_READ"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DO_WRITE",
+      "form": "object",
+      "replacement": "ERL_DRV_WRITE"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DRIVER_CALL_KEEP_BUFFER",
+      "form": "object",
+      "replacement": "0x1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "DRIVER_INIT",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ERL_DRIVER_EXPORT ErlDrvEntry* ERLANG_DRIVER_NAME(DRIVER_NAME)(void); ERL_DRIVER_EXPORT ErlDrvEntry* ERLANG_DRIVER_NAME(DRIVER_NAME)(void)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERLANG_DRIVER_NAME",
+      "form": "function",
+      "arity": 1,
+      "replacement": "driver_init"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRIVER_EXPORT",
+      "form": "object",
+      "replacement": "__attribute__ ((visibility(\"default\")))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ATOM",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BINARY",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 5)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUF2BINARY",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 14)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUSY_MSGQ_DISABLED",
+      "form": "object",
+      "replacement": "(~((ErlDrvSizeT) 0))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUSY_MSGQ_LIM_MAX",
+      "form": "object",
+      "replacement": "(ERL_DRV_BUSY_MSGQ_DISABLED - 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUSY_MSGQ_LIM_MIN",
+      "form": "object",
+      "replacement": "((ErlDrvSizeT) 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_BUSY_MSGQ_READ_ONLY",
+      "form": "object",
+      "replacement": "((ErlDrvSizeT) 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_DEPRECATED_FUNC",
+      "form": "object",
+      "replacement": "__attribute__((deprecated))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_BADARG",
+      "form": "object",
+      "replacement": "((ErlDrvData) -3)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_ERRNO",
+      "form": "object",
+      "replacement": "((ErlDrvData) -2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_ERROR_GENERAL",
+      "form": "object",
+      "replacement": "((ErlDrvData) -1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXT2TERM",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 12)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MAJOR_VERSION",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MARKER",
+      "form": "object",
+      "replacement": "(0xfeeeeeed)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_EXTENDED_MINOR_VERSION",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_NO_BUSY_MSGQ",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_SOFT_BUSY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_USE_INIT_ACK",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 3)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLAG_USE_PORT_LOCKING",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_FLOAT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 11)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_INT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 3)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_INT64",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 15)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_LIST",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 8)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_MAP",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 17)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_MIN_REQUIRED_MAJOR_VERSION_ON_LOAD",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_NIL",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_PID",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 10)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_PORT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 4)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_READ",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_READ)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_STRING",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 6)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_STRING_CONS",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 9)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_TIME_ERROR",
+      "form": "object",
+      "replacement": "((ErlDrvSInt64) ERTS_NAPI_TIME_ERROR__)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_TUPLE",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 7)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_UINT",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 13)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_UINT64",
+      "form": "object",
+      "replacement": "((ErlDrvTermData) 16)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_USE",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_STOP)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_USE_NO_CALLBACK",
+      "form": "object",
+      "replacement": "(ERL_DRV_USE | (ERL_DRV_USE \u003c\u003c 1))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "ERL_DRV_WRITE",
+      "form": "object",
+      "replacement": "((int)ERL_NIF_SELECT_WRITE)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "EXTERN",
+      "form": "object",
+      "replacement": "ERL_NAPI_EXPORT extern"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_CONTROL_FLAG_BINARY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_CONTROL_FLAG_HEAVY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_FLAG_BINARY",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "PORT_FLAG_LINE",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "TERM_DATA",
+      "form": "function",
+      "arity": 1,
+      "replacement": "((ErlDrvTermData) (x))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "driver",
+      "source_path": "erts/emulator/beam/erl_driver.h",
+      "name": "__ERL_DRIVER_H__",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EHOSTUNREACH",
+      "form": "object",
+      "replacement": "65"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_ACCEPT_NAME",
+      "form": "object",
+      "replacement": "accept"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_DEPRECATED_ATTR",
+      "form": "object",
+      "replacement": "__attribute__((EI_DEPRECATED_ATTR_NAME))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_DEPRECATED_ATTR_NAME",
+      "form": "object",
+      "replacement": "deprecated"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_H",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_HAVE_DEPRECATED_ATTR__",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_HAVE_TIMEOUT",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_LONGLONG",
+      "form": "object",
+      "replacement": "long long"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAXALIVELEN",
+      "form": "object",
+      "replacement": "(MAXATOMLEN - 2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAXHOSTNAMELEN",
+      "form": "object",
+      "replacement": "(MAXATOMLEN - 2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_MAX_COOKIE_SIZE",
+      "form": "object",
+      "replacement": "512"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_RPC_FETCH_STDOUT",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_SCLBK_FLG_FULL_IMPL",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_SCLBK_INF_TMO",
+      "form": "object",
+      "replacement": "(~((unsigned) 0))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EI_ULONGLONG",
+      "form": "object",
+      "replacement": "unsigned long long"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "EMSGSIZE",
+      "form": "object",
+      "replacement": "40"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ATOM_EXT",
+      "form": "object",
+      "replacement": "'d'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ATOM_UTF8_EXT",
+      "form": "object",
+      "replacement": "'v'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_BINARY_EXT",
+      "form": "object",
+      "replacement": "'m'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_BIT_BINARY_EXT",
+      "form": "object",
+      "replacement": "'M'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_CACHED_ATOM",
+      "form": "object",
+      "replacement": "'C'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_CONNECT_FAIL",
+      "form": "object",
+      "replacement": "-4"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_DEMONITOR_P",
+      "form": "object",
+      "replacement": "20"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_ERROR",
+      "form": "object",
+      "replacement": "-1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT2",
+      "form": "object",
+      "replacement": "8"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT2_TT",
+      "form": "object",
+      "replacement": "18"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXIT_TT",
+      "form": "object",
+      "replacement": "13"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_EXPORT_EXT",
+      "form": "object",
+      "replacement": "'q'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_FLOAT_EXT",
+      "form": "object",
+      "replacement": "'c'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_FUN_EXT",
+      "form": "object",
+      "replacement": "'u'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_GROUP_LEADER",
+      "form": "object",
+      "replacement": "7"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_INTEGER_EXT",
+      "form": "object",
+      "replacement": "'b'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LARGE_BIG_EXT",
+      "form": "object",
+      "replacement": "'o'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LARGE_TUPLE_EXT",
+      "form": "object",
+      "replacement": "'i'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LINK",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_LIST_EXT",
+      "form": "object",
+      "replacement": "'l'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MAP_EXT",
+      "form": "object",
+      "replacement": "'t'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MONITOR_P",
+      "form": "object",
+      "replacement": "19"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MONITOR_P_EXIT",
+      "form": "object",
+      "replacement": "21"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_MSG",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEWER_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'Z'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_CACHE",
+      "form": "object",
+      "replacement": "'N'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_FUN_EXT",
+      "form": "object",
+      "replacement": "'p'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_PID_EXT",
+      "form": "object",
+      "replacement": "'X'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_PORT_EXT",
+      "form": "object",
+      "replacement": "'Y'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NEW_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'r'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NIL_EXT",
+      "form": "object",
+      "replacement": "'j'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NODE_LINK",
+      "form": "object",
+      "replacement": "5"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_DAEMON",
+      "form": "object",
+      "replacement": "-2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_PORT",
+      "form": "object",
+      "replacement": "-3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_REMOTE",
+      "form": "object",
+      "replacement": "-6"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_NO_TIMEOUT",
+      "form": "object",
+      "replacement": "-1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PASS_THROUGH",
+      "form": "object",
+      "replacement": "'p'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PID_EXT",
+      "form": "object",
+      "replacement": "'g'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_PORT_EXT",
+      "form": "object",
+      "replacement": "'f'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REFERENCE_EXT",
+      "form": "object",
+      "replacement": "'e'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REG_SEND",
+      "form": "object",
+      "replacement": "6"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_REG_SEND_TT",
+      "form": "object",
+      "replacement": "16"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SEND",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SEND_TT",
+      "form": "object",
+      "replacement": "12"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_ATOM_EXT",
+      "form": "object",
+      "replacement": "'s'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_ATOM_UTF8_EXT",
+      "form": "object",
+      "replacement": "'w'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_BIG_EXT",
+      "form": "object",
+      "replacement": "'n'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_INTEGER_EXT",
+      "form": "object",
+      "replacement": "'a'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_SMALL_TUPLE_EXT",
+      "form": "object",
+      "replacement": "'h'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_STRING_EXT",
+      "form": "object",
+      "replacement": "'k'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_TICK",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_TIMEOUT",
+      "form": "object",
+      "replacement": "-5"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_UNLINK",
+      "form": "object",
+      "replacement": "4"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ERL_V4_PORT_EXT",
+      "form": "object",
+      "replacement": "'x'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ETIMEDOUT",
+      "form": "object",
+      "replacement": "60"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXATOMLEN",
+      "form": "object",
+      "replacement": "(255 + 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXATOMLEN_UTF8",
+      "form": "object",
+      "replacement": "(255*4 + 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "MAXNODELEN",
+      "form": "object",
+      "replacement": "MAXATOMLEN"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "NEW_FLOAT_EXT",
+      "form": "object",
+      "replacement": "'F'"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "USE_EI_UNDOCUMENTED",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_encode_empty_list",
+      "form": "function",
+      "arity": 2,
+      "replacement": "ei_encode_list_header(buf,i,0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_send_encoded_timeout",
+      "form": "function",
+      "arity": 5,
+      "replacement": "ei_send_encoded_tmo((Fd),(To),(Msg),(MsgLen),(Ms))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "ei_send_reg_encoded_timeout",
+      "form": "function",
+      "arity": 6,
+      "replacement": "ei_send_reg_encoded_tmo((Fd),(From),(To),(Msg),(MsgLen),(Ms))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei.h",
+      "name": "erl_errno",
+      "form": "object",
+      "replacement": "__erl_errno"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "ei",
+      "source_path": "lib/erl_interface/include/ei_connect.h",
+      "name": "EI_CONNECT_H",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT",
+      "form": "function",
+      "arity": 6,
+      "replacement": "ERL_NIF_INIT_PROLOGUE ERL_NIF_INIT_GLOB ERL_NIF_INIT_DECL(NAME); ERL_NIF_INIT_DECL(NAME) { static ErlNifEntry entry = { ERL_NIF_MAJOR_VERSION, ERL_NIF_MINOR_VERSION, #NAME, sizeof(FUNCS) / sizeof(*FUNCS), FUNCS, LOAD, RELOAD, UPGRADE, UNLOAD, ERL_NIF_VM_VARIANT, 1, sizeof(ErlNifResourceTypeInit), ERL_NIF_MIN_ERTS_VERSION }; ERL_NIF_INIT_BODY; return \u0026entry; } ERL_NIF_INIT_EPILOGUE"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_ARGS",
+      "form": "object",
+      "replacement": "void"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_BODY",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_DECL",
+      "form": "function",
+      "arity": 1,
+      "replacement": "ERL_NAPI_EXPORT ErlNifEntry* nif_init(ERL_NIF_INIT_ARGS)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_EPILOGUE",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_GLOB",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_INIT_PROLOGUE",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_IOVEC_SIZE",
+      "form": "object",
+      "replacement": "16"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MAJOR_VERSION",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MINOR_VERSION",
+      "form": "object",
+      "replacement": "18"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MIN_ERTS_VERSION",
+      "form": "object",
+      "replacement": "\"erts-14.0\""
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_MIN_REQUIRED_MAJOR_VERSION_ON_LOAD",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_ERROR_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 6)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_FAILED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 3)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_INVALID_EVENT",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 2)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_NOTSUP",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 7)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_READ_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 4)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_STOP_CALLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 0)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_STOP_SCHEDULED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 1)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_SELECT_WRITE_CANCELLED",
+      "form": "object",
+      "replacement": "(1 \u003c\u003c 5)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_DIRTY_CPU_SCHEDULER",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_DIRTY_IO_SCHEDULER",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_NORMAL_SCHEDULER",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_THR_UNDEFINED",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_TIME_ERROR",
+      "form": "object",
+      "replacement": "((ErlNifSInt64) ERTS_NAPI_TIME_ERROR__)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "ERL_NIF_VM_VARIANT",
+      "form": "object",
+      "replacement": "\"beam.vanilla\""
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif.h",
+      "name": "__ERL_NIF_H__",
+      "form": "object"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_compare_pids",
+      "form": "function",
+      "arity": 2,
+      "replacement": "(enif_compare((A)-\u003epid,(B)-\u003epid))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_int64",
+      "form": "object",
+      "replacement": "enif_get_long"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_get_uint64",
+      "form": "object",
+      "replacement": "enif_get_ulong"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_int64",
+      "form": "object",
+      "replacement": "enif_make_long"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_pid",
+      "form": "function",
+      "arity": 2,
+      "replacement": "((void)(ENV),(const ERL_NIF_TERM)((PID)-\u003epid))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_make_uint64",
+      "form": "object",
+      "replacement": "enif_make_ulong"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_error",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_ERROR | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_read",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_READ | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "nif",
+      "source_path": "erts/emulator/beam/erl_nif_api_funcs.h",
+      "name": "enif_select_write",
+      "form": "function",
+      "arity": 6,
+      "replacement": "enif_select_x(ENV, E, (enum ErlNifSelectFlags)(ERL_NIF_SELECT_WRITE | ERL_NIF_SELECT_CUSTOM_MSG), OBJ, PID, MSG, MSG_ENV)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_ALLOC_SIZE",
+      "form": "function",
+      "arity": 1,
+      "replacement": "__attribute__((alloc_size(SZPOS))) ERL_NAPI_ATTR_WUR"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_D",
+      "form": "function",
+      "arity": 2,
+      "replacement": "ERL_NAPI_ATTR_WUR"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_U",
+      "form": "object",
+      "replacement": "__attribute__((malloc)) ERL_NAPI_ATTR_WUR"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_UD",
+      "form": "function",
+      "arity": 2,
+      "replacement": "ERL_NAPI_ATTR_MALLOC_U ERL_NAPI_ATTR_MALLOC_D(DTOR, PTRPOS)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_US",
+      "form": "function",
+      "arity": 1,
+      "replacement": "__attribute__((malloc)) ERL_NAPI_ATTR_ALLOC_SIZE(SZPOS)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_MALLOC_USD",
+      "form": "function",
+      "arity": 3,
+      "replacement": "ERL_NAPI_ATTR_MALLOC_US(SZPOS) ERL_NAPI_ATTR_MALLOC_D(DTOR, PTRPOS)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_ATTR_WUR",
+      "form": "object",
+      "replacement": "__attribute__((warn_unused_result))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_EXPORT",
+      "form": "object",
+      "replacement": "__attribute__ ((visibility(\"default\")))"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_SINT64_MAX__",
+      "form": "object",
+      "replacement": "9223372036854775807L"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERL_NAPI_SINT64_MIN__",
+      "form": "object",
+      "replacement": "(-ERL_NAPI_SINT64_MAX__ - 1L)"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_MSEC__",
+      "form": "object",
+      "replacement": "1"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_NSEC__",
+      "form": "object",
+      "replacement": "3"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_SEC__",
+      "form": "object",
+      "replacement": "0"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_TIME_ERROR__",
+      "form": "object",
+      "replacement": "ERL_NAPI_SINT64_MIN__"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "ERTS_NAPI_USEC__",
+      "form": "object",
+      "replacement": "2"
+    },
+    {
+      "profile": "darwin-arm64-lp64",
+      "surface": "shared",
+      "source_path": "erts/emulator/beam/erl_drv_nif.h",
+      "name": "__ERL_DRV_NIF_H__",
+      "form": "object"
+    }
+  ]
+}
