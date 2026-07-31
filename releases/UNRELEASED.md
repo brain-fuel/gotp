@@ -91,6 +91,8 @@ This document is not a release and does not authorize a tag or publication.
   incomplete; no OTP parity claim is made.
 - Added total raw high-level instruction decoding and a direct relup-delta to
   executable-script bridge; differential OTP ordering proof remains open.
+- Added sealed `systools_relup` error and warning diagnostics with pinned OTP
+  message text, prefix behavior, newline placement, and source-linked laws.
 
 ### Generation-owned literal memory
 
