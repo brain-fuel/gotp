@@ -13,8 +13,7 @@ message text, prefix behavior, and newline placement while making unsupported
 states unrepresentable for typed callers.
 
 Raw fallback terms use a deterministic Erlang-shaped renderer. Complete `~tp`
-parity and execution against the pinned OTP runtime remain required before
-either declaration can be conformant.
+parity remains required before either declaration can be conformant.
 
 ## Traceability
 
@@ -22,3 +21,8 @@ either declaration can be conformant.
 - Pinned source: `OTP-29.0.4:lib/sasl/src/systools_relup.erl#format_error/1`.
 - Code: `gotp.otp.systools-relup-diagnostics`.
 - Laws: `test:gotp.otp.systools-relup-diagnostic-laws`.
+- Differential law: `test:gotp.otp.systools-relup-otp29-differential`.
+- Oracle: official `erlang:29.0.4-alpine` image at manifest digest
+  `sha256:a6e2d0c34adb0038f98953d89d82a501a26b8905027a8e840bf8851531de75d8`.
+- Corpus: `otp/release/testdata/otp-29.0.4-systools-relup.corpus` at
+  `sha256:077d7cb7a3ec3df4f9addaf269e31606a0874906289464277b66453d92af3bd7`.

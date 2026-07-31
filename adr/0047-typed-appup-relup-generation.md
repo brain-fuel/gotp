@@ -29,10 +29,17 @@ terms are cloned so callers cannot mutate parsed specifications.
 - Decision: `adr:0047-typed-appup-relup-generation`.
 - Code: `gotp.otp.appup`, `gotp.otp.relup-delta`.
 - Laws: `test:gotp.otp.appup-laws`, `test:gotp.otp.relup-delta-laws`.
+- Differential law: `test:gotp.otp.systools-relup-otp29-differential`.
+- Oracle: official `erlang:29.0.4-alpine` image at manifest digest
+  `sha256:a6e2d0c34adb0038f98953d89d82a501a26b8905027a8e840bf8851531de75d8`.
+- Corpus: `otp/release/testdata/otp-29.0.4-systools-relup.corpus` at
+  `sha256:077d7cb7a3ec3df4f9addaf269e31606a0874906289464277b66453d92af3bd7`.
 
 ## Remaining obligations
 
 This decision does not claim `systools_relup` parity. The `systools_rc`
 high-level dependency graph and low-level translation, release/application file
 discovery, warning compatibility, pre-R15 SASL handling, canonical Erlang-term
-serialization, and differential execution against OTP remain open.
+serialization, and complete Erlang regular-expression compatibility remain
+open. The checked-in corpus proves exact/regex ordering, whole-match behavior,
+Unicode versions, malformed-entry skipping, invalid-regex failure, and misses.

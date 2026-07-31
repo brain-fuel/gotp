@@ -5,6 +5,8 @@ package release
 
 import (
 	"regexp"
+	"strings"
+	"unicode"
 
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
@@ -391,54 +393,113 @@ func (appup Appup) Select(direction AppupDirection, baseVersion string) result.R
 	return result.Err[[]term.Term, AppupFailure]{Err: MissingVersionScript{Direction: direction, Version: baseVersion}}
 }
 
+// assayxport:unit gotp.otp.systools-relup-appup-search
+func SearchAppupVersion(
+	baseVersion string,
+	entries []term.Term,
+) result.Result[[]term.Term, AppupFailure] {
+	for _, encoded := range entries {
+		switch __gp_m7 := any(encoded).(type) {
+		case term.TupleTerm:
+			fields := __gp_m7.Elements
+
+			if len(fields) != 2 {
+				continue
+			}
+			var instructions []term.Term
+			switch __gp_m8 := any(fields[1]).(type) {
+			case term.ProperListTerm:
+				found := __gp_m8.Elements
+				instructions = found
+			default:
+				continue
+			}
+			switch __gp_m9 := any(fields[0]).(type) {
+			case term.BinaryTerm:
+				raw := __gp_m9.Bytes
+
+				pattern := string(raw)
+				switch __gp_m10 := any(result.Of(regexp.Compile(pattern))).(type) {
+				case result.Err[*regexp.Regexp, error]:
+					cause := __gp_m10.Err
+					return result.Err[[]term.Term, AppupFailure]{Err: InvalidVersionPattern{Pattern: pattern, Detail: cause.Error()}}
+				case result.Ok[*regexp.Regexp, error]:
+					compiled := __gp_m10.Value
+					if compiled.FindString(baseVersion) == baseVersion {
+						return result.Ok[[]term.Term, AppupFailure]{Value: cloneInstructions(instructions)}
+					}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			default:
+
+				switch __gp_m11 := any(appupText(fields[0])).(type) {
+				case option.Some[string]:
+					version := __gp_m11.Value
+					if version == baseVersion {
+						return result.Ok[[]term.Term, AppupFailure]{Value: cloneInstructions(instructions)}
+					}
+				case option.None[string]:
+
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+		default:
+
+		}
+	}
+	return result.Err[[]term.Term, AppupFailure]{Err: MissingVersionScript{Direction: UpgradeScripts{}, Version: baseVersion}}
+}
+
 func parseAppupEntries(encoded term.Term) result.Result[[]AppupEntry, AppupFailure] {
 	var values []term.Term
-	switch __gp_m7 := any(encoded).(type) {
+	switch __gp_m12 := any(encoded).(type) {
 	case term.ProperListTerm:
-		found := __gp_m7.Elements
+		found := __gp_m12.Elements
 		values = found
 	default:
 		return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script table is not a proper list"}}
 	}
 	entries := make([]AppupEntry, len(values))
 	for index, value := range values {
-		switch __gp_m8 := any(value).(type) {
+		switch __gp_m13 := any(value).(type) {
 		case term.TupleTerm:
-			fields := __gp_m8.Elements
+			fields := __gp_m13.Elements
 
 			if len(fields) != 2 {
 				return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script entry must have two fields"}}
 			}
 			var instructions []term.Term
-			switch __gp_m9 := any(fields[1]).(type) {
+			switch __gp_m14 := any(fields[1]).(type) {
 			case term.ProperListTerm:
-				found := __gp_m9.Elements
+				found := __gp_m14.Elements
 				instructions = cloneInstructions(found)
 			default:
 				return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "script instructions are not a proper list"}}
 			}
-			switch __gp_m10 := any(fields[0]).(type) {
+			switch __gp_m15 := any(fields[0]).(type) {
 			case term.BinaryTerm:
-				raw := __gp_m10.Bytes
+				raw := __gp_m15.Bytes
 
 				pattern := string(raw)
-				switch __gp_m11 := any(result.Of(regexp.Compile(pattern))).(type) {
+				switch __gp_m16 := any(result.Of(regexp.Compile(pattern))).(type) {
 				case result.Err[*regexp.Regexp, error]:
-					cause := __gp_m11.Err
+					cause := __gp_m16.Err
 					return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidVersionPattern{Pattern: pattern, Detail: cause.Error()}}
 				case result.Ok[*regexp.Regexp, error]:
-					compiled := __gp_m11.Value
+					compiled := __gp_m16.Value
 					entries[index] = AppupEntry{Selector: VersionPattern{Pattern: pattern}, Instructions: instructions, pattern: compiled}
 				default:
 					panic("goplus: impossible enum value in match")
 				}
 			default:
 
-				switch __gp_m12 := any(appupText(fields[0])).(type) {
+				switch __gp_m17 := any(appupText(fields[0])).(type) {
 				case option.None[string]:
 					return result.Err[[]AppupEntry, AppupFailure]{Err: InvalidAppup{Detail: "version selector is neither text nor binary pattern"}}
 				case option.Some[string]:
-					version := __gp_m12.Value
+					version := __gp_m17.Value
 					entries[index] = AppupEntry{Selector: ExactVersion{Version: version}, Instructions: instructions}
 				default:
 					panic("goplus: impossible enum value in match")
@@ -452,29 +513,30 @@ func parseAppupEntries(encoded term.Term) result.Result[[]AppupEntry, AppupFailu
 }
 
 func appupText(value term.Term) option.Option[string] {
-	switch __gp_m13 := any(value).(type) {
+	switch __gp_m18 := any(value).(type) {
 	case term.BinaryTerm:
-		raw := __gp_m13.Bytes
+		raw := __gp_m18.Bytes
 		return option.Some[string]{Value: string(raw)}
 	case term.ProperListTerm:
-		characters := __gp_m13.Elements
+		characters := __gp_m18.Elements
 
-		bytes := make([]byte, len(characters))
-		for index, character := range characters {
-			switch __gp_m14 := any(term.Int64(character)).(type) {
+		var text strings.Builder
+		for _, character := range characters {
+			switch __gp_m19 := any(term.Int64(character)).(type) {
 			case option.Some[int64]:
-				code := __gp_m14.Value
-				if code < 0 || code > 255 {
+				code := __gp_m19.Value
+
+				if code < 0 || code > unicode.MaxRune || code >= 0xD800 && code <= 0xDFFF {
 					return option.None[string]{}
 				}
-				bytes[index] = byte(code)
+				text.WriteRune(rune(code))
 			case option.None[int64]:
 				return option.None[string]{}
 			default:
 				panic("goplus: impossible enum value in match")
 			}
 		}
-		return option.Some[string]{Value: string(bytes)}
+		return option.Some[string]{Value: text.String()}
 	default:
 		return option.None[string]{}
 	}

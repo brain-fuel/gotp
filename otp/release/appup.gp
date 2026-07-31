@@ -2,6 +2,8 @@ package release
 
 import (
 	"regexp"
+	"strings"
+	"unicode"
 
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
@@ -79,6 +81,36 @@ func (appup Appup) Select(direction AppupDirection, baseVersion string) result.R
 	return result.Err[[]term.Term, AppupFailure](MissingVersionScript(direction, baseVersion))
 }
 
+// assayxport:unit gotp.otp.systools-relup-appup-search
+func SearchAppupVersion(
+	baseVersion string,
+	entries []term.Term,
+) result.Result[[]term.Term, AppupFailure] {
+	for _, encoded := range entries {
+		match encoded {
+		case term.TupleTerm(fields):
+			if len(fields) != 2 { continue }
+			var instructions []term.Term
+			match fields[1] { case term.ProperListTerm(found): instructions = found; case _: continue }
+			match fields[0] {
+			case term.BinaryTerm(raw):
+				pattern := string(raw)
+				match result.Of(regexp.Compile(pattern)) {
+				case result.Err(cause): return result.Err[[]term.Term, AppupFailure](InvalidVersionPattern(pattern, cause.Error()))
+				case result.Ok(compiled): if compiled.FindString(baseVersion) == baseVersion { return result.Ok[[]term.Term, AppupFailure](cloneInstructions(instructions)) }
+				}
+			case _:
+				match appupText(fields[0]) {
+				case option.Some(version): if version == baseVersion { return result.Ok[[]term.Term, AppupFailure](cloneInstructions(instructions)) }
+				case option.None:
+				}
+			}
+		case _:
+		}
+	}
+	return result.Err[[]term.Term, AppupFailure](MissingVersionScript(UpgradeScripts(), baseVersion))
+}
+
 func parseAppupEntries(encoded term.Term) result.Result[[]AppupEntry, AppupFailure] {
 	var values []term.Term
 	match encoded { case term.ProperListTerm(found): values = found; case _: return result.Err[[]AppupEntry, AppupFailure](InvalidAppup("script table is not a proper list")) }
@@ -109,9 +141,16 @@ func appupText(value term.Term) option.Option[string] {
 	match value {
 	case term.BinaryTerm(raw): return option.Some(string(raw))
 	case term.ProperListTerm(characters):
-		bytes := make([]byte, len(characters))
-		for index, character := range characters { match term.Int64(character) { case option.Some(code): if code < 0 || code > 255 { return option.None[string]() }; bytes[index] = byte(code); case option.None: return option.None[string]() } }
-		return option.Some(string(bytes))
+		var text strings.Builder
+		for _, character := range characters {
+			match term.Int64(character) {
+			case option.Some(code):
+				if code < 0 || code > unicode.MaxRune || code >= 0xD800 && code <= 0xDFFF { return option.None[string]() }
+				text.WriteRune(rune(code))
+			case option.None: return option.None[string]()
+			}
+		}
+		return option.Some(text.String())
 	case _: return option.None[string]()
 	}
 }

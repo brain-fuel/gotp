@@ -93,6 +93,9 @@ This document is not a release and does not authorize a tag or publication.
   executable-script bridge; differential OTP ordering proof remains open.
 - Added sealed `systools_relup` error and warning diagnostics with pinned OTP
   message text, prefix behavior, newline placement, and source-linked laws.
+- Added a reproducible official OTP-29.0.4 container oracle, ETF-backed corpus,
+  and differential laws for appup selector ordering/failure behavior and relup
+  diagnostics; regex-engine and complete `~tp` parity remain open.
 
 ### Generation-owned literal memory
 
