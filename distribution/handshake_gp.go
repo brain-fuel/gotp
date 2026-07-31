@@ -72,7 +72,28 @@ type InvalidEnvelope struct{}
 
 func (InvalidEnvelope) isFailure() {}
 
-// FailureCases selects one handler per Failure variant for Fold.
+//goplus:variant (Failure) MalformedPacket(Detail string)
+type MalformedPacket struct {
+	Detail string
+}
+
+func (MalformedPacket) isFailure() {}
+
+//goplus:variant (Failure) PacketTooLarge(Size uint64)
+type PacketTooLarge struct {
+	Size uint64
+}
+
+func (PacketTooLarge) isFailure() {}
+
+//goplus:variant (Failure) InvalidControl(Detail string)
+type InvalidControl struct {
+	Detail string
+}
+
+func (InvalidControl) isFailure() {}
+
+// FailureCases selects one handler per Failure variant for FailureFold.
 type FailureCases[R any] struct {
 	InvalidNode        func(Name string) R
 	EmptyCookie        func() R
@@ -81,10 +102,13 @@ type FailureCases[R any] struct {
 	UnexpectedSequence func(Expected uint64, Received uint64) R
 	ETFRejected        func(Cause string) R
 	InvalidEnvelope    func() R
+	MalformedPacket    func(Detail string) R
+	PacketTooLarge     func(Size uint64) R
+	InvalidControl     func(Detail string) R
 }
 
-// Fold reduces Failure by one-level case analysis.
-func Fold[R any](f Failure, cs FailureCases[R]) R {
+// FailureFold reduces Failure by one-level case analysis.
+func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 	switch m := any(f).(type) {
 	case InvalidNode:
 		return cs.InvalidNode(m.Name)
@@ -100,8 +124,14 @@ func Fold[R any](f Failure, cs FailureCases[R]) R {
 		return cs.ETFRejected(m.Cause)
 	case InvalidEnvelope:
 		return cs.InvalidEnvelope()
+	case MalformedPacket:
+		return cs.MalformedPacket(m.Detail)
+	case PacketTooLarge:
+		return cs.PacketTooLarge(m.Size)
+	case InvalidControl:
+		return cs.InvalidControl(m.Detail)
 	default:
-		panic("goplus: impossible enum value in Fold")
+		panic("goplus: impossible enum value in FailureFold")
 	}
 }
 
@@ -115,6 +145,9 @@ type FailureEqOverrides struct {
 	UnexpectedSequence func(x, y UnexpectedSequence) (eq, handled bool)
 	ETFRejected        func(x, y ETFRejected) (eq, handled bool)
 	InvalidEnvelope    func(x, y InvalidEnvelope) (eq, handled bool)
+	MalformedPacket    func(x, y MalformedPacket) (eq, handled bool)
+	PacketTooLarge     func(x, y PacketTooLarge) (eq, handled bool)
+	InvalidControl     func(x, y InvalidControl) (eq, handled bool)
 }
 
 // FailureEqualWith reports structural equality of a and b under ov.
@@ -216,6 +249,48 @@ func FailureEqualWith(a, b Failure, ov FailureEqOverrides) bool {
 		}
 		_ = y
 		return true
+	case MalformedPacket:
+		y, ok := any(b).(MalformedPacket)
+		if !ok {
+			return false
+		}
+		if ov.MalformedPacket != nil {
+			if eq, handled := ov.MalformedPacket(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	case PacketTooLarge:
+		y, ok := any(b).(PacketTooLarge)
+		if !ok {
+			return false
+		}
+		if ov.PacketTooLarge != nil {
+			if eq, handled := ov.PacketTooLarge(x, y); handled {
+				return eq
+			}
+		}
+		if x.Size != y.Size {
+			return false
+		}
+		return true
+	case InvalidControl:
+		y, ok := any(b).(InvalidControl)
+		if !ok {
+			return false
+		}
+		if ov.InvalidControl != nil {
+			if eq, handled := ov.InvalidControl(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
 	}
 	return false
 }
@@ -253,6 +328,18 @@ func Error(failure Failure) string {
 	case InvalidEnvelope:
 
 		return "gotp/distribution: invalid envelope"
+	case MalformedPacket:
+		detail := __gp_m0.Detail
+
+		return fmt.Sprintf("gotp/distribution: malformed packet: %s", detail)
+	case PacketTooLarge:
+		size := __gp_m0.Size
+
+		return fmt.Sprintf("gotp/distribution: packet size %d exceeds framing capacity", size)
+	case InvalidControl:
+		detail := __gp_m0.Detail
+
+		return fmt.Sprintf("gotp/distribution: invalid control message: %s", detail)
 	default:
 		panic("goplus: impossible enum value in match")
 	}

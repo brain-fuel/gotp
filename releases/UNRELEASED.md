@@ -24,3 +24,24 @@
 - Core immutable list/tuple/type-test/select instructions, including direct execution of an OTP-29.0.4 `lists:reverse/1` fast path (`ADR-0012`).
 
 This document is not a release and does not authorize a tag or publication.
+# Unreleased
+
+- Added a pinned deterministic OTP source inventory covering 36 applications
+  and 1,268 Erlang modules, plus 981 native, Java, generator, and public-header
+  production units, with explicit compatibility rows and coverage laws.
+- Added a source-digest-pinned inventory of 40,563 exported functions, exported
+  types, required callbacks, and optional callbacks, each represented by a
+  stable compatibility row.
+- Added a source-digest-pinned inventory of 11,780 public Erlang header records,
+  macros, and types with semantic deduplication and explicit compatibility rows.
+- Added a compiler-, source-, and class-digest-pinned inventory of 730 public or
+  protected JInterface JVM symbols, preserving overload descriptors, generics,
+  exceptions, visibility, and synthetic bridge metadata.
+- Added a source-digest-pinned inventory of 15 production NIF modules, 279
+  Erlang-callable NIF functions, and 2 drivers, preserving lifecycle hooks and
+  scheduler flags.
+- Corrected production-source classification to exclude singular `example/`
+  trees as well as plural test/example paths.
+- Added compiler- and source-digest-pinned C ABI inventories for Darwin ARM64,
+  Linux AMD64/ARM64, and Windows AMD64, covering 3,535 profile-qualified NIF,
+  driver, and EI functions, types, layouts, enums, and variables.

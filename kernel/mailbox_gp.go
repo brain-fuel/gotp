@@ -41,11 +41,23 @@ type DownSignal struct {
 
 func (DownSignal) isSignal() {}
 
+//goplus:variant (Signal) DownNamedSignal(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target string)
+type DownNamedSignal struct {
+	From      term.PID
+	Sequence  uint64
+	Reason    term.Term
+	Reference term.Reference
+	Target    string
+}
+
+func (DownNamedSignal) isSignal() {}
+
 // SignalCases selects one handler per Signal variant for SignalFold.
 type SignalCases[R any] struct {
-	UserSignal func(From term.PID, Sequence uint64, Message term.Term) R
-	ExitSignal func(From term.PID, Sequence uint64, Reason term.Term, Target term.PID) R
-	DownSignal func(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target term.PID) R
+	UserSignal      func(From term.PID, Sequence uint64, Message term.Term) R
+	ExitSignal      func(From term.PID, Sequence uint64, Reason term.Term, Target term.PID) R
+	DownSignal      func(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target term.PID) R
+	DownNamedSignal func(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target string) R
 }
 
 // SignalFold reduces Signal by one-level case analysis.
@@ -57,6 +69,8 @@ func SignalFold[R any](s Signal, cs SignalCases[R]) R {
 		return cs.ExitSignal(m.From, m.Sequence, m.Reason, m.Target)
 	case DownSignal:
 		return cs.DownSignal(m.From, m.Sequence, m.Reason, m.Reference, m.Target)
+	case DownNamedSignal:
+		return cs.DownNamedSignal(m.From, m.Sequence, m.Reason, m.Reference, m.Target)
 	default:
 		panic("goplus: impossible enum value in SignalFold")
 	}
@@ -65,9 +79,10 @@ func SignalFold[R any](s Signal, cs SignalCases[R]) R {
 // SignalEqOverrides carries optional per-variant hooks for SignalEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type SignalEqOverrides struct {
-	UserSignal func(x, y UserSignal) (eq, handled bool)
-	ExitSignal func(x, y ExitSignal) (eq, handled bool)
-	DownSignal func(x, y DownSignal) (eq, handled bool)
+	UserSignal      func(x, y UserSignal) (eq, handled bool)
+	ExitSignal      func(x, y ExitSignal) (eq, handled bool)
+	DownSignal      func(x, y DownSignal) (eq, handled bool)
+	DownNamedSignal func(x, y DownNamedSignal) (eq, handled bool)
 }
 
 // SignalEqualWith reports structural equality of a and b under ov.
@@ -126,6 +141,32 @@ func SignalEqualWith(a, b Signal, ov SignalEqOverrides) bool {
 		}
 		if ov.DownSignal != nil {
 			if eq, handled := ov.DownSignal(x, y); handled {
+				return eq
+			}
+		}
+		if x.From != y.From {
+			return false
+		}
+		if x.Sequence != y.Sequence {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		if x.Reference != y.Reference {
+			return false
+		}
+		if x.Target != y.Target {
+			return false
+		}
+		return true
+	case DownNamedSignal:
+		y, ok := any(b).(DownNamedSignal)
+		if !ok {
+			return false
+		}
+		if ov.DownNamedSignal != nil {
+			if eq, handled := ov.DownNamedSignal(x, y); handled {
 				return eq
 			}
 		}
@@ -274,6 +315,10 @@ func signalFrom(signal Signal) term.PID {
 		from := __gp_m0.From
 
 		return from
+	case DownNamedSignal:
+		from := __gp_m0.From
+
+		return from
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -290,6 +335,10 @@ func signalSequence(signal Signal) uint64 {
 
 		return sequence
 	case DownSignal:
+		sequence := __gp_m1.Sequence
+
+		return sequence
+	case DownNamedSignal:
 		sequence := __gp_m1.Sequence
 
 		return sequence
@@ -318,6 +367,13 @@ func withSequence(signal Signal, sequence uint64) Signal {
 		target := __gp_m2.Target
 
 		return DownSignal{From: from, Sequence: sequence, Reason: reason, Reference: reference, Target: target}
+	case DownNamedSignal:
+		from := __gp_m2.From
+		reason := __gp_m2.Reason
+		reference := __gp_m2.Reference
+		target := __gp_m2.Target
+
+		return DownNamedSignal{From: from, Sequence: sequence, Reason: reason, Reference: reference, Target: target}
 	default:
 		panic("goplus: impossible enum value in match")
 	}

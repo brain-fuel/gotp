@@ -21,6 +21,7 @@ import (
 const (
 	canonicalVersion         = 131
 	canonicalCompressed      = 80
+	canonicalAtomCacheRef    = 82
 	canonicalNewPID          = 88
 	canonicalNewPort         = 89
 	canonicalNewerReference  = 90
@@ -148,6 +149,11 @@ type CanonicalCodec struct {
 	Limits TermLimits
 }
 
+type DecodedPrefix struct {
+	Value         term.Term
+	BytesConsumed int
+}
+
 func (codec CanonicalCodec) Encode(value term.Term) result.Result[[]byte, Failure] {
 	encoder := canonicalEncoder{nodes: codec.Nodes, limits: codec.Limits.normalized()}
 	switch __gp_m2 := any(encoder.encodeTerm(value, 0)).(type) {
@@ -208,6 +214,50 @@ func (codec CanonicalCodec) Decode(encoded []byte) result.Result[term.Term, Fail
 	}
 }
 
+// assayxport:unit gotp.etf.versionless-prefix
+func (codec CanonicalCodec) DecodeVersionlessPrefix(
+	encoded []byte,
+	atomReferences []string,
+) result.Result[DecodedPrefix, Failure] {
+	limits := codec.Limits.normalized()
+	if len(encoded) == 0 {
+		return result.Err[DecodedPrefix, Failure]{Err: MissingVersion{}}
+	}
+	if len(encoded) > limits.MaxTotalBytes {
+		return result.Err[DecodedPrefix, Failure]{Err: LimitExceeded{Resource: "input bytes", Actual: len(encoded), Limit: limits.MaxTotalBytes}}
+	}
+	for _, name := range atomReferences {
+		switch __gp_m5 := any(term.Atom(name)).(type) {
+		case result.Err[term.Term, term.ValidationFailure]:
+			cause := __gp_m5.Err
+
+			return result.Err[DecodedPrefix, Failure]{Err: TermRejected{Cause: cause}}
+		case result.Ok[term.Term, term.ValidationFailure]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	decoder := canonicalDecoder{
+		data: encoded, nodes: codec.Nodes, limits: limits,
+		atomReferences: append([]string{}, atomReferences...),
+	}
+	switch __gp_m6 := any(decoder.decodeTerm(0)).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m6.Err
+
+		return result.Err[DecodedPrefix, Failure]{Err: failure}
+	case result.Ok[term.Term, Failure]:
+		value := __gp_m6.Value
+
+		return result.Ok[DecodedPrefix, Failure]{Value: DecodedPrefix{
+			Value: value, BytesConsumed: decoder.position,
+		}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 type canonicalEncoder struct {
 	nodes  NodeResolver
 	limits TermLimits
@@ -217,24 +267,24 @@ func (encoder canonicalEncoder) encodeTerm(value term.Term, depth int) result.Re
 	if depth >= encoder.limits.MaxDepth {
 		return result.Err[[]byte, Failure]{Err: LimitExceeded{Resource: "nesting depth", Actual: depth, Limit: encoder.limits.MaxDepth}}
 	}
-	switch __gp_m5 := any(value).(type) {
+	switch __gp_m7 := any(value).(type) {
 	case term.IntegerTerm:
-		integer := __gp_m5.Value
+		integer := __gp_m7.Value
 
 		return encoder.integer(integer)
 	case term.FloatTerm:
-		value := __gp_m5.Bits
+		value := __gp_m7.Bits
 
 		encoded := make([]byte, 9)
 		encoded[0] = canonicalFloat
 		binary.BigEndian.PutUint64(encoded[1:], value)
 		return result.Ok[[]byte, Failure]{Value: encoded}
 	case term.AtomTerm:
-		name := __gp_m5.Name
+		name := __gp_m7.Name
 
 		return encodeUTF8Atom(name)
 	case term.BinaryTerm:
-		value := __gp_m5.Bytes
+		value := __gp_m7.Bytes
 
 		if len(value) > encoder.limits.MaxBinaryBytes || uint64(len(value)) > uint64(^uint32(0)) {
 			return result.Err[[]byte, Failure]{Err: LimitExceeded{Resource: "binary bytes", Actual: len(value), Limit: encoder.limits.MaxBinaryBytes}}
@@ -245,36 +295,36 @@ func (encoder canonicalEncoder) encodeTerm(value term.Term, depth int) result.Re
 		copy(encoded[5:], value)
 		return result.Ok[[]byte, Failure]{Value: encoded}
 	case term.TupleTerm:
-		values := __gp_m5.Elements
+		values := __gp_m7.Elements
 
 		return encoder.tuple(values, depth)
 	case term.ProperListTerm:
-		values := __gp_m5.Elements
+		values := __gp_m7.Elements
 
 		return encoder.list(values, option.None[term.Term]{}, depth)
 	case term.ImproperListTerm:
-		values := __gp_m5.Elements
-		tail := __gp_m5.Tail
+		values := __gp_m7.Elements
+		tail := __gp_m7.Tail
 
 		return encoder.list(values, option.Some[term.Term]{Value: tail}, depth)
 	case term.MapTerm:
-		entries := __gp_m5.Entries
+		entries := __gp_m7.Entries
 
 		return encoder.mapValue(entries, depth)
 	case term.PIDTerm:
-		pid := __gp_m5.Value
+		pid := __gp_m7.Value
 
 		return encoder.pid(pid)
 	case term.ReferenceTerm:
-		reference := __gp_m5.Value
+		reference := __gp_m7.Value
 
 		return encoder.reference(reference)
 	case term.FunTerm:
-		function := __gp_m5.Value
+		function := __gp_m7.Value
 
 		return encoder.function(function, depth)
 	case term.PortTerm:
-		port := __gp_m5.Value
+		port := __gp_m7.Value
 
 		return encoder.port(port)
 	case term.InvalidTerm:
@@ -334,13 +384,13 @@ func (encoder canonicalEncoder) tuple(values []term.Term, depth int) result.Resu
 		binary.BigEndian.PutUint32(encoded[1:], uint32(len(values)))
 	}
 	for _, value := range values {
-		switch __gp_m6 := any(encoder.encodeTerm(value, depth+1)).(type) {
+		switch __gp_m8 := any(encoder.encodeTerm(value, depth+1)).(type) {
 		case result.Ok[[]byte, Failure]:
-			item := __gp_m6.Value
+			item := __gp_m8.Value
 
 			encoded = append(encoded, item...)
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m6.Err
+			failure := __gp_m8.Err
 
 			return result.Err[[]byte, Failure]{Err: failure}
 		default:
@@ -373,33 +423,33 @@ func (encoder canonicalEncoder) list(
 	encoded[0] = canonicalList
 	binary.BigEndian.PutUint32(encoded[1:], uint32(len(values)))
 	for _, value := range values {
-		switch __gp_m8 := any(encoder.encodeTerm(value, depth+1)).(type) {
+		switch __gp_m10 := any(encoder.encodeTerm(value, depth+1)).(type) {
 		case result.Ok[[]byte, Failure]:
-			item := __gp_m8.Value
+			item := __gp_m10.Value
 
 			encoded = append(encoded, item...)
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m8.Err
+			failure := __gp_m10.Err
 
 			return result.Err[[]byte, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m9 := any(tail).(type) {
+	switch __gp_m11 := any(tail).(type) {
 	case option.None[term.Term]:
 
 		encoded = append(encoded, canonicalNil)
 	case option.Some[term.Term]:
-		value := __gp_m9.Value
+		value := __gp_m11.Value
 
-		switch __gp_m10 := any(encoder.encodeTerm(value, depth+1)).(type) {
+		switch __gp_m12 := any(encoder.encodeTerm(value, depth+1)).(type) {
 		case result.Ok[[]byte, Failure]:
-			encodedTail := __gp_m10.Value
+			encodedTail := __gp_m12.Value
 
 			encoded = append(encoded, encodedTail...)
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m10.Err
+			failure := __gp_m12.Err
 
 			return result.Err[[]byte, Failure]{Err: failure}
 		default:
@@ -422,21 +472,21 @@ func (encoder canonicalEncoder) mapValue(entries []term.MapEntry, depth int) res
 	}
 	encodedEntries := make([]encodedMapEntry, len(entries))
 	for index, entry := range entries {
-		switch __gp_m11 := any(encoder.encodeTerm(entry.Key, depth+1)).(type) {
+		switch __gp_m13 := any(encoder.encodeTerm(entry.Key, depth+1)).(type) {
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m11.Err
+			failure := __gp_m13.Err
 
 			return result.Err[[]byte, Failure]{Err: failure}
 		case result.Ok[[]byte, Failure]:
-			key := __gp_m11.Value
+			key := __gp_m13.Value
 
-			switch __gp_m12 := any(encoder.encodeTerm(entry.Value, depth+1)).(type) {
+			switch __gp_m14 := any(encoder.encodeTerm(entry.Value, depth+1)).(type) {
 			case result.Err[[]byte, Failure]:
-				failure := __gp_m12.Err
+				failure := __gp_m14.Err
 
 				return result.Err[[]byte, Failure]{Err: failure}
 			case result.Ok[[]byte, Failure]:
-				value := __gp_m12.Value
+				value := __gp_m14.Value
 
 				encodedEntries[index] = encodedMapEntry{key: key, value: value}
 			default:
@@ -464,13 +514,13 @@ func (encoder canonicalEncoder) mapValue(entries []term.MapEntry, depth int) res
 }
 
 func (encoder canonicalEncoder) pid(pid term.PID) result.Result[[]byte, Failure] {
-	switch __gp_m13 := any(encoder.node(pid.Node)).(type) {
+	switch __gp_m15 := any(encoder.node(pid.Node)).(type) {
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m13.Err
+		failure := __gp_m15.Err
 
 		return result.Err[[]byte, Failure]{Err: failure}
 	case result.Ok[[]byte, Failure]:
-		node := __gp_m13.Value
+		node := __gp_m15.Value
 
 		if pid.Number > uint64(^uint32(0)) {
 			return result.Err[[]byte, Failure]{Err: Invalid{Area: "PID", Detail: fmt.Sprintf("number %d does not fit NEW_PID_EXT", pid.Number)}}
@@ -490,13 +540,13 @@ func (encoder canonicalEncoder) reference(reference term.Reference) result.Resul
 	if !reference.Valid() {
 		return result.Err[[]byte, Failure]{Err: Invalid{Area: "reference", Detail: "reference is not valid"}}
 	}
-	switch __gp_m14 := any(encoder.node(reference.Node)).(type) {
+	switch __gp_m16 := any(encoder.node(reference.Node)).(type) {
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m14.Err
+		failure := __gp_m16.Err
 
 		return result.Err[[]byte, Failure]{Err: failure}
 	case result.Ok[[]byte, Failure]:
-		node := __gp_m14.Value
+		node := __gp_m16.Value
 
 		encoded := []byte{canonicalNewerReference, 0, reference.Length}
 		encoded = append(encoded, node...)
@@ -515,13 +565,13 @@ func (encoder canonicalEncoder) reference(reference term.Reference) result.Resul
 }
 
 func (encoder canonicalEncoder) port(port term.Port) result.Result[[]byte, Failure] {
-	switch __gp_m15 := any(encoder.node(port.Node)).(type) {
+	switch __gp_m17 := any(encoder.node(port.Node)).(type) {
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m15.Err
+		failure := __gp_m17.Err
 
 		return result.Err[[]byte, Failure]{Err: failure}
 	case result.Ok[[]byte, Failure]:
-		node := __gp_m15.Value
+		node := __gp_m17.Value
 
 		encoded := append([]byte{canonicalV4Port}, node...)
 		fields := make([]byte, 12)
@@ -537,9 +587,9 @@ func (encoder canonicalEncoder) node(id uint32) result.Result[[]byte, Failure] {
 	if encoder.nodes == nil {
 		return result.Err[[]byte, Failure]{Err: ResolverRequired{}}
 	}
-	switch __gp_m16 := any(encoder.nodes.Name(id)).(type) {
+	switch __gp_m18 := any(encoder.nodes.Name(id)).(type) {
 	case option.Some[string]:
-		name := __gp_m16.Value
+		name := __gp_m18.Value
 
 		return encodeUTF8Atom(name)
 	case option.None[string]:
@@ -551,23 +601,24 @@ func (encoder canonicalEncoder) node(id uint32) result.Result[[]byte, Failure] {
 }
 
 type canonicalDecoder struct {
-	data     []byte
-	position int
-	nodes    NodeResolver
-	limits   TermLimits
+	data           []byte
+	position       int
+	nodes          NodeResolver
+	limits         TermLimits
+	atomReferences []string
 }
 
 func (decoder *canonicalDecoder) decodeTerm(depth int) result.Result[term.Term, Failure] {
 	if depth >= decoder.limits.MaxDepth {
 		return result.Err[term.Term, Failure]{Err: LimitExceeded{Resource: "nesting depth", Actual: depth, Limit: decoder.limits.MaxDepth}}
 	}
-	switch __gp_m17 := any(decoder.byte()).(type) {
+	switch __gp_m19 := any(decoder.byte()).(type) {
 	case result.Err[byte, Failure]:
-		failure := __gp_m17.Err
+		failure := __gp_m19.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[byte, Failure]:
-		tag := __gp_m17.Value
+		tag := __gp_m19.Value
 
 		return decoder.decodeTagged(tag, depth)
 	default:
@@ -584,39 +635,66 @@ func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result
 	case canonicalExport:
 		return decoder.exportedFunction(depth)
 	case canonicalSmallInteger:
-		switch __gp_m18 := any(decoder.byte()).(type) {
+		switch __gp_m20 := any(decoder.byte()).(type) {
 		case result.Ok[byte, Failure]:
-			value := __gp_m18.Value
+			value := __gp_m20.Value
 
 			return result.Ok[term.Term, Failure]{Value: term.Integer(int64(value))}
 		case result.Err[byte, Failure]:
-			failure := __gp_m18.Err
+			failure := __gp_m20.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+	case canonicalAtomCacheRef:
+		switch __gp_m21 := any(decoder.byte()).(type) {
+		case result.Err[byte, Failure]:
+			failure := __gp_m21.Err
+
+			return result.Err[term.Term, Failure]{Err: failure}
+		case result.Ok[byte, Failure]:
+			index := __gp_m21.Value
+
+			if int(index) >= len(decoder.atomReferences) {
+				return result.Err[term.Term, Failure]{Err: Invalid{Area: "atom cache reference", Detail: fmt.Sprintf("index %d exceeds %d references", index, len(decoder.atomReferences))}}
+			}
+			switch __gp_m22 := any(term.Atom(decoder.atomReferences[index])).(type) {
+			case result.Err[term.Term, term.ValidationFailure]:
+				cause := __gp_m22.Err
+
+				return result.Err[term.Term, Failure]{Err: TermRejected{Cause: cause}}
+			case result.Ok[term.Term, term.ValidationFailure]:
+				atom := __gp_m22.Value
+
+				return result.Ok[term.Term, Failure]{Value: atom}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 	case canonicalInteger:
-		switch __gp_m19 := any(decoder.uint32()).(type) {
+		switch __gp_m23 := any(decoder.uint32()).(type) {
 		case result.Ok[uint32, Failure]:
-			value := __gp_m19.Value
+			value := __gp_m23.Value
 
 			return result.Ok[term.Term, Failure]{Value: term.Integer(int64(int32(value)))}
 		case result.Err[uint32, Failure]:
-			failure := __gp_m19.Err
+			failure := __gp_m23.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	case canonicalFloat:
-		switch __gp_m20 := any(decoder.uint64()).(type) {
+		switch __gp_m24 := any(decoder.uint64()).(type) {
 		case result.Ok[uint64, Failure]:
-			bits := __gp_m20.Value
+			bits := __gp_m24.Value
 
 			return result.Ok[term.Term, Failure]{Value: term.Float(math.Float64frombits(bits))}
 		case result.Err[uint64, Failure]:
-			failure := __gp_m20.Err
+			failure := __gp_m24.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
@@ -631,26 +709,26 @@ func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result
 	case canonicalSmallAtomLatin1:
 		return decoder.atomLatin1(1)
 	case canonicalSmallTuple:
-		switch __gp_m21 := any(decoder.byte()).(type) {
+		switch __gp_m25 := any(decoder.byte()).(type) {
 		case result.Ok[byte, Failure]:
-			count := __gp_m21.Value
+			count := __gp_m25.Value
 
 			return decoder.tuple(int(count), depth)
 		case result.Err[byte, Failure]:
-			failure := __gp_m21.Err
+			failure := __gp_m25.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	case canonicalLargeTuple:
-		switch __gp_m22 := any(decoder.containerLength()).(type) {
+		switch __gp_m26 := any(decoder.containerLength()).(type) {
 		case result.Ok[int, Failure]:
-			count := __gp_m22.Value
+			count := __gp_m26.Value
 
 			return decoder.tuple(count, depth)
 		case result.Err[int, Failure]:
-			failure := __gp_m22.Err
+			failure := __gp_m26.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
@@ -663,21 +741,21 @@ func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result
 	case canonicalList:
 		return decoder.listValue(depth)
 	case canonicalBinary:
-		switch __gp_m23 := any(decoder.binaryLength(decoder.limits.MaxBinaryBytes)).(type) {
+		switch __gp_m27 := any(decoder.binaryLength(decoder.limits.MaxBinaryBytes)).(type) {
 		case result.Err[int, Failure]:
-			failure := __gp_m23.Err
+			failure := __gp_m27.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[int, Failure]:
-			length := __gp_m23.Value
+			length := __gp_m27.Value
 
-			switch __gp_m24 := any(decoder.take(length)).(type) {
+			switch __gp_m28 := any(decoder.take(length)).(type) {
 			case result.Ok[[]byte, Failure]:
-				value := __gp_m24.Value
+				value := __gp_m28.Value
 
 				return result.Ok[term.Term, Failure]{Value: term.Binary(value)}
 			case result.Err[[]byte, Failure]:
-				failure := __gp_m24.Err
+				failure := __gp_m28.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			default:
@@ -687,26 +765,26 @@ func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result
 			panic("goplus: impossible enum value in match")
 		}
 	case canonicalSmallBig:
-		switch __gp_m25 := any(decoder.byte()).(type) {
+		switch __gp_m29 := any(decoder.byte()).(type) {
 		case result.Ok[byte, Failure]:
-			length := __gp_m25.Value
+			length := __gp_m29.Value
 
 			return decoder.bigInteger(int(length))
 		case result.Err[byte, Failure]:
-			failure := __gp_m25.Err
+			failure := __gp_m29.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	case canonicalLargeBig:
-		switch __gp_m26 := any(decoder.binaryLength(decoder.limits.MaxBigIntBytes)).(type) {
+		switch __gp_m30 := any(decoder.binaryLength(decoder.limits.MaxBigIntBytes)).(type) {
 		case result.Ok[int, Failure]:
-			length := __gp_m26.Value
+			length := __gp_m30.Value
 
 			return decoder.bigInteger(length)
 		case result.Err[int, Failure]:
-			failure := __gp_m26.Err
+			failure := __gp_m30.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
@@ -741,13 +819,13 @@ func (decoder *canonicalDecoder) tuple(count int, depth int) result.Result[term.
 	}
 	values := make([]term.Term, count)
 	for index := range values {
-		switch __gp_m27 := any(decoder.decodeTerm(depth + 1)).(type) {
+		switch __gp_m31 := any(decoder.decodeTerm(depth + 1)).(type) {
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m27.Value
+			value := __gp_m31.Value
 
 			values[index] = value
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m27.Err
+			failure := __gp_m31.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
@@ -758,21 +836,21 @@ func (decoder *canonicalDecoder) tuple(count int, depth int) result.Result[term.
 }
 
 func (decoder *canonicalDecoder) stringValue() result.Result[term.Term, Failure] {
-	switch __gp_m28 := any(decoder.uint16()).(type) {
+	switch __gp_m32 := any(decoder.uint16()).(type) {
 	case result.Err[uint16, Failure]:
-		failure := __gp_m28.Err
+		failure := __gp_m32.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[uint16, Failure]:
-		length := __gp_m28.Value
+		length := __gp_m32.Value
 
-		switch __gp_m29 := any(decoder.take(int(length))).(type) {
+		switch __gp_m33 := any(decoder.take(int(length))).(type) {
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m29.Err
+			failure := __gp_m33.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[[]byte, Failure]:
-			raw := __gp_m29.Value
+			raw := __gp_m33.Value
 
 			values := make([]term.Term, len(raw))
 			for index, value := range raw {
@@ -788,36 +866,36 @@ func (decoder *canonicalDecoder) stringValue() result.Result[term.Term, Failure]
 }
 
 func (decoder *canonicalDecoder) listValue(depth int) result.Result[term.Term, Failure] {
-	switch __gp_m30 := any(decoder.containerLength()).(type) {
+	switch __gp_m34 := any(decoder.containerLength()).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m30.Err
+		failure := __gp_m34.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m30.Value
+		count := __gp_m34.Value
 
 		values := make([]term.Term, count)
 		for index := range values {
-			switch __gp_m31 := any(decoder.decodeTerm(depth + 1)).(type) {
+			switch __gp_m35 := any(decoder.decodeTerm(depth + 1)).(type) {
 			case result.Ok[term.Term, Failure]:
-				value := __gp_m31.Value
+				value := __gp_m35.Value
 
 				values[index] = value
 			case result.Err[term.Term, Failure]:
-				failure := __gp_m31.Err
+				failure := __gp_m35.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			default:
 				panic("goplus: impossible enum value in match")
 			}
 		}
-		switch __gp_m32 := any(decoder.decodeTerm(depth + 1)).(type) {
+		switch __gp_m36 := any(decoder.decodeTerm(depth + 1)).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m32.Err
+			failure := __gp_m36.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			tail := __gp_m32.Value
+			tail := __gp_m36.Value
 
 			if isEmptyList(tail) {
 				return result.Ok[term.Term, Failure]{Value: term.List(values...)}
@@ -832,35 +910,35 @@ func (decoder *canonicalDecoder) listValue(depth int) result.Result[term.Term, F
 }
 
 func (decoder *canonicalDecoder) mapValue(depth int) result.Result[term.Term, Failure] {
-	switch __gp_m33 := any(decoder.containerLength()).(type) {
+	switch __gp_m37 := any(decoder.containerLength()).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m33.Err
+		failure := __gp_m37.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		count := __gp_m33.Value
+		count := __gp_m37.Value
 
 		entries := make([]term.MapEntry, count)
 		for index := range entries {
-			switch __gp_m34 := any(decoder.decodeTerm(depth + 1)).(type) {
+			switch __gp_m38 := any(decoder.decodeTerm(depth + 1)).(type) {
 			case result.Ok[term.Term, Failure]:
-				key := __gp_m34.Value
+				key := __gp_m38.Value
 
 				entries[index].Key = key
 			case result.Err[term.Term, Failure]:
-				failure := __gp_m34.Err
+				failure := __gp_m38.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			default:
 				panic("goplus: impossible enum value in match")
 			}
-			switch __gp_m35 := any(decoder.decodeTerm(depth + 1)).(type) {
+			switch __gp_m39 := any(decoder.decodeTerm(depth + 1)).(type) {
 			case result.Ok[term.Term, Failure]:
-				value := __gp_m35.Value
+				value := __gp_m39.Value
 
 				entries[index].Value = value
 			case result.Err[term.Term, Failure]:
-				failure := __gp_m35.Err
+				failure := __gp_m39.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			default:
@@ -874,21 +952,21 @@ func (decoder *canonicalDecoder) mapValue(depth int) result.Result[term.Term, Fa
 }
 
 func (decoder *canonicalDecoder) atomUTF8(lengthBytes int) result.Result[term.Term, Failure] {
-	switch __gp_m36 := any(decoder.length(lengthBytes)).(type) {
+	switch __gp_m40 := any(decoder.length(lengthBytes)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m36.Err
+		failure := __gp_m40.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		length := __gp_m36.Value
+		length := __gp_m40.Value
 
-		switch __gp_m37 := any(decoder.take(length)).(type) {
+		switch __gp_m41 := any(decoder.take(length)).(type) {
 		case result.Ok[[]byte, Failure]:
-			raw := __gp_m37.Value
+			raw := __gp_m41.Value
 
 			return acceptedTerm(term.Atom(string(raw)))
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m37.Err
+			failure := __gp_m41.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		default:
@@ -900,21 +978,21 @@ func (decoder *canonicalDecoder) atomUTF8(lengthBytes int) result.Result[term.Te
 }
 
 func (decoder *canonicalDecoder) atomLatin1(lengthBytes int) result.Result[term.Term, Failure] {
-	switch __gp_m38 := any(decoder.length(lengthBytes)).(type) {
+	switch __gp_m42 := any(decoder.length(lengthBytes)).(type) {
 	case result.Err[int, Failure]:
-		failure := __gp_m38.Err
+		failure := __gp_m42.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[int, Failure]:
-		length := __gp_m38.Value
+		length := __gp_m42.Value
 
-		switch __gp_m39 := any(decoder.take(length)).(type) {
+		switch __gp_m43 := any(decoder.take(length)).(type) {
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m39.Err
+			failure := __gp_m43.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[[]byte, Failure]:
-			raw := __gp_m39.Value
+			raw := __gp_m43.Value
 
 			runes := make([]rune, len(raw))
 			for index, value := range raw {
@@ -933,24 +1011,24 @@ func (decoder *canonicalDecoder) bigInteger(length int) result.Result[term.Term,
 	if length > decoder.limits.MaxBigIntBytes {
 		return result.Err[term.Term, Failure]{Err: LimitExceeded{Resource: "big integer bytes", Actual: length, Limit: decoder.limits.MaxBigIntBytes}}
 	}
-	switch __gp_m40 := any(decoder.byte()).(type) {
+	switch __gp_m44 := any(decoder.byte()).(type) {
 	case result.Err[byte, Failure]:
-		failure := __gp_m40.Err
+		failure := __gp_m44.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[byte, Failure]:
-		sign := __gp_m40.Value
+		sign := __gp_m44.Value
 
 		if sign > 1 {
 			return result.Err[term.Term, Failure]{Err: Invalid{Area: "big integer", Detail: fmt.Sprintf("sign %d", sign)}}
 		}
-		switch __gp_m41 := any(decoder.take(length)).(type) {
+		switch __gp_m45 := any(decoder.take(length)).(type) {
 		case result.Err[[]byte, Failure]:
-			failure := __gp_m41.Err
+			failure := __gp_m45.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[[]byte, Failure]:
-			raw := __gp_m41.Value
+			raw := __gp_m45.Value
 
 			digits := bytes.Clone(raw)
 			reverse(digits)
@@ -968,39 +1046,39 @@ func (decoder *canonicalDecoder) bigInteger(length int) result.Result[term.Term,
 }
 
 func (decoder *canonicalDecoder) pid(depth int, modern bool) result.Result[term.Term, Failure] {
-	switch __gp_m42 := any(decoder.node(depth)).(type) {
+	switch __gp_m46 := any(decoder.node(depth)).(type) {
 	case result.Err[uint32, Failure]:
-		failure := __gp_m42.Err
+		failure := __gp_m46.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[uint32, Failure]:
-		node := __gp_m42.Value
+		node := __gp_m46.Value
 
-		switch __gp_m43 := any(decoder.uint32()).(type) {
+		switch __gp_m47 := any(decoder.uint32()).(type) {
 		case result.Err[uint32, Failure]:
-			failure := __gp_m43.Err
+			failure := __gp_m47.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[uint32, Failure]:
-			id := __gp_m43.Value
+			id := __gp_m47.Value
 
-			switch __gp_m44 := any(decoder.uint32()).(type) {
+			switch __gp_m48 := any(decoder.uint32()).(type) {
 			case result.Err[uint32, Failure]:
-				failure := __gp_m44.Err
+				failure := __gp_m48.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			case result.Ok[uint32, Failure]:
-				serial := __gp_m44.Value
+				serial := __gp_m48.Value
 
-				switch __gp_m45 := any(decoder.creation(modern)).(type) {
+				switch __gp_m49 := any(decoder.creation(modern)).(type) {
 				case result.Ok[uint32, Failure]:
-					creation := __gp_m45.Value
+					creation := __gp_m49.Value
 
 					return result.Ok[term.Term, Failure]{Value: term.PIDTerm{Value: term.PID{
 						Node: node, Number: uint64(id), Serial: serial, Creation: creation,
 					}}}
 				case result.Err[uint32, Failure]:
-					failure := __gp_m45.Err
+					failure := __gp_m49.Err
 
 					return result.Err[term.Term, Failure]{Err: failure}
 				default:
@@ -1018,42 +1096,42 @@ func (decoder *canonicalDecoder) pid(depth int, modern bool) result.Result[term.
 }
 
 func (decoder *canonicalDecoder) reference(depth int, modern bool) result.Result[term.Term, Failure] {
-	switch __gp_m46 := any(decoder.uint16()).(type) {
+	switch __gp_m50 := any(decoder.uint16()).(type) {
 	case result.Err[uint16, Failure]:
-		failure := __gp_m46.Err
+		failure := __gp_m50.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[uint16, Failure]:
-		length := __gp_m46.Value
+		length := __gp_m50.Value
 
 		if length == 0 || length > 5 {
 			return result.Err[term.Term, Failure]{Err: Invalid{Area: "reference", Detail: fmt.Sprintf("length %d", length)}}
 		}
-		switch __gp_m47 := any(decoder.node(depth)).(type) {
+		switch __gp_m51 := any(decoder.node(depth)).(type) {
 		case result.Err[uint32, Failure]:
-			failure := __gp_m47.Err
+			failure := __gp_m51.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[uint32, Failure]:
-			node := __gp_m47.Value
+			node := __gp_m51.Value
 
-			switch __gp_m48 := any(decoder.creation(modern)).(type) {
+			switch __gp_m52 := any(decoder.creation(modern)).(type) {
 			case result.Err[uint32, Failure]:
-				failure := __gp_m48.Err
+				failure := __gp_m52.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			case result.Ok[uint32, Failure]:
-				creation := __gp_m48.Value
+				creation := __gp_m52.Value
 
 				reference := term.Reference{Node: node, Creation: creation, Length: uint8(length)}
 				for index := 0; index < int(length); index++ {
-					switch __gp_m49 := any(decoder.uint32()).(type) {
+					switch __gp_m53 := any(decoder.uint32()).(type) {
 					case result.Ok[uint32, Failure]:
-						word := __gp_m49.Value
+						word := __gp_m53.Value
 
 						reference.Words[index] = word
 					case result.Err[uint32, Failure]:
-						failure := __gp_m49.Err
+						failure := __gp_m53.Err
 
 						return result.Err[term.Term, Failure]{Err: failure}
 					default:
@@ -1076,29 +1154,29 @@ func (decoder *canonicalDecoder) reference(depth int, modern bool) result.Result
 }
 
 func (decoder *canonicalDecoder) oldReference(depth int) result.Result[term.Term, Failure] {
-	switch __gp_m50 := any(decoder.node(depth)).(type) {
+	switch __gp_m54 := any(decoder.node(depth)).(type) {
 	case result.Err[uint32, Failure]:
-		failure := __gp_m50.Err
+		failure := __gp_m54.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[uint32, Failure]:
-		node := __gp_m50.Value
+		node := __gp_m54.Value
 
-		switch __gp_m51 := any(decoder.uint32()).(type) {
+		switch __gp_m55 := any(decoder.uint32()).(type) {
 		case result.Err[uint32, Failure]:
-			failure := __gp_m51.Err
+			failure := __gp_m55.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[uint32, Failure]:
-			word := __gp_m51.Value
+			word := __gp_m55.Value
 
-			switch __gp_m52 := any(decoder.byte()).(type) {
+			switch __gp_m56 := any(decoder.byte()).(type) {
 			case result.Err[byte, Failure]:
-				failure := __gp_m52.Err
+				failure := __gp_m56.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			case result.Ok[byte, Failure]:
-				creation := __gp_m52.Value
+				creation := __gp_m56.Value
 
 				if creation > 3 || word>>18 != 0 {
 					return result.Err[term.Term, Failure]{Err: Invalid{Area: "REFERENCE_EXT", Detail: "reserved bits are set"}}
@@ -1122,48 +1200,48 @@ func (decoder *canonicalDecoder) port(
 	idBytes int,
 	creationBytes int,
 ) result.Result[term.Term, Failure] {
-	switch __gp_m53 := any(decoder.node(depth)).(type) {
+	switch __gp_m57 := any(decoder.node(depth)).(type) {
 	case result.Err[uint32, Failure]:
-		failure := __gp_m53.Err
+		failure := __gp_m57.Err
 
 		return result.Err[term.Term, Failure]{Err: failure}
 	case result.Ok[uint32, Failure]:
-		node := __gp_m53.Value
+		node := __gp_m57.Value
 
 		var idResult result.Result[uint64, Failure]
 		if idBytes == 8 {
 			idResult = decoder.uint64()
 		} else {
-			switch __gp_m54 := any(decoder.uint32()).(type) {
+			switch __gp_m58 := any(decoder.uint32()).(type) {
 			case result.Ok[uint32, Failure]:
-				id := __gp_m54.Value
+				id := __gp_m58.Value
 
 				idResult = result.Ok[uint64, Failure]{Value: uint64(id)}
 			case result.Err[uint32, Failure]:
-				failure := __gp_m54.Err
+				failure := __gp_m58.Err
 
 				idResult = result.Err[uint64, Failure]{Err: failure}
 			default:
 				panic("goplus: impossible enum value in match")
 			}
 		}
-		switch __gp_m55 := any(idResult).(type) {
+		switch __gp_m59 := any(idResult).(type) {
 		case result.Err[uint64, Failure]:
-			failure := __gp_m55.Err
+			failure := __gp_m59.Err
 
 			return result.Err[term.Term, Failure]{Err: failure}
 		case result.Ok[uint64, Failure]:
-			id := __gp_m55.Value
+			id := __gp_m59.Value
 
-			switch __gp_m56 := any(decoder.creation(creationBytes == 4)).(type) {
+			switch __gp_m60 := any(decoder.creation(creationBytes == 4)).(type) {
 			case result.Ok[uint32, Failure]:
-				creation := __gp_m56.Value
+				creation := __gp_m60.Value
 
 				return result.Ok[term.Term, Failure]{Value: term.PortTerm{Value: term.Port{
 					Node: node, ID: id, Creation: creation,
 				}}}
 			case result.Err[uint32, Failure]:
-				failure := __gp_m56.Err
+				failure := __gp_m60.Err
 
 				return result.Err[term.Term, Failure]{Err: failure}
 			default:
@@ -1178,24 +1256,24 @@ func (decoder *canonicalDecoder) port(
 }
 
 func (decoder *canonicalDecoder) node(depth int) result.Result[uint32, Failure] {
-	switch __gp_m57 := any(decoder.decodeTerm(depth + 1)).(type) {
+	switch __gp_m61 := any(decoder.decodeTerm(depth + 1)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m57.Err
+		failure := __gp_m61.Err
 
 		return result.Err[uint32, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		node := __gp_m57.Value
+		node := __gp_m61.Value
 
-		switch __gp_m58 := any(node).(type) {
+		switch __gp_m62 := any(node).(type) {
 		case term.AtomTerm:
-			name := __gp_m58.Name
+			name := __gp_m62.Name
 
 			if decoder.nodes == nil {
 				return result.Err[uint32, Failure]{Err: ResolverRequired{}}
 			}
-			switch __gp_m59 := any(decoder.nodes.ID(name)).(type) {
+			switch __gp_m63 := any(decoder.nodes.ID(name)).(type) {
 			case option.Some[uint32]:
-				id := __gp_m59.Value
+				id := __gp_m63.Value
 
 				return result.Ok[uint32, Failure]{Value: id}
 			case option.None[uint32]:
@@ -1217,13 +1295,13 @@ func (decoder *canonicalDecoder) creation(modern bool) result.Result[uint32, Fai
 	if modern {
 		return decoder.uint32()
 	}
-	switch __gp_m60 := any(decoder.byte()).(type) {
+	switch __gp_m64 := any(decoder.byte()).(type) {
 	case result.Ok[byte, Failure]:
-		value := __gp_m60.Value
+		value := __gp_m64.Value
 
 		return result.Ok[uint32, Failure]{Value: uint32(value)}
 	case result.Err[byte, Failure]:
-		failure := __gp_m60.Err
+		failure := __gp_m64.Err
 
 		return result.Err[uint32, Failure]{Err: failure}
 	default:
@@ -1236,13 +1314,13 @@ func (decoder *canonicalDecoder) containerLength() result.Result[int, Failure] {
 }
 
 func (decoder *canonicalDecoder) binaryLength(limit int) result.Result[int, Failure] {
-	switch __gp_m61 := any(decoder.uint32()).(type) {
+	switch __gp_m65 := any(decoder.uint32()).(type) {
 	case result.Err[uint32, Failure]:
-		failure := __gp_m61.Err
+		failure := __gp_m65.Err
 
 		return result.Err[int, Failure]{Err: failure}
 	case result.Ok[uint32, Failure]:
-		value := __gp_m61.Value
+		value := __gp_m65.Value
 
 		if uint64(value) > uint64(limit) || uint64(value) > uint64(maxInt()) {
 			return result.Err[int, Failure]{Err: LimitExceeded{Resource: "container length", Actual: int(value), Limit: limit}}
@@ -1255,26 +1333,26 @@ func (decoder *canonicalDecoder) binaryLength(limit int) result.Result[int, Fail
 
 func (decoder *canonicalDecoder) length(bytes int) result.Result[int, Failure] {
 	if bytes == 1 {
-		switch __gp_m62 := any(decoder.byte()).(type) {
+		switch __gp_m66 := any(decoder.byte()).(type) {
 		case result.Ok[byte, Failure]:
-			value := __gp_m62.Value
+			value := __gp_m66.Value
 
 			return result.Ok[int, Failure]{Value: int(value)}
 		case result.Err[byte, Failure]:
-			failure := __gp_m62.Err
+			failure := __gp_m66.Err
 
 			return result.Err[int, Failure]{Err: failure}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m63 := any(decoder.uint16()).(type) {
+	switch __gp_m67 := any(decoder.uint16()).(type) {
 	case result.Ok[uint16, Failure]:
-		value := __gp_m63.Value
+		value := __gp_m67.Value
 
 		return result.Ok[int, Failure]{Value: int(value)}
 	case result.Err[uint16, Failure]:
-		failure := __gp_m63.Err
+		failure := __gp_m67.Err
 
 		return result.Err[int, Failure]{Err: failure}
 	default:
@@ -1283,13 +1361,13 @@ func (decoder *canonicalDecoder) length(bytes int) result.Result[int, Failure] {
 }
 
 func (decoder *canonicalDecoder) byte() result.Result[byte, Failure] {
-	switch __gp_m64 := any(decoder.take(1)).(type) {
+	switch __gp_m68 := any(decoder.take(1)).(type) {
 	case result.Ok[[]byte, Failure]:
-		value := __gp_m64.Value
+		value := __gp_m68.Value
 
 		return result.Ok[byte, Failure]{Value: value[0]}
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m64.Err
+		failure := __gp_m68.Err
 
 		return result.Err[byte, Failure]{Err: failure}
 	default:
@@ -1298,13 +1376,13 @@ func (decoder *canonicalDecoder) byte() result.Result[byte, Failure] {
 }
 
 func (decoder *canonicalDecoder) uint16() result.Result[uint16, Failure] {
-	switch __gp_m65 := any(decoder.take(2)).(type) {
+	switch __gp_m69 := any(decoder.take(2)).(type) {
 	case result.Ok[[]byte, Failure]:
-		value := __gp_m65.Value
+		value := __gp_m69.Value
 
 		return result.Ok[uint16, Failure]{Value: binary.BigEndian.Uint16(value)}
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m65.Err
+		failure := __gp_m69.Err
 
 		return result.Err[uint16, Failure]{Err: failure}
 	default:
@@ -1313,13 +1391,13 @@ func (decoder *canonicalDecoder) uint16() result.Result[uint16, Failure] {
 }
 
 func (decoder *canonicalDecoder) uint32() result.Result[uint32, Failure] {
-	switch __gp_m66 := any(decoder.take(4)).(type) {
+	switch __gp_m70 := any(decoder.take(4)).(type) {
 	case result.Ok[[]byte, Failure]:
-		value := __gp_m66.Value
+		value := __gp_m70.Value
 
 		return result.Ok[uint32, Failure]{Value: binary.BigEndian.Uint32(value)}
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m66.Err
+		failure := __gp_m70.Err
 
 		return result.Err[uint32, Failure]{Err: failure}
 	default:
@@ -1328,13 +1406,13 @@ func (decoder *canonicalDecoder) uint32() result.Result[uint32, Failure] {
 }
 
 func (decoder *canonicalDecoder) uint64() result.Result[uint64, Failure] {
-	switch __gp_m67 := any(decoder.take(8)).(type) {
+	switch __gp_m71 := any(decoder.take(8)).(type) {
 	case result.Ok[[]byte, Failure]:
-		value := __gp_m67.Value
+		value := __gp_m71.Value
 
 		return result.Ok[uint64, Failure]{Value: binary.BigEndian.Uint64(value)}
 	case result.Err[[]byte, Failure]:
-		failure := __gp_m67.Err
+		failure := __gp_m71.Err
 
 		return result.Err[uint64, Failure]{Err: failure}
 	default:
@@ -1352,9 +1430,9 @@ func (decoder *canonicalDecoder) take(length int) result.Result[[]byte, Failure]
 }
 
 func encodeUTF8Atom(name string) result.Result[[]byte, Failure] {
-	switch __gp_m68 := any(term.Atom(name)).(type) {
+	switch __gp_m72 := any(term.Atom(name)).(type) {
 	case result.Err[term.Term, term.ValidationFailure]:
-		cause := __gp_m68.Err
+		cause := __gp_m72.Err
 
 		return result.Err[[]byte, Failure]{Err: TermRejected{Cause: cause}}
 	case result.Ok[term.Term, term.ValidationFailure]:
@@ -1387,23 +1465,23 @@ func decompressCanonical(encoded []byte, limits TermLimits) result.Result[[]byte
 		return result.Err[[]byte, Failure]{Err: LimitExceeded{Resource: "compressed expansion bytes", Actual: int(size), Limit: limits.MaxTotalBytes}}
 	}
 	readerValue, readerError := zlib.NewReader(bytes.NewReader(encoded[4:]))
-	switch __gp_m69 := any(result.Of(readerValue, readerError)).(type) {
+	switch __gp_m73 := any(result.Of(readerValue, readerError)).(type) {
 	case result.Err[io.ReadCloser, error]:
-		cause := __gp_m69.Err
+		cause := __gp_m73.Err
 
 		return result.Err[[]byte, Failure]{Err: Foreign{Operation: "open compressed term", Cause: cause}}
 	case result.Ok[io.ReadCloser, error]:
-		reader := __gp_m69.Value
+		reader := __gp_m73.Value
 
 		defer reader.Close()
 		decodedValue, decodedError := io.ReadAll(io.LimitReader(reader, int64(size)+1))
-		switch __gp_m70 := any(result.Of(decodedValue, decodedError)).(type) {
+		switch __gp_m74 := any(result.Of(decodedValue, decodedError)).(type) {
 		case result.Err[[]byte, error]:
-			cause := __gp_m70.Err
+			cause := __gp_m74.Err
 
 			return result.Err[[]byte, Failure]{Err: Foreign{Operation: "decompress term", Cause: cause}}
 		case result.Ok[[]byte, error]:
-			decoded := __gp_m70.Value
+			decoded := __gp_m74.Value
 
 			if len(decoded) != int(size) {
 				return result.Err[[]byte, Failure]{Err: Invalid{Area: "compressed size", Detail: fmt.Sprintf("header says %d, decoded %d", size, len(decoded))}}
@@ -1420,13 +1498,13 @@ func decompressCanonical(encoded []byte, limits TermLimits) result.Result[[]byte
 func acceptedTerm(
 	candidate result.Result[term.Term, term.ValidationFailure],
 ) result.Result[term.Term, Failure] {
-	switch __gp_m71 := any(candidate).(type) {
+	switch __gp_m75 := any(candidate).(type) {
 	case result.Ok[term.Term, term.ValidationFailure]:
-		value := __gp_m71.Value
+		value := __gp_m75.Value
 
 		return result.Ok[term.Term, Failure]{Value: value}
 	case result.Err[term.Term, term.ValidationFailure]:
-		cause := __gp_m71.Err
+		cause := __gp_m75.Err
 
 		return result.Err[term.Term, Failure]{Err: TermRejected{Cause: cause}}
 	default:
@@ -1435,9 +1513,9 @@ func acceptedTerm(
 }
 
 func isEmptyList(value term.Term) bool {
-	switch __gp_m72 := any(value).(type) {
+	switch __gp_m76 := any(value).(type) {
 	case term.ProperListTerm:
-		values := __gp_m72.Elements
+		values := __gp_m76.Elements
 
 		return len(values) == 0
 	default:

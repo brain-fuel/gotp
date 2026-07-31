@@ -32,6 +32,9 @@ type Failure enum {
 	UnexpectedSequence(Expected uint64, Received uint64)
 	ETFRejected(Cause string)
 	InvalidEnvelope()
+	MalformedPacket(Detail string)
+	PacketTooLarge(Size uint64)
+	InvalidControl(Detail string)
 }
 
 func (failure Failure) Error() string {
@@ -50,6 +53,12 @@ func (failure Failure) Error() string {
 		return fmt.Sprintf("gotp/distribution: ETF rejected: %s", cause)
 	case InvalidEnvelope:
 		return "gotp/distribution: invalid envelope"
+	case MalformedPacket(detail):
+		return fmt.Sprintf("gotp/distribution: malformed packet: %s", detail)
+	case PacketTooLarge(size):
+		return fmt.Sprintf("gotp/distribution: packet size %d exceeds framing capacity", size)
+	case InvalidControl(detail):
+		return fmt.Sprintf("gotp/distribution: invalid control message: %s", detail)
 	}
 }
 

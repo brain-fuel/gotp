@@ -1,0 +1,2716 @@
+{
+  "schema": "gotp.otp-native-entries/v1",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "source_digest": "2652b1943775661f8be7b8092be85c411e6e9e91f399f37f006618a7a81c376c",
+  "source_count": 860,
+  "entries": [
+    {
+      "kind": "driver-module",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/trace_file_drv.c",
+      "module": "trace_file_drv",
+      "name": "trace_file_drv",
+      "arity": -1
+    },
+    {
+      "kind": "driver-module",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/trace_ip_drv.c",
+      "module": "trace_ip_drv",
+      "name": "trace_ip_drv",
+      "arity": -1
+    },
+    {
+      "kind": "nif-function",
+      "application": "asn1",
+      "source_path": "lib/asn1/c_src/asn1_erl_nif.c",
+      "module": "asn1rt_nif",
+      "name": "decode_ber_tlv_raw",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "asn1",
+      "source_path": "lib/asn1/c_src/asn1_erl_nif.c",
+      "module": "asn1rt_nif",
+      "name": "encode_ber_tlv",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "asn1",
+      "source_path": "lib/asn1/c_src/asn1_erl_nif.c",
+      "module": "asn1rt_nif",
+      "name": "encode_per_complete",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "aead_cipher_init_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "aead_cipher_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "aead_cipher_nif",
+      "arity": 7,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "cipher_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "cipher_info_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "curve_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "decapsulate_key_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "dh_compute_key_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "dh_generate_key_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "do_exor",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ec_generate_key_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ecdh_compute_key_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "enable_fips_mode_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "encapsulate_key_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_add_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_by_id_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_ctrl_cmd_strings_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_free_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_get_all_methods_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_get_first_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_get_id_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_get_name_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_get_next_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_init_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_load_dynamic_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_register_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_remove_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "engine_unregister_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ensure_engine_loaded_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "evp_compute_key_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "evp_generate_key_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_equals_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_final_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_final_xof_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_info",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_init_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "hash_update_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "info_fips",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "info_lib",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "info_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "kem_algorithms_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mac_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mac_final_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mac_init_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mac_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mac_update_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "mod_exp_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ng_crypto_final_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ng_crypto_get_data_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ng_crypto_init_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ng_crypto_one_time_nif",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "ng_crypto_update_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pbkdf2_hmac_nif",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pkey_crypt_nif",
+      "arity": 6,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pkey_sign_heavy_nif",
+      "arity": 5,
+      "flags": "ERL_NIF_DIRTY_JOB_CPU_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pkey_sign_nif",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pkey_verify_nif",
+      "arity": 6,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "privkey_to_pubkey_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "pubkey_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "rand_seed_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "rand_uniform_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "rsa_generate_key_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "rsa_opts_algorithms",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "srp_host_secret_nif",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "srp_user_secret_nif",
+      "arity": 7,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "srp_value_B_nif",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "strong_rand_bytes_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "strong_rand_range_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "available",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_call",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_garbage_collection",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_ports",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_procs",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_receive",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_running_ports",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_running_procs",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "enabled_send",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_call",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_garbage_collection",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_ports",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_procs",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_receive",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_running_ports",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_running_procs",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "trace_send",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "user_trace_i4s4",
+      "arity": 9,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "user_trace_n",
+      "arity": 10,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "user_trace_s1",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/erl_tracer_nif.c",
+      "module": "erl_tracer",
+      "name": "enabled",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/erl_tracer_nif.c",
+      "module": "erl_tracer",
+      "name": "trace",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/egl_impl.c",
+      "module": "gl",
+      "name": "lookup_func_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "copying_read",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "find_byte_index",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "new",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "peek_head",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "size",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "skip",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "try_lock",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "unlock",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "write",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "advise_nif",
+      "arity": 4,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "allocate_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "altname_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "close_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "del_dir_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "del_file_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "delayed_close_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "file_desc_to_ref_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "get_cwd_nif",
+      "arity": 0,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "get_device_cwd_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "get_handle_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "ipread_s32bu_p32bu_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "list_dir_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "make_dir_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "make_hard_link_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "make_soft_link_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "open_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "pread_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "pwrite_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "read_file_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "read_handle_info_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "read_info_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "read_link_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "read_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "rename_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "seek_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "set_cwd_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "set_owner_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "set_permissions_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "set_time_nif",
+      "arity": 4,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "sync_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "truncate_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "write_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_command",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_get_adapters_addresses",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_get_if_entry",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_get_interface_info",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_get_ip_address_table",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_getaddrinfo",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_gethostname",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_getifaddrs",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_getnameinfo",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_getservbyname",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_getservbyport",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_if_index2name",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_if_name2index",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_if_names",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "nif_info",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_accept",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_bind",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_bind",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_cancel",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_close",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_command",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_connect",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_connect",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_finalize_close",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_getopt",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_getopt",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_info",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_info",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_ioctl",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_ioctl",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_ioctl",
+      "arity": 4,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_listen",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_open",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_open",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_peeloff",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_peername",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_peernames",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_recv",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_recvfrom",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_recvmmsg",
+      "arity": 6,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_recvmsg",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_send",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendfile",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendfile",
+      "arity": 4,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendfile",
+      "arity": 5,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendmmsg",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendmsg",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendto",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sendv",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_setopt",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_shutdown",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_sockname",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_socknames",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_supports",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "nif_supports",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "isatty",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "isprint",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "read_nif",
+      "arity": 3,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "setlocale",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "setupterm_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "sizeof_wchar",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tigetflag_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tigetnum_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tigetstr_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tinfo_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tputs_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_create",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_encoding",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_init",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_is_open",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_select",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "tty_window_size",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "wcswidth",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "wcwidth",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "write_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_IO_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "public_key",
+      "source_path": "lib/public_key/c_src/public_key.c",
+      "module": "pubkey_os_cacerts",
+      "name": "os_cacerts",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "debug_driver",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "delete_env",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "get_consts_impl",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "init_opengl",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "make_env",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 10,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 11,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 12,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 13,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 14,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 15,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 5,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 6,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 7,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 8,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "queue_cmd",
+      "arity": 9,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "clearStash_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "close_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflateEnd_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflateInit_nif",
+      "arity": 6,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflateParams_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflateReset_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflateSetDictionary_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "deflate_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "enqueue_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "getStash_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflateEnd_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflateGetDictionary_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflateInit_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflateReset_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflateSetDictionary_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "inflate_nif",
+      "arity": 4,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "open_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "setStash_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "set_controller_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "compress_close_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "compress_reset_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "compress_stream_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "create_cdict_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_CPU_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "create_ddict_nif",
+      "arity": 1,
+      "flags": "ERL_NIF_DIRTY_JOB_CPU_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "decompress_close_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "decompress_reset_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "decompress_stream_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "getDictId_fromCDict_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "getDictId_fromDDict_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "getDictId_fromDict_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "getDictId_fromFrame_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "get_compress_parameter_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "get_decompress_parameter_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "get_frame_header_nif",
+      "arity": 1,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "init_compress_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "init_decompress_nif",
+      "arity": 0,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "load_compress_dictionary_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_CPU_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "load_decompress_dictionary_nif",
+      "arity": 2,
+      "flags": "ERL_NIF_DIRTY_JOB_CPU_BOUND"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "ref_compress_dictionary_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "ref_decompress_dictionary_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "set_compress_parameter_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "set_decompress_parameter_nif",
+      "arity": 3,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-function",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "set_pledged_src_size_nif",
+      "arity": 2,
+      "flags": "0"
+    },
+    {
+      "kind": "nif-module",
+      "application": "asn1",
+      "source_path": "lib/asn1/c_src/asn1_erl_nif.c",
+      "module": "asn1rt_nif",
+      "name": "asn1rt_nif",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto.c",
+      "module": "crypto",
+      "name": "crypto",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "crypto",
+      "source_path": "lib/crypto/c_src/crypto_callback.c",
+      "module": "dummy",
+      "name": "dummy",
+      "arity": -1,
+      "load": "NULL",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "NULL"
+    },
+    {
+      "kind": "nif-module",
+      "application": "runtime_tools",
+      "source_path": "lib/runtime_tools/c_src/dyntrace.c",
+      "module": "dyntrace",
+      "name": "dyntrace",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "NULL"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/erl_tracer_nif.c",
+      "module": "erl_tracer",
+      "name": "erl_tracer",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/egl_impl.c",
+      "module": "gl",
+      "name": "gl",
+      "arity": -1,
+      "load": "egl_init",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "NULL"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_buffer_nif.c",
+      "module": "prim_buffer",
+      "name": "prim_buffer",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_file_nif.c",
+      "module": "prim_file",
+      "name": "prim_file",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_net_nif.c",
+      "module": "prim_net",
+      "name": "prim_net",
+      "arity": -1,
+      "load": "on_load",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "NULL"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_socket_nif.c",
+      "module": "prim_socket",
+      "name": "prim_socket",
+      "arity": -1,
+      "load": "on_load",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "NULL"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/prim_tty_nif.c",
+      "module": "prim_tty",
+      "name": "prim_tty",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "public_key",
+      "source_path": "lib/public_key/c_src/public_key.c",
+      "module": "pubkey_os_cacerts",
+      "name": "pubkey_os_cacerts",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "wx",
+      "source_path": "lib/wx/c_src/wxe_nif.c",
+      "module": "wxe_util",
+      "name": "wxe_util",
+      "arity": -1,
+      "load": "wxe_init",
+      "reload": "NULL",
+      "upgrade": "NULL",
+      "unload": "wxe_unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zlib_nif.c",
+      "module": "zlib",
+      "name": "zlib",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    },
+    {
+      "kind": "nif-module",
+      "application": "erts",
+      "source_path": "erts/emulator/nifs/common/zstd_nif.c",
+      "module": "zstd",
+      "name": "zstd",
+      "arity": -1,
+      "load": "load",
+      "reload": "NULL",
+      "upgrade": "upgrade",
+      "unload": "unload"
+    }
+  ]
+}

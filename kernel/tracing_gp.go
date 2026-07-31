@@ -475,6 +475,13 @@ func (kernel *Kernel) traceSignal(to term.PID, signal Signal) {
 		reference := __gp_m2.Reference
 
 		kernel.trace(DownSignalQueued{From: from, To: to, Sequence: sequence, Reason: reason, Reference: reference})
+	case DownNamedSignal:
+		from := __gp_m2.From
+		sequence := __gp_m2.Sequence
+		reason := __gp_m2.Reason
+		reference := __gp_m2.Reference
+
+		kernel.trace(DownSignalQueued{From: from, To: to, Sequence: sequence, Reason: reason, Reference: reference})
 	default:
 		panic("goplus: impossible enum value in match")
 	}

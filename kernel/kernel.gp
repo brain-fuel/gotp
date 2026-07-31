@@ -48,6 +48,9 @@ type ProcessInfo struct {
 	Links         []term.PID
 	Aliases       []term.Reference
 	ExitReason    option.Option[term.Term]
+	RegisteredName option.Option[string]
+	GroupLeader   term.PID
+	PendingRemoteUnlinks []RemoteUnlink
 }
 
 type Failure enum {
@@ -55,6 +58,9 @@ type Failure enum {
 	MissingProcess(Role string, PID term.PID)
 	InvalidLink(Detail string)
 	InvalidTimer(Detail string)
+	InvalidMonitor(Detail string)
+	InvalidRegistration(Detail string)
+	InvalidGroupLeader(Detail string)
 }
 
 func (failure Failure) Error() string {
@@ -67,6 +73,12 @@ func (failure Failure) Error() string {
 		return "gotp/kernel: invalid link: " + detail
 	case InvalidTimer(detail):
 		return "gotp/kernel: invalid timer: " + detail
+	case InvalidMonitor(detail):
+		return "gotp/kernel: invalid monitor: " + detail
+	case InvalidRegistration(detail):
+		return "gotp/kernel: invalid registration: " + detail
+	case InvalidGroupLeader(detail):
+		return "gotp/kernel: invalid group leader: " + detail
 	}
 }
 
@@ -89,6 +101,23 @@ type AliasRemoval enum {
 	AliasAbsent()
 }
 
+type RemoteSignal enum {
+	RemoteExitSignal(From term.PID, To term.PID, Reason term.Term)
+	RemoteDownSignal(Source term.PID, To term.PID, Reference term.Reference, Reason term.Term)
+	RemoteDownNamedSignal(Source string, To term.PID, Reference term.Reference, Reason term.Term)
+}
+
+type RemoteUnlink struct {
+	ID     uint64
+	Local  term.PID
+	Remote term.PID
+}
+
+type RemoteUnlinkAcknowledgement enum {
+	RemoteUnlinkMatched()
+	RemoteUnlinkIgnored()
+}
+
 type route struct {
 	from term.PID
 	to   term.PID
@@ -105,6 +134,10 @@ type process struct {
 	monitoredBy map[term.Reference]term.PID
 	aliases     map[term.Reference]struct{}
 	exitReason  option.Option[term.Term]
+	registeredName option.Option[string]
+	groupLeader term.PID
+	monitorNames map[term.Reference]string
+	remoteUnlinks map[term.PID]uint64
 }
 
 type Kernel struct {
@@ -118,6 +151,9 @@ type Kernel struct {
 	aliases       map[term.Reference]term.PID
 	wakeups       *wakeQueue
 	tracer        *Tracer
+	remoteSignals []RemoteSignal
+	names         map[string]term.PID
+	nextUnlinkID  uint64
 }
 
 func New(config KernelConfig) *Kernel {
@@ -134,6 +170,7 @@ func New(config KernelConfig) *Kernel {
 		sequences: make(map[route]uint64),
 		aliases:   make(map[term.Reference]term.PID),
 		wakeups: newWakeQueue(),
+		names: make(map[string]term.PID),
 	}
 }
 
@@ -169,6 +206,10 @@ func (kernel *Kernel) Spawn(
 		monitoredBy: make(map[term.Reference]term.PID),
 		aliases: make(map[term.Reference]struct{}),
 		exitReason: option.None[term.Term],
+		registeredName: option.None[string],
+		groupLeader: pid,
+		monitorNames: make(map[term.Reference]string),
+		remoteUnlinks: make(map[term.PID]uint64),
 	}
 	kernel.processes[pid] = current
 	kernel.enqueueRunnable(pid)
@@ -191,6 +232,83 @@ func (kernel *Kernel) Send(
 	message term.Term,
 ) Delivery {
 	return kernel.enqueueSignal(to, UserSignal(from, 0, message.Clone()))
+}
+
+// assayxport:unit gotp.kernel.registered-processes
+func (kernel *Kernel) Register(name string, pid term.PID) result.Result[KernelMutation, Failure] {
+	if name == "" {
+		return result.Err[KernelMutation, Failure](InvalidRegistration("name is empty"))
+	}
+	match term.Atom(name) {
+	case result.Err(cause): return result.Err[KernelMutation, Failure](InvalidRegistration(cause.Error()))
+	case result.Ok(_):
+	}
+	if _, duplicate := kernel.names[name]; duplicate {
+		return result.Err[KernelMutation, Failure](InvalidRegistration("name is already registered"))
+	}
+	match kernel.liveProcess(pid) {
+	case option.None: return result.Err[KernelMutation, Failure](MissingProcess("registration", pid))
+	case option.Some(current):
+		match current.registeredName {
+		case option.Some(_): return result.Err[KernelMutation, Failure](InvalidRegistration("process already has a name"))
+		case option.None:
+		}
+		kernel.names[name] = pid
+		current.registeredName = option.Some[string](name)
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	}
+}
+
+func (kernel *Kernel) Unregister(name string) result.Result[KernelMutation, Failure] {
+	pid, present := kernel.names[name]
+	if !present {
+		return result.Err[KernelMutation, Failure](InvalidRegistration("name is not registered"))
+	}
+	delete(kernel.names, name)
+	match kernel.liveProcess(pid) {
+	case option.None:
+	case option.Some(current): current.registeredName = option.None[string]
+	}
+	return result.Ok[KernelMutation, Failure](KernelMutated())
+}
+
+func (kernel *Kernel) Whereis(name string) option.Option[term.PID] {
+	pid, present := kernel.names[name]
+	if !present { return option.None[term.PID] }
+	match kernel.liveProcess(pid) {
+	case option.None:
+		delete(kernel.names, name)
+		return option.None[term.PID]
+	case option.Some(_): return option.Some[term.PID](pid)
+	}
+}
+
+func (kernel *Kernel) SendRegistered(from term.PID, name string, message term.Term) Delivery {
+	match kernel.Whereis(name) {
+	case option.None: return NoProcess()
+	case option.Some(to): return kernel.Send(from, to, message)
+	}
+}
+
+func (kernel *Kernel) SetGroupLeader(
+	leader term.PID,
+	member term.PID,
+) result.Result[KernelMutation, Failure] {
+	if !leader.Valid() {
+		return result.Err[KernelMutation, Failure](InvalidGroupLeader("leader pid is invalid"))
+	}
+	if leader.Node == kernel.config.Node {
+		match kernel.liveProcess(leader) {
+		case option.None: return result.Err[KernelMutation, Failure](MissingProcess("group leader", leader))
+		case option.Some(_):
+		}
+	}
+	match kernel.liveProcess(member) {
+	case option.None: return result.Err[KernelMutation, Failure](MissingProcess("group member", member))
+	case option.Some(current):
+		current.groupLeader = leader
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	}
 }
 
 func (kernel *Kernel) Link(
@@ -216,6 +334,27 @@ func (kernel *Kernel) Link(
 	}
 }
 
+// assayxport:unit gotp.kernel.remote-process-signals
+func (kernel *Kernel) LinkRemote(
+	remote term.PID,
+	local term.PID,
+) result.Result[KernelMutation, Failure] {
+	if !remote.Valid() || !local.Valid() {
+		return result.Err[KernelMutation, Failure](InvalidLink("remote or local pid is invalid"))
+	}
+	match kernel.liveProcess(local) {
+	case option.None:
+		return result.Err[KernelMutation, Failure](MissingProcess("local link", local))
+	case option.Some(current):
+		if _, outstanding := current.remoteUnlinks[remote]; outstanding {
+			return result.Ok[KernelMutation, Failure](KernelMutated())
+		}
+		current.links[remote] = struct{}{}
+		kernel.trace(ProcessesLinked(remote, local))
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	}
+}
+
 func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
 	match kernel.liveProcess(left) {
 	case option.Some(leftProcess):
@@ -230,15 +369,85 @@ func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
 	return KernelMutated()
 }
 
+func (kernel *Kernel) UnlinkRemote(remote term.PID, local term.PID) KernelMutation {
+	match kernel.liveProcess(local) {
+	case option.Some(current): delete(current.links, remote)
+	case option.None:
+	}
+	return KernelMutated()
+}
+
+// assayxport:unit gotp.kernel.remote-unlink-protocol
+func (kernel *Kernel) BeginRemoteUnlink(
+	local term.PID,
+	remote term.PID,
+) result.Result[RemoteUnlink, Failure] {
+	match kernel.liveProcess(local) {
+	case option.None:
+		return result.Err[RemoteUnlink, Failure](MissingProcess("local unlink", local))
+	case option.Some(current):
+		if identifier, outstanding := current.remoteUnlinks[remote]; outstanding {
+			return result.Ok[RemoteUnlink, Failure](RemoteUnlink{
+				ID: identifier, Local: local, Remote: remote,
+			})
+		}
+		if _, active := current.links[remote]; !active {
+			return result.Err[RemoteUnlink, Failure](InvalidLink("remote link is not active"))
+		}
+		delete(current.links, remote)
+		kernel.nextUnlinkID++
+		if kernel.nextUnlinkID == 0 { kernel.nextUnlinkID++ }
+		current.remoteUnlinks[remote] = kernel.nextUnlinkID
+		return result.Ok[RemoteUnlink, Failure](RemoteUnlink{
+			ID: kernel.nextUnlinkID, Local: local, Remote: remote,
+		})
+	}
+}
+
+func (kernel *Kernel) AcknowledgeRemoteUnlink(
+	local term.PID,
+	remote term.PID,
+	identifier uint64,
+) RemoteUnlinkAcknowledgement {
+	match kernel.liveProcess(local) {
+	case option.None: return RemoteUnlinkIgnored()
+	case option.Some(current):
+		outstanding, present := current.remoteUnlinks[remote]
+		if present && outstanding == identifier {
+			delete(current.remoteUnlinks, remote)
+			return RemoteUnlinkMatched()
+		}
+		return RemoteUnlinkIgnored()
+	}
+}
+
 func (kernel *Kernel) Monitor(
 	watcher term.PID,
 	target term.PID,
 ) result.Result[term.Reference, Failure] {
+	reference := kernel.newReference()
+	match kernel.MonitorReference(watcher, target, reference) {
+	case result.Err(failure): return result.Err[term.Reference, Failure](failure)
+	case result.Ok(_): return result.Ok[term.Reference, Failure](reference)
+	}
+}
+
+// assayxport:unit gotp.kernel.remote-monitor-signals
+func (kernel *Kernel) MonitorReference(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !reference.Valid() {
+		return result.Err[KernelMutation, Failure](InvalidMonitor("reference is invalid"))
+	}
 	match kernel.liveProcess(watcher) {
 	case option.None:
-		return result.Err[term.Reference, Failure](MissingProcess("watcher", watcher))
+		return result.Err[KernelMutation, Failure](MissingProcess("watcher", watcher))
 	case option.Some(watcherProcess):
-		reference := kernel.newReference()
+		if _, duplicate := watcherProcess.monitoring[reference]; duplicate {
+			return result.Err[KernelMutation, Failure](InvalidMonitor("reference is already active"))
+		}
 		match kernel.liveProcess(target) {
 		case option.None:
 			kernel.enqueueSignal(watcher, DownSignal(
@@ -249,8 +458,112 @@ func (kernel *Kernel) Monitor(
 			targetProcess.monitoredBy[reference] = watcher
 		}
 		kernel.trace(ProcessMonitored(watcher, target, reference))
-		return result.Ok[term.Reference, Failure](reference)
+		return result.Ok[KernelMutation, Failure](KernelMutated())
 	}
+}
+
+func (kernel *Kernel) MonitorRemote(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !watcher.Valid() || !reference.Valid() {
+		return result.Err[KernelMutation, Failure](InvalidMonitor("remote watcher or reference is invalid"))
+	}
+	match kernel.liveProcess(target) {
+	case option.None:
+		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal(
+			target, watcher, reference, term.MustAtom("noproc"),
+		))
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	case option.Some(current):
+		if prior, duplicate := current.monitoredBy[reference]; duplicate && prior != watcher {
+			return result.Err[KernelMutation, Failure](InvalidMonitor("reference belongs to another watcher"))
+		}
+		current.monitoredBy[reference] = watcher
+		kernel.trace(ProcessMonitored(watcher, target, reference))
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	}
+}
+
+func (kernel *Kernel) MonitorRemoteName(
+	watcher term.PID,
+	name string,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !watcher.Valid() || !reference.Valid() {
+		return result.Err[KernelMutation, Failure](InvalidMonitor("remote watcher or reference is invalid"))
+	}
+	match kernel.Whereis(name) {
+	case option.None:
+		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal(
+			name, watcher, reference, term.MustAtom("noproc"),
+		))
+		return result.Ok[KernelMutation, Failure](KernelMutated())
+	case option.Some(target):
+		match kernel.liveProcess(target) {
+		case option.None: return result.Err[KernelMutation, Failure](MissingProcess("named monitor", target))
+		case option.Some(current):
+			if prior, duplicate := current.monitoredBy[reference]; duplicate && prior != watcher {
+				return result.Err[KernelMutation, Failure](InvalidMonitor("reference belongs to another watcher"))
+			}
+			current.monitoredBy[reference] = watcher
+			current.monitorNames[reference] = name
+			kernel.trace(ProcessMonitored(watcher, target, reference))
+			return result.Ok[KernelMutation, Failure](KernelMutated())
+		}
+	}
+}
+
+func (kernel *Kernel) DemonitorRemote(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) MonitorRemoval {
+	match kernel.liveProcess(target) {
+	case option.None: return MonitorAbsent()
+	case option.Some(current):
+		prior, present := current.monitoredBy[reference]
+		if present && prior == watcher {
+			delete(current.monitoredBy, reference)
+			return MonitorRemoved()
+		}
+		return MonitorAbsent()
+	}
+}
+
+func (kernel *Kernel) DemonitorRemoteName(
+	watcher term.PID,
+	name string,
+	reference term.Reference,
+) MonitorRemoval {
+	for _, current := range kernel.processes {
+		match current.status { case Exited: continue; case _: }
+		prior, present := current.monitoredBy[reference]
+		registered, named := current.monitorNames[reference]
+		if present && named && prior == watcher && registered == name {
+			delete(current.monitoredBy, reference)
+			delete(current.monitorNames, reference)
+			return MonitorRemoved()
+		}
+	}
+	return MonitorAbsent()
+}
+
+func (kernel *Kernel) DrainRemoteSignals() []RemoteSignal {
+	drained := make([]RemoteSignal, len(kernel.remoteSignals))
+	for index, signal := range kernel.remoteSignals {
+		match signal {
+		case RemoteExitSignal(from, to, reason):
+			drained[index] = RemoteExitSignal(from, to, reason.Clone())
+		case RemoteDownSignal(source, to, reference, reason):
+			drained[index] = RemoteDownSignal(source, to, reference, reason.Clone())
+		case RemoteDownNamedSignal(source, to, reference, reason):
+			drained[index] = RemoteDownNamedSignal(source, to, reference, reason.Clone())
+		}
+	}
+	kernel.remoteSignals = kernel.remoteSignals[:0]
+	return drained
 }
 
 func (kernel *Kernel) Demonitor(
@@ -268,6 +581,7 @@ func (kernel *Kernel) Demonitor(
 			match kernel.liveProcess(target) {
 			case option.Some(targetProcess):
 				delete(targetProcess.monitoredBy, reference)
+				delete(targetProcess.monitorNames, reference)
 			case option.None:
 			}
 		}
@@ -275,6 +589,8 @@ func (kernel *Kernel) Demonitor(
 			watcherProcess.mailbox.Remove(func(signal Signal) bool {
 				match signal {
 				case DownSignal(_, _, _, found, _):
+					return found == reference
+				case DownNamedSignal(_, _, _, found, _):
 					return found == reference
 				case _:
 					return false
@@ -378,6 +694,28 @@ func (kernel *Kernel) SendExit(
 	}
 }
 
+func (kernel *Kernel) SendDown(
+	source term.PID,
+	to term.PID,
+	reference term.Reference,
+	reason term.Term,
+) Delivery {
+	return kernel.enqueueSignal(to, DownSignal(
+		source, 0, reason.Clone(), reference, source,
+	))
+}
+
+func (kernel *Kernel) SendDownNamed(
+	name string,
+	to term.PID,
+	reference term.Reference,
+	reason term.Term,
+) Delivery {
+	return kernel.enqueueSignal(to, DownNamedSignal(
+		term.PID{}, 0, reason.Clone(), reference, name,
+	))
+}
+
 func (kernel *Kernel) Run(maxReductions int) RunReport {
 	if maxReductions <= 0 {
 		maxReductions = 1_000_000
@@ -447,10 +785,20 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 			exitReason = option.Some[term.Term](reason.Clone())
 		case option.None:
 		}
+		pending := make([]RemoteUnlink, 0, len(found.remoteUnlinks))
+		for remote, identifier := range found.remoteUnlinks {
+			pending = append(pending, RemoteUnlink{ID: identifier, Local: found.pid, Remote: remote})
+		}
+		sort.Slice(pending, func(left, right int) bool {
+			return pending[left].Remote.Less(pending[right].Remote)
+		})
 		return option.Some[ProcessInfo](ProcessInfo{
 			PID: found.pid, Status: found.status, TrapExit: found.trapExit,
 			MailboxLength: found.mailbox.Len(), Links: links, Aliases: aliases,
 			ExitReason: exitReason,
+			RegisteredName: found.registeredName,
+			GroupLeader: found.groupLeader,
+			PendingRemoteUnlinks: pending,
 		})
 	}
 }
@@ -517,6 +865,11 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	current.status = Exited()
 	current.exitReason = option.Some[term.Term](reason.Clone())
 	kernel.trace(ProcessExited(current.pid, reason))
+	match current.registeredName {
+	case option.Some(name): delete(kernel.names, name)
+	case option.None:
+	}
+	current.registeredName = option.None[string]
 
 	links := make([]term.PID, 0, len(current.links))
 	for linked := range current.links {
@@ -526,9 +879,15 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		return links[left].Less(links[right])
 	})
 	current.links = make(map[term.PID]struct{})
+	current.remoteUnlinks = make(map[term.PID]uint64)
 	for _, linkedPID := range links {
 		match kernel.liveProcess(linkedPID) {
 		case option.None:
+			if linkedPID.Node != kernel.config.Node {
+				kernel.remoteSignals = append(kernel.remoteSignals, RemoteExitSignal(
+					current.pid, linkedPID, reason.Clone(),
+				))
+			}
 		case option.Some(linked):
 			delete(linked.links, current.pid)
 			if linked.trapExit {
@@ -554,14 +913,34 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		watcher := current.monitoredBy[reference]
 		match kernel.liveProcess(watcher) {
 		case option.None:
+			if watcher.Node != kernel.config.Node {
+				name, named := current.monitorNames[reference]
+				if named {
+					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal(
+						name, watcher, reference, reason.Clone(),
+					))
+				} else {
+					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal(
+						current.pid, watcher, reference, reason.Clone(),
+					))
+				}
+			}
 		case option.Some(watcherProcess):
 			delete(watcherProcess.monitoring, reference)
-			kernel.enqueueSignal(watcher, DownSignal(
-				current.pid, 0, reason.Clone(), reference, current.pid,
-			))
+			name, named := current.monitorNames[reference]
+			if named {
+				kernel.enqueueSignal(watcher, DownNamedSignal(
+					current.pid, 0, reason.Clone(), reference, name,
+				))
+			} else {
+				kernel.enqueueSignal(watcher, DownSignal(
+					current.pid, 0, reason.Clone(), reference, current.pid,
+				))
+			}
 		}
 	}
 	current.monitoredBy = make(map[term.Reference]term.PID)
+	current.monitorNames = make(map[term.Reference]string)
 
 	outgoing := make([]term.Reference, 0, len(current.monitoring))
 	for reference := range current.monitoring {
@@ -672,6 +1051,17 @@ func signalMessage(signal Signal) option.Option[MessageEnvelope] {
 				term.ReferenceTerm(reference),
 				term.MustAtom("process"),
 				term.PIDTerm(target),
+				reason,
+			),
+			From: from,
+		})
+	case DownNamedSignal(from, _, reason, reference, target):
+		return option.Some[MessageEnvelope](MessageEnvelope{
+			Message: term.Tuple(
+				term.MustAtom("DOWN"),
+				term.ReferenceTerm(reference),
+				term.MustAtom("process"),
+				term.MustAtom(target),
 				reason,
 			),
 			From: from,

@@ -18,6 +18,7 @@ import (
 const (
 	canonicalVersion         = 131
 	canonicalCompressed      = 80
+	canonicalAtomCacheRef    = 82
 	canonicalNewPID          = 88
 	canonicalNewPort         = 89
 	canonicalNewerReference  = 90
@@ -138,6 +139,11 @@ type CanonicalCodec struct {
 	Limits TermLimits
 }
 
+type DecodedPrefix struct {
+	Value         term.Term
+	BytesConsumed int
+}
+
 func (codec CanonicalCodec) Encode(value term.Term) result.Result[[]byte, Failure] {
 	encoder := canonicalEncoder{nodes: codec.Nodes, limits: codec.Limits.normalized()}
 	match encoder.encodeTerm(value, 0) {
@@ -181,6 +187,39 @@ func (codec CanonicalCodec) Decode(encoded []byte) result.Result[term.Term, Fail
 			return result.Err[term.Term, Failure](TrailingBytes(len(decoder.data) - decoder.position))
 		}
 		return result.Ok[term.Term, Failure](value)
+	}
+}
+
+// assayxport:unit gotp.etf.versionless-prefix
+func (codec CanonicalCodec) DecodeVersionlessPrefix(
+	encoded []byte,
+	atomReferences []string,
+) result.Result[DecodedPrefix, Failure] {
+	limits := codec.Limits.normalized()
+	if len(encoded) == 0 {
+		return result.Err[DecodedPrefix, Failure](MissingVersion())
+	}
+	if len(encoded) > limits.MaxTotalBytes {
+		return result.Err[DecodedPrefix, Failure](LimitExceeded("input bytes", len(encoded), limits.MaxTotalBytes))
+	}
+	for _, name := range atomReferences {
+		match term.Atom(name) {
+		case result.Err(cause):
+			return result.Err[DecodedPrefix, Failure](TermRejected(cause))
+		case result.Ok(_):
+		}
+	}
+	decoder := canonicalDecoder{
+		data: encoded, nodes: codec.Nodes, limits: limits,
+		atomReferences: append([]string{}, atomReferences...),
+	}
+	match decoder.decodeTerm(0) {
+	case result.Err(failure):
+		return result.Err[DecodedPrefix, Failure](failure)
+	case result.Ok(value):
+		return result.Ok[DecodedPrefix, Failure](DecodedPrefix{
+			Value: value, BytesConsumed: decoder.position,
+		})
 	}
 }
 
@@ -464,6 +503,7 @@ type canonicalDecoder struct {
 	position int
 	nodes    NodeResolver
 	limits   TermLimits
+	atomReferences []string
 }
 
 func (decoder *canonicalDecoder) decodeTerm(depth int) result.Result[term.Term, Failure] {
@@ -492,6 +532,24 @@ func (decoder *canonicalDecoder) decodeTagged(tag byte, depth int) result.Result
 			return result.Ok[term.Term, Failure](term.Integer(int64(value)))
 		case result.Err(failure):
 			return result.Err[term.Term, Failure](failure)
+		}
+	case canonicalAtomCacheRef:
+		match decoder.byte() {
+		case result.Err(failure):
+			return result.Err[term.Term, Failure](failure)
+		case result.Ok(index):
+			if int(index) >= len(decoder.atomReferences) {
+				return result.Err[term.Term, Failure](Invalid(
+					"atom cache reference",
+					fmt.Sprintf("index %d exceeds %d references", index, len(decoder.atomReferences)),
+				))
+			}
+			match term.Atom(decoder.atomReferences[index]) {
+			case result.Err(cause):
+				return result.Err[term.Term, Failure](TermRejected(cause))
+			case result.Ok(atom):
+				return result.Ok[term.Term, Failure](atom)
+			}
 		}
 	case canonicalInteger:
 		match decoder.uint32() {

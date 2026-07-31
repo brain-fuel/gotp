@@ -9,6 +9,7 @@ type Signal enum {
 	UserSignal(From term.PID, Sequence uint64, Message term.Term)
 	ExitSignal(From term.PID, Sequence uint64, Reason term.Term, Target term.PID)
 	DownSignal(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target term.PID)
+	DownNamedSignal(From term.PID, Sequence uint64, Reason term.Term, Reference term.Reference, Target string)
 }
 
 type MailboxMutation enum {
@@ -73,6 +74,8 @@ func signalFrom(signal Signal) term.PID {
 		return from
 	case DownSignal(from, _, _, _, _):
 		return from
+	case DownNamedSignal(from, _, _, _, _):
+		return from
 	}
 }
 
@@ -83,6 +86,8 @@ func signalSequence(signal Signal) uint64 {
 	case ExitSignal(_, sequence, _, _):
 		return sequence
 	case DownSignal(_, sequence, _, _, _):
+		return sequence
+	case DownNamedSignal(_, sequence, _, _, _):
 		return sequence
 	}
 }
@@ -95,5 +100,7 @@ func withSequence(signal Signal, sequence uint64) Signal {
 		return ExitSignal(from, sequence, reason, target)
 	case DownSignal(from, _, reason, reference, target):
 		return DownSignal(from, sequence, reason, reference, target)
+	case DownNamedSignal(from, _, reason, reference, target):
+		return DownNamedSignal(from, sequence, reason, reference, target)
 	}
 }

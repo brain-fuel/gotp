@@ -316,13 +316,16 @@ type RunReport struct {
 }
 
 type ProcessInfo struct {
-	PID           term.PID
-	Status        ProcessStatus
-	TrapExit      bool
-	MailboxLength int
-	Links         []term.PID
-	Aliases       []term.Reference
-	ExitReason    option.Option[term.Term]
+	PID                  term.PID
+	Status               ProcessStatus
+	TrapExit             bool
+	MailboxLength        int
+	Links                []term.PID
+	Aliases              []term.Reference
+	ExitReason           option.Option[term.Term]
+	RegisteredName       option.Option[string]
+	GroupLeader          term.PID
+	PendingRemoteUnlinks []RemoteUnlink
 }
 
 //goplus:enum Failure
@@ -355,12 +358,36 @@ type InvalidTimer struct {
 
 func (InvalidTimer) isFailure() {}
 
+//goplus:variant (Failure) InvalidMonitor(Detail string)
+type InvalidMonitor struct {
+	Detail string
+}
+
+func (InvalidMonitor) isFailure() {}
+
+//goplus:variant (Failure) InvalidRegistration(Detail string)
+type InvalidRegistration struct {
+	Detail string
+}
+
+func (InvalidRegistration) isFailure() {}
+
+//goplus:variant (Failure) InvalidGroupLeader(Detail string)
+type InvalidGroupLeader struct {
+	Detail string
+}
+
+func (InvalidGroupLeader) isFailure() {}
+
 // FailureCases selects one handler per Failure variant for FailureFold.
 type FailureCases[R any] struct {
-	NilBehavior    func() R
-	MissingProcess func(Role string, PID term.PID) R
-	InvalidLink    func(Detail string) R
-	InvalidTimer   func(Detail string) R
+	NilBehavior         func() R
+	MissingProcess      func(Role string, PID term.PID) R
+	InvalidLink         func(Detail string) R
+	InvalidTimer        func(Detail string) R
+	InvalidMonitor      func(Detail string) R
+	InvalidRegistration func(Detail string) R
+	InvalidGroupLeader  func(Detail string) R
 }
 
 // FailureFold reduces Failure by one-level case analysis.
@@ -374,6 +401,12 @@ func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 		return cs.InvalidLink(m.Detail)
 	case InvalidTimer:
 		return cs.InvalidTimer(m.Detail)
+	case InvalidMonitor:
+		return cs.InvalidMonitor(m.Detail)
+	case InvalidRegistration:
+		return cs.InvalidRegistration(m.Detail)
+	case InvalidGroupLeader:
+		return cs.InvalidGroupLeader(m.Detail)
 	default:
 		panic("goplus: impossible enum value in FailureFold")
 	}
@@ -382,10 +415,13 @@ func FailureFold[R any](f Failure, cs FailureCases[R]) R {
 // FailureEqOverrides carries optional per-variant hooks for FailureEqualWith.
 // A hook returning handled=false falls through to the derived comparison.
 type FailureEqOverrides struct {
-	NilBehavior    func(x, y NilBehavior) (eq, handled bool)
-	MissingProcess func(x, y MissingProcess) (eq, handled bool)
-	InvalidLink    func(x, y InvalidLink) (eq, handled bool)
-	InvalidTimer   func(x, y InvalidTimer) (eq, handled bool)
+	NilBehavior         func(x, y NilBehavior) (eq, handled bool)
+	MissingProcess      func(x, y MissingProcess) (eq, handled bool)
+	InvalidLink         func(x, y InvalidLink) (eq, handled bool)
+	InvalidTimer        func(x, y InvalidTimer) (eq, handled bool)
+	InvalidMonitor      func(x, y InvalidMonitor) (eq, handled bool)
+	InvalidRegistration func(x, y InvalidRegistration) (eq, handled bool)
+	InvalidGroupLeader  func(x, y InvalidGroupLeader) (eq, handled bool)
 }
 
 // FailureEqualWith reports structural equality of a and b under ov.
@@ -451,6 +487,48 @@ func FailureEqualWith(a, b Failure, ov FailureEqOverrides) bool {
 			return false
 		}
 		return true
+	case InvalidMonitor:
+		y, ok := any(b).(InvalidMonitor)
+		if !ok {
+			return false
+		}
+		if ov.InvalidMonitor != nil {
+			if eq, handled := ov.InvalidMonitor(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	case InvalidRegistration:
+		y, ok := any(b).(InvalidRegistration)
+		if !ok {
+			return false
+		}
+		if ov.InvalidRegistration != nil {
+			if eq, handled := ov.InvalidRegistration(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
+	case InvalidGroupLeader:
+		y, ok := any(b).(InvalidGroupLeader)
+		if !ok {
+			return false
+		}
+		if ov.InvalidGroupLeader != nil {
+			if eq, handled := ov.InvalidGroupLeader(x, y); handled {
+				return eq
+			}
+		}
+		if x.Detail != y.Detail {
+			return false
+		}
+		return true
 	}
 	return false
 }
@@ -479,6 +557,18 @@ func FailureError(failure Failure) string {
 		detail := __gp_m0.Detail
 
 		return "gotp/kernel: invalid timer: " + detail
+	case InvalidMonitor:
+		detail := __gp_m0.Detail
+
+		return "gotp/kernel: invalid monitor: " + detail
+	case InvalidRegistration:
+		detail := __gp_m0.Detail
+
+		return "gotp/kernel: invalid registration: " + detail
+	case InvalidGroupLeader:
+		detail := __gp_m0.Detail
+
+		return "gotp/kernel: invalid group leader: " + detail
 	default:
 		panic("goplus: impossible enum value in match")
 	}
@@ -771,22 +861,251 @@ func AliasRemovalEqual(a, b AliasRemoval) bool {
 	return AliasRemovalEqualWith(a, b, AliasRemovalEqOverrides{})
 }
 
+//goplus:enum RemoteSignal
+type RemoteSignal interface{ isRemoteSignal() }
+
+//goplus:variant (RemoteSignal) RemoteExitSignal(From term.PID, To term.PID, Reason term.Term)
+type RemoteExitSignal struct {
+	From   term.PID
+	To     term.PID
+	Reason term.Term
+}
+
+func (RemoteExitSignal) isRemoteSignal() {}
+
+//goplus:variant (RemoteSignal) RemoteDownSignal(Source term.PID, To term.PID, Reference term.Reference, Reason term.Term)
+type RemoteDownSignal struct {
+	Source    term.PID
+	To        term.PID
+	Reference term.Reference
+	Reason    term.Term
+}
+
+func (RemoteDownSignal) isRemoteSignal() {}
+
+//goplus:variant (RemoteSignal) RemoteDownNamedSignal(Source string, To term.PID, Reference term.Reference, Reason term.Term)
+type RemoteDownNamedSignal struct {
+	Source    string
+	To        term.PID
+	Reference term.Reference
+	Reason    term.Term
+}
+
+func (RemoteDownNamedSignal) isRemoteSignal() {}
+
+// RemoteSignalCases selects one handler per RemoteSignal variant for RemoteSignalFold.
+type RemoteSignalCases[R any] struct {
+	RemoteExitSignal      func(From term.PID, To term.PID, Reason term.Term) R
+	RemoteDownSignal      func(Source term.PID, To term.PID, Reference term.Reference, Reason term.Term) R
+	RemoteDownNamedSignal func(Source string, To term.PID, Reference term.Reference, Reason term.Term) R
+}
+
+// RemoteSignalFold reduces RemoteSignal by one-level case analysis.
+func RemoteSignalFold[R any](v RemoteSignal, cs RemoteSignalCases[R]) R {
+	switch m := any(v).(type) {
+	case RemoteExitSignal:
+		return cs.RemoteExitSignal(m.From, m.To, m.Reason)
+	case RemoteDownSignal:
+		return cs.RemoteDownSignal(m.Source, m.To, m.Reference, m.Reason)
+	case RemoteDownNamedSignal:
+		return cs.RemoteDownNamedSignal(m.Source, m.To, m.Reference, m.Reason)
+	default:
+		panic("goplus: impossible enum value in RemoteSignalFold")
+	}
+}
+
+// RemoteSignalEqOverrides carries optional per-variant hooks for RemoteSignalEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type RemoteSignalEqOverrides struct {
+	RemoteExitSignal      func(x, y RemoteExitSignal) (eq, handled bool)
+	RemoteDownSignal      func(x, y RemoteDownSignal) (eq, handled bool)
+	RemoteDownNamedSignal func(x, y RemoteDownNamedSignal) (eq, handled bool)
+}
+
+// RemoteSignalEqualWith reports structural equality of a and b under ov.
+func RemoteSignalEqualWith(a, b RemoteSignal, ov RemoteSignalEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case RemoteExitSignal:
+		y, ok := any(b).(RemoteExitSignal)
+		if !ok {
+			return false
+		}
+		if ov.RemoteExitSignal != nil {
+			if eq, handled := ov.RemoteExitSignal(x, y); handled {
+				return eq
+			}
+		}
+		if x.From != y.From {
+			return false
+		}
+		if x.To != y.To {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		return true
+	case RemoteDownSignal:
+		y, ok := any(b).(RemoteDownSignal)
+		if !ok {
+			return false
+		}
+		if ov.RemoteDownSignal != nil {
+			if eq, handled := ov.RemoteDownSignal(x, y); handled {
+				return eq
+			}
+		}
+		if x.Source != y.Source {
+			return false
+		}
+		if x.To != y.To {
+			return false
+		}
+		if x.Reference != y.Reference {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		return true
+	case RemoteDownNamedSignal:
+		y, ok := any(b).(RemoteDownNamedSignal)
+		if !ok {
+			return false
+		}
+		if ov.RemoteDownNamedSignal != nil {
+			if eq, handled := ov.RemoteDownNamedSignal(x, y); handled {
+				return eq
+			}
+		}
+		if x.Source != y.Source {
+			return false
+		}
+		if x.To != y.To {
+			return false
+		}
+		if x.Reference != y.Reference {
+			return false
+		}
+		if x.Reason != y.Reason {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+// RemoteSignalEqual reports structural equality of a and b.
+func RemoteSignalEqual(a, b RemoteSignal) bool {
+	return RemoteSignalEqualWith(a, b, RemoteSignalEqOverrides{})
+}
+
+type RemoteUnlink struct {
+	ID     uint64
+	Local  term.PID
+	Remote term.PID
+}
+
+//goplus:enum RemoteUnlinkAcknowledgement
+type RemoteUnlinkAcknowledgement interface{ isRemoteUnlinkAcknowledgement() }
+
+//goplus:variant (RemoteUnlinkAcknowledgement) RemoteUnlinkMatched()
+type RemoteUnlinkMatched struct{}
+
+func (RemoteUnlinkMatched) isRemoteUnlinkAcknowledgement() {}
+
+//goplus:variant (RemoteUnlinkAcknowledgement) RemoteUnlinkIgnored()
+type RemoteUnlinkIgnored struct{}
+
+func (RemoteUnlinkIgnored) isRemoteUnlinkAcknowledgement() {}
+
+// RemoteUnlinkAcknowledgementCases selects one handler per RemoteUnlinkAcknowledgement variant for RemoteUnlinkAcknowledgementFold.
+type RemoteUnlinkAcknowledgementCases[R any] struct {
+	RemoteUnlinkMatched func() R
+	RemoteUnlinkIgnored func() R
+}
+
+// RemoteUnlinkAcknowledgementFold reduces RemoteUnlinkAcknowledgement by one-level case analysis.
+func RemoteUnlinkAcknowledgementFold[R any](v RemoteUnlinkAcknowledgement, cs RemoteUnlinkAcknowledgementCases[R]) R {
+	switch any(v).(type) {
+	case RemoteUnlinkMatched:
+		return cs.RemoteUnlinkMatched()
+	case RemoteUnlinkIgnored:
+		return cs.RemoteUnlinkIgnored()
+	default:
+		panic("goplus: impossible enum value in RemoteUnlinkAcknowledgementFold")
+	}
+}
+
+// RemoteUnlinkAcknowledgementEqOverrides carries optional per-variant hooks for RemoteUnlinkAcknowledgementEqualWith.
+// A hook returning handled=false falls through to the derived comparison.
+type RemoteUnlinkAcknowledgementEqOverrides struct {
+	RemoteUnlinkMatched func(x, y RemoteUnlinkMatched) (eq, handled bool)
+	RemoteUnlinkIgnored func(x, y RemoteUnlinkIgnored) (eq, handled bool)
+}
+
+// RemoteUnlinkAcknowledgementEqualWith reports structural equality of a and b under ov.
+func RemoteUnlinkAcknowledgementEqualWith(a, b RemoteUnlinkAcknowledgement, ov RemoteUnlinkAcknowledgementEqOverrides) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch x := any(a).(type) {
+	case RemoteUnlinkMatched:
+		y, ok := any(b).(RemoteUnlinkMatched)
+		if !ok {
+			return false
+		}
+		if ov.RemoteUnlinkMatched != nil {
+			if eq, handled := ov.RemoteUnlinkMatched(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	case RemoteUnlinkIgnored:
+		y, ok := any(b).(RemoteUnlinkIgnored)
+		if !ok {
+			return false
+		}
+		if ov.RemoteUnlinkIgnored != nil {
+			if eq, handled := ov.RemoteUnlinkIgnored(x, y); handled {
+				return eq
+			}
+		}
+		_ = y
+		return true
+	}
+	return false
+}
+
+// RemoteUnlinkAcknowledgementEqual reports structural equality of a and b.
+func RemoteUnlinkAcknowledgementEqual(a, b RemoteUnlinkAcknowledgement) bool {
+	return RemoteUnlinkAcknowledgementEqualWith(a, b, RemoteUnlinkAcknowledgementEqOverrides{})
+}
+
 type route struct {
 	from term.PID
 	to   term.PID
 }
 
 type process struct {
-	pid         term.PID
-	behavior    Behavior
-	status      ProcessStatus
-	mailbox     Mailbox
-	trapExit    bool
-	links       map[term.PID]struct{}
-	monitoring  map[term.Reference]term.PID
-	monitoredBy map[term.Reference]term.PID
-	aliases     map[term.Reference]struct{}
-	exitReason  option.Option[term.Term]
+	pid            term.PID
+	behavior       Behavior
+	status         ProcessStatus
+	mailbox        Mailbox
+	trapExit       bool
+	links          map[term.PID]struct{}
+	monitoring     map[term.Reference]term.PID
+	monitoredBy    map[term.Reference]term.PID
+	aliases        map[term.Reference]struct{}
+	exitReason     option.Option[term.Term]
+	registeredName option.Option[string]
+	groupLeader    term.PID
+	monitorNames   map[term.Reference]string
+	remoteUnlinks  map[term.PID]uint64
 }
 
 type Kernel struct {
@@ -800,6 +1119,9 @@ type Kernel struct {
 	aliases       map[term.Reference]term.PID
 	wakeups       *wakeQueue
 	tracer        *Tracer
+	remoteSignals []RemoteSignal
+	names         map[string]term.PID
+	nextUnlinkID  uint64
 }
 
 func New(config KernelConfig) *Kernel {
@@ -816,6 +1138,7 @@ func New(config KernelConfig) *Kernel {
 		sequences: make(map[route]uint64),
 		aliases:   make(map[term.Reference]term.PID),
 		wakeups:   newWakeQueue(),
+		names:     make(map[string]term.PID),
 	}
 }
 
@@ -857,11 +1180,15 @@ func (kernel *Kernel) Spawn(
 	}
 	current := &process{
 		pid: pid, behavior: behavior, status: Runnable{}, trapExit: trapExit,
-		links:       make(map[term.PID]struct{}),
-		monitoring:  make(map[term.Reference]term.PID),
-		monitoredBy: make(map[term.Reference]term.PID),
-		aliases:     make(map[term.Reference]struct{}),
-		exitReason:  option.None[term.Term]{},
+		links:          make(map[term.PID]struct{}),
+		monitoring:     make(map[term.Reference]term.PID),
+		monitoredBy:    make(map[term.Reference]term.PID),
+		aliases:        make(map[term.Reference]struct{}),
+		exitReason:     option.None[term.Term]{},
+		registeredName: option.None[string]{},
+		groupLeader:    pid,
+		monitorNames:   make(map[term.Reference]string),
+		remoteUnlinks:  make(map[term.PID]uint64),
 	}
 	kernel.processes[pid] = current
 	kernel.enqueueRunnable(pid)
@@ -896,6 +1223,122 @@ func (kernel *Kernel) Send(
 	return kernel.enqueueSignal(to, UserSignal{From: from, Sequence: 0, Message: term.Clone(message)})
 }
 
+// assayxport:unit gotp.kernel.registered-processes
+func (kernel *Kernel) Register(name string, pid term.PID) result.Result[KernelMutation, Failure] {
+	if name == "" {
+		return result.Err[KernelMutation, Failure]{Err: InvalidRegistration{Detail: "name is empty"}}
+	}
+	switch __gp_m5 := any(term.Atom(name)).(type) {
+	case result.Err[term.Term, term.ValidationFailure]:
+		cause := __gp_m5.Err
+		return result.Err[KernelMutation, Failure]{Err: InvalidRegistration{Detail: term.Error(cause)}}
+	case result.Ok[term.Term, term.ValidationFailure]:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	if _, duplicate := kernel.names[name]; duplicate {
+		return result.Err[KernelMutation, Failure]{Err: InvalidRegistration{Detail: "name is already registered"}}
+	}
+	switch __gp_m6 := any(kernel.liveProcess(pid)).(type) {
+	case option.None[*process]:
+		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "registration", PID: pid}}
+	case option.Some[*process]:
+		current := __gp_m6.Value
+
+		switch any(current.registeredName).(type) {
+		case option.Some[string]:
+			return result.Err[KernelMutation, Failure]{Err: InvalidRegistration{Detail: "process already has a name"}}
+		case option.None[string]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		kernel.names[name] = pid
+		current.registeredName = option.Some[string]{Value: name}
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) Unregister(name string) result.Result[KernelMutation, Failure] {
+	pid, present := kernel.names[name]
+	if !present {
+		return result.Err[KernelMutation, Failure]{Err: InvalidRegistration{Detail: "name is not registered"}}
+	}
+	delete(kernel.names, name)
+	switch __gp_m8 := any(kernel.liveProcess(pid)).(type) {
+	case option.None[*process]:
+
+	case option.Some[*process]:
+		current := __gp_m8.Value
+		current.registeredName = option.None[string]{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+}
+
+func (kernel *Kernel) Whereis(name string) option.Option[term.PID] {
+	pid, present := kernel.names[name]
+	if !present {
+		return option.None[term.PID]{}
+	}
+	switch any(kernel.liveProcess(pid)).(type) {
+	case option.None[*process]:
+
+		delete(kernel.names, name)
+		return option.None[term.PID]{}
+	case option.Some[*process]:
+		return option.Some[term.PID]{Value: pid}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) SendRegistered(from term.PID, name string, message term.Term) Delivery {
+	switch __gp_m10 := any(kernel.Whereis(name)).(type) {
+	case option.None[term.PID]:
+		return NoProcess{}
+	case option.Some[term.PID]:
+		to := __gp_m10.Value
+		return kernel.Send(from, to, message)
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) SetGroupLeader(
+	leader term.PID,
+	member term.PID,
+) result.Result[KernelMutation, Failure] {
+	if !leader.Valid() {
+		return result.Err[KernelMutation, Failure]{Err: InvalidGroupLeader{Detail: "leader pid is invalid"}}
+	}
+	if leader.Node == kernel.config.Node {
+		switch any(kernel.liveProcess(leader)).(type) {
+		case option.None[*process]:
+			return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "group leader", PID: leader}}
+		case option.Some[*process]:
+
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	switch __gp_m12 := any(kernel.liveProcess(member)).(type) {
+	case option.None[*process]:
+		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "group member", PID: member}}
+	case option.Some[*process]:
+		current := __gp_m12.Value
+
+		current.groupLeader = leader
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (kernel *Kernel) Link(
 	left term.PID,
 	right term.PID,
@@ -903,19 +1346,19 @@ func (kernel *Kernel) Link(
 	if left == right {
 		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
 	}
-	switch __gp_m5 := any(kernel.liveProcess(left)).(type) {
+	switch __gp_m13 := any(kernel.liveProcess(left)).(type) {
 	case option.None[*process]:
 
 		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "left link", PID: left}}
 	case option.Some[*process]:
-		leftProcess := __gp_m5.Value
+		leftProcess := __gp_m13.Value
 
-		switch __gp_m6 := any(kernel.liveProcess(right)).(type) {
+		switch __gp_m14 := any(kernel.liveProcess(right)).(type) {
 		case option.None[*process]:
 
 			return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "right link", PID: right}}
 		case option.Some[*process]:
-			rightProcess := __gp_m6.Value
+			rightProcess := __gp_m14.Value
 
 			leftProcess.links[right] = struct{}{}
 			rightProcess.links[left] = struct{}{}
@@ -929,10 +1372,36 @@ func (kernel *Kernel) Link(
 	}
 }
 
-func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
-	switch __gp_m7 := any(kernel.liveProcess(left)).(type) {
+// assayxport:unit gotp.kernel.remote-process-signals
+func (kernel *Kernel) LinkRemote(
+	remote term.PID,
+	local term.PID,
+) result.Result[KernelMutation, Failure] {
+	if !remote.Valid() || !local.Valid() {
+		return result.Err[KernelMutation, Failure]{Err: InvalidLink{Detail: "remote or local pid is invalid"}}
+	}
+	switch __gp_m15 := any(kernel.liveProcess(local)).(type) {
+	case option.None[*process]:
+
+		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "local link", PID: local}}
 	case option.Some[*process]:
-		leftProcess := __gp_m7.Value
+		current := __gp_m15.Value
+
+		if _, outstanding := current.remoteUnlinks[remote]; outstanding {
+			return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+		}
+		current.links[remote] = struct{}{}
+		kernel.trace(ProcessesLinked{Left: remote, Right: local})
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
+	switch __gp_m16 := any(kernel.liveProcess(left)).(type) {
+	case option.Some[*process]:
+		leftProcess := __gp_m16.Value
 
 		delete(leftProcess.links, right)
 	case option.None[*process]:
@@ -940,9 +1409,9 @@ func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m8 := any(kernel.liveProcess(right)).(type) {
+	switch __gp_m17 := any(kernel.liveProcess(right)).(type) {
 	case option.Some[*process]:
-		rightProcess := __gp_m8.Value
+		rightProcess := __gp_m17.Value
 
 		delete(rightProcess.links, left)
 	case option.None[*process]:
@@ -953,24 +1422,116 @@ func (kernel *Kernel) Unlink(left term.PID, right term.PID) KernelMutation {
 	return KernelMutated{}
 }
 
+func (kernel *Kernel) UnlinkRemote(remote term.PID, local term.PID) KernelMutation {
+	switch __gp_m18 := any(kernel.liveProcess(local)).(type) {
+	case option.Some[*process]:
+		current := __gp_m18.Value
+		delete(current.links, remote)
+	case option.None[*process]:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	return KernelMutated{}
+}
+
+// assayxport:unit gotp.kernel.remote-unlink-protocol
+func (kernel *Kernel) BeginRemoteUnlink(
+	local term.PID,
+	remote term.PID,
+) result.Result[RemoteUnlink, Failure] {
+	switch __gp_m19 := any(kernel.liveProcess(local)).(type) {
+	case option.None[*process]:
+
+		return result.Err[RemoteUnlink, Failure]{Err: MissingProcess{Role: "local unlink", PID: local}}
+	case option.Some[*process]:
+		current := __gp_m19.Value
+
+		if identifier, outstanding := current.remoteUnlinks[remote]; outstanding {
+			return result.Ok[RemoteUnlink, Failure]{Value: RemoteUnlink{
+				ID: identifier, Local: local, Remote: remote,
+			}}
+		}
+		if _, active := current.links[remote]; !active {
+			return result.Err[RemoteUnlink, Failure]{Err: InvalidLink{Detail: "remote link is not active"}}
+		}
+		delete(current.links, remote)
+		kernel.nextUnlinkID++
+		if kernel.nextUnlinkID == 0 {
+			kernel.nextUnlinkID++
+		}
+		current.remoteUnlinks[remote] = kernel.nextUnlinkID
+		return result.Ok[RemoteUnlink, Failure]{Value: RemoteUnlink{
+			ID: kernel.nextUnlinkID, Local: local, Remote: remote,
+		}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) AcknowledgeRemoteUnlink(
+	local term.PID,
+	remote term.PID,
+	identifier uint64,
+) RemoteUnlinkAcknowledgement {
+	switch __gp_m20 := any(kernel.liveProcess(local)).(type) {
+	case option.None[*process]:
+		return RemoteUnlinkIgnored{}
+	case option.Some[*process]:
+		current := __gp_m20.Value
+
+		outstanding, present := current.remoteUnlinks[remote]
+		if present && outstanding == identifier {
+			delete(current.remoteUnlinks, remote)
+			return RemoteUnlinkMatched{}
+		}
+		return RemoteUnlinkIgnored{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (kernel *Kernel) Monitor(
 	watcher term.PID,
 	target term.PID,
 ) result.Result[term.Reference, Failure] {
-	switch __gp_m9 := any(kernel.liveProcess(watcher)).(type) {
+	reference := kernel.newReference()
+	switch __gp_m21 := any(kernel.MonitorReference(watcher, target, reference)).(type) {
+	case result.Err[KernelMutation, Failure]:
+		failure := __gp_m21.Err
+		return result.Err[term.Reference, Failure]{Err: failure}
+	case result.Ok[KernelMutation, Failure]:
+		return result.Ok[term.Reference, Failure]{Value: reference}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+// assayxport:unit gotp.kernel.remote-monitor-signals
+func (kernel *Kernel) MonitorReference(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !reference.Valid() {
+		return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "reference is invalid"}}
+	}
+	switch __gp_m22 := any(kernel.liveProcess(watcher)).(type) {
 	case option.None[*process]:
 
-		return result.Err[term.Reference, Failure]{Err: MissingProcess{Role: "watcher", PID: watcher}}
+		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "watcher", PID: watcher}}
 	case option.Some[*process]:
-		watcherProcess := __gp_m9.Value
+		watcherProcess := __gp_m22.Value
 
-		reference := kernel.newReference()
-		switch __gp_m10 := any(kernel.liveProcess(target)).(type) {
+		if _, duplicate := watcherProcess.monitoring[reference]; duplicate {
+			return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "reference is already active"}}
+		}
+		switch __gp_m23 := any(kernel.liveProcess(target)).(type) {
 		case option.None[*process]:
 
 			kernel.enqueueSignal(watcher, DownSignal{From: target, Sequence: 0, Reason: term.MustAtom("noproc"), Reference: reference, Target: target})
 		case option.Some[*process]:
-			targetProcess := __gp_m10.Value
+			targetProcess := __gp_m23.Value
 
 			watcherProcess.monitoring[reference] = target
 			targetProcess.monitoredBy[reference] = watcher
@@ -978,10 +1539,150 @@ func (kernel *Kernel) Monitor(
 			panic("goplus: impossible enum value in match")
 		}
 		kernel.trace(ProcessMonitored{Watcher: watcher, Target: target, Reference: reference})
-		return result.Ok[term.Reference, Failure]{Value: reference}
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
 	default:
 		panic("goplus: impossible enum value in match")
 	}
+}
+
+func (kernel *Kernel) MonitorRemote(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !watcher.Valid() || !reference.Valid() {
+		return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "remote watcher or reference is invalid"}}
+	}
+	switch __gp_m24 := any(kernel.liveProcess(target)).(type) {
+	case option.None[*process]:
+
+		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal{Source: target, To: watcher, Reference: reference, Reason: term.MustAtom("noproc")})
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	case option.Some[*process]:
+		current := __gp_m24.Value
+
+		if prior, duplicate := current.monitoredBy[reference]; duplicate && prior != watcher {
+			return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "reference belongs to another watcher"}}
+		}
+		current.monitoredBy[reference] = watcher
+		kernel.trace(ProcessMonitored{Watcher: watcher, Target: target, Reference: reference})
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) MonitorRemoteName(
+	watcher term.PID,
+	name string,
+	reference term.Reference,
+) result.Result[KernelMutation, Failure] {
+	if !watcher.Valid() || !reference.Valid() {
+		return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "remote watcher or reference is invalid"}}
+	}
+	switch __gp_m25 := any(kernel.Whereis(name)).(type) {
+	case option.None[term.PID]:
+
+		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal{Source: name, To: watcher, Reference: reference, Reason: term.MustAtom("noproc")})
+		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+	case option.Some[term.PID]:
+		target := __gp_m25.Value
+
+		switch __gp_m26 := any(kernel.liveProcess(target)).(type) {
+		case option.None[*process]:
+			return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "named monitor", PID: target}}
+		case option.Some[*process]:
+			current := __gp_m26.Value
+
+			if prior, duplicate := current.monitoredBy[reference]; duplicate && prior != watcher {
+				return result.Err[KernelMutation, Failure]{Err: InvalidMonitor{Detail: "reference belongs to another watcher"}}
+			}
+			current.monitoredBy[reference] = watcher
+			current.monitorNames[reference] = name
+			kernel.trace(ProcessMonitored{Watcher: watcher, Target: target, Reference: reference})
+			return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) DemonitorRemote(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+) MonitorRemoval {
+	switch __gp_m27 := any(kernel.liveProcess(target)).(type) {
+	case option.None[*process]:
+		return MonitorAbsent{}
+	case option.Some[*process]:
+		current := __gp_m27.Value
+
+		prior, present := current.monitoredBy[reference]
+		if present && prior == watcher {
+			delete(current.monitoredBy, reference)
+			return MonitorRemoved{}
+		}
+		return MonitorAbsent{}
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (kernel *Kernel) DemonitorRemoteName(
+	watcher term.PID,
+	name string,
+	reference term.Reference,
+) MonitorRemoval {
+	for _, current := range kernel.processes {
+		switch any(current.status).(type) {
+		case Exited:
+			continue
+		default:
+		}
+		prior, present := current.monitoredBy[reference]
+		registered, named := current.monitorNames[reference]
+		if present && named && prior == watcher && registered == name {
+			delete(current.monitoredBy, reference)
+			delete(current.monitorNames, reference)
+			return MonitorRemoved{}
+		}
+	}
+	return MonitorAbsent{}
+}
+
+func (kernel *Kernel) DrainRemoteSignals() []RemoteSignal {
+	drained := make([]RemoteSignal, len(kernel.remoteSignals))
+	for index, signal := range kernel.remoteSignals {
+		switch __gp_m29 := any(signal).(type) {
+		case RemoteExitSignal:
+			from := __gp_m29.From
+			to := __gp_m29.To
+			reason := __gp_m29.Reason
+
+			drained[index] = RemoteExitSignal{From: from, To: to, Reason: term.Clone(reason)}
+		case RemoteDownSignal:
+			source := __gp_m29.Source
+			to := __gp_m29.To
+			reference := __gp_m29.Reference
+			reason := __gp_m29.Reason
+
+			drained[index] = RemoteDownSignal{Source: source, To: to, Reference: reference, Reason: term.Clone(reason)}
+		case RemoteDownNamedSignal:
+			source := __gp_m29.Source
+			to := __gp_m29.To
+			reference := __gp_m29.Reference
+			reason := __gp_m29.Reason
+
+			drained[index] = RemoteDownNamedSignal{Source: source, To: to, Reference: reference, Reason: term.Clone(reason)}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	kernel.remoteSignals = kernel.remoteSignals[:0]
+	return drained
 }
 
 func (kernel *Kernel) Demonitor(
@@ -989,21 +1690,22 @@ func (kernel *Kernel) Demonitor(
 	reference term.Reference,
 	flush bool,
 ) MonitorRemoval {
-	switch __gp_m11 := any(kernel.liveProcess(watcher)).(type) {
+	switch __gp_m30 := any(kernel.liveProcess(watcher)).(type) {
 	case option.None[*process]:
 
 		return MonitorAbsent{}
 	case option.Some[*process]:
-		watcherProcess := __gp_m11.Value
+		watcherProcess := __gp_m30.Value
 
 		target, exists := watcherProcess.monitoring[reference]
 		if exists {
 			delete(watcherProcess.monitoring, reference)
-			switch __gp_m12 := any(kernel.liveProcess(target)).(type) {
+			switch __gp_m31 := any(kernel.liveProcess(target)).(type) {
 			case option.Some[*process]:
-				targetProcess := __gp_m12.Value
+				targetProcess := __gp_m31.Value
 
 				delete(targetProcess.monitoredBy, reference)
+				delete(targetProcess.monitorNames, reference)
 			case option.None[*process]:
 
 			default:
@@ -1012,9 +1714,13 @@ func (kernel *Kernel) Demonitor(
 		}
 		if flush {
 			watcherProcess.mailbox.Remove(func(signal Signal) bool {
-				switch __gp_m13 := any(signal).(type) {
+				switch __gp_m32 := any(signal).(type) {
 				case DownSignal:
-					found := __gp_m13.Reference
+					found := __gp_m32.Reference
+
+					return found == reference
+				case DownNamedSignal:
+					found := __gp_m32.Reference
 
 					return found == reference
 				default:
@@ -1036,12 +1742,12 @@ func (kernel *Kernel) SetTrapExit(
 	pid term.PID,
 	enabled bool,
 ) result.Result[KernelMutation, Failure] {
-	switch __gp_m14 := any(kernel.liveProcess(pid)).(type) {
+	switch __gp_m33 := any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
 		return result.Err[KernelMutation, Failure]{Err: MissingProcess{Role: "trap-exit target", PID: pid}}
 	case option.Some[*process]:
-		current := __gp_m14.Value
+		current := __gp_m33.Value
 
 		current.trapExit = enabled
 		return result.Ok[KernelMutation, Failure]{Value: KernelMutated{}}
@@ -1052,12 +1758,12 @@ func (kernel *Kernel) SetTrapExit(
 
 // assayxport:unit gotp.kernel.process-aliases
 func (kernel *Kernel) Alias(owner term.PID) result.Result[term.Reference, Failure] {
-	switch __gp_m15 := any(kernel.liveProcess(owner)).(type) {
+	switch __gp_m34 := any(kernel.liveProcess(owner)).(type) {
 	case option.None[*process]:
 
 		return result.Err[term.Reference, Failure]{Err: MissingProcess{Role: "alias owner", PID: owner}}
 	case option.Some[*process]:
-		current := __gp_m15.Value
+		current := __gp_m34.Value
 
 		reference := kernel.newReference()
 		current.aliases[reference] = struct{}{}
@@ -1069,12 +1775,12 @@ func (kernel *Kernel) Alias(owner term.PID) result.Result[term.Reference, Failur
 }
 
 func (kernel *Kernel) Unalias(owner term.PID, reference term.Reference) AliasRemoval {
-	switch __gp_m16 := any(kernel.liveProcess(owner)).(type) {
+	switch __gp_m35 := any(kernel.liveProcess(owner)).(type) {
 	case option.None[*process]:
 
 		return AliasAbsent{}
 	case option.Some[*process]:
-		current := __gp_m16.Value
+		current := __gp_m35.Value
 
 		_, owned := current.aliases[reference]
 		if !owned {
@@ -1094,12 +1800,12 @@ func (kernel *Kernel) SendAlias(
 	message term.Term,
 ) Delivery {
 	owner, present := kernel.aliases[reference]
-	switch __gp_m17 := any(option.Of(owner, present)).(type) {
+	switch __gp_m36 := any(option.Of(owner, present)).(type) {
 	case option.None[term.PID]:
 
 		return NoProcess{}
 	case option.Some[term.PID]:
-		target := __gp_m17.Value
+		target := __gp_m36.Value
 
 		return kernel.enqueueSignal(target, UserSignal{From: from, Sequence: 0, Message: term.Clone(message)})
 	default:
@@ -1108,12 +1814,12 @@ func (kernel *Kernel) SendAlias(
 }
 
 func (kernel *Kernel) Exit(pid term.PID, reason term.Term) Delivery {
-	switch __gp_m18 := any(kernel.liveProcess(pid)).(type) {
+	switch __gp_m37 := any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
 		return NoProcess{}
 	case option.Some[*process]:
-		current := __gp_m18.Value
+		current := __gp_m37.Value
 
 		kernel.terminate(current, reason)
 		return Delivered{}
@@ -1128,12 +1834,12 @@ func (kernel *Kernel) SendExit(
 	to term.PID,
 	reason term.Term,
 ) Delivery {
-	switch __gp_m19 := any(kernel.liveProcess(to)).(type) {
+	switch __gp_m38 := any(kernel.liveProcess(to)).(type) {
 	case option.None[*process]:
 
 		return NoProcess{}
 	case option.Some[*process]:
-		target := __gp_m19.Value
+		target := __gp_m38.Value
 
 		if isAtom(reason, "kill") {
 			kernel.terminate(target, term.MustAtom("killed"))
@@ -1152,6 +1858,24 @@ func (kernel *Kernel) SendExit(
 	}
 }
 
+func (kernel *Kernel) SendDown(
+	source term.PID,
+	to term.PID,
+	reference term.Reference,
+	reason term.Term,
+) Delivery {
+	return kernel.enqueueSignal(to, DownSignal{From: source, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: source})
+}
+
+func (kernel *Kernel) SendDownNamed(
+	name string,
+	to term.PID,
+	reference term.Reference,
+	reason term.Term,
+) Delivery {
+	return kernel.enqueueSignal(to, DownNamedSignal{From: term.PID{}, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: name})
+}
+
 func (kernel *Kernel) Run(maxReductions int) RunReport {
 	if maxReductions <= 0 {
 		maxReductions = 1_000_000
@@ -1164,12 +1888,12 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 		kernel.runQueue = kernel.runQueue[:len(kernel.runQueue)-1]
 		kernel.queued[pid] = false
 
-		switch __gp_m20 := any(kernel.liveProcess(pid)).(type) {
+		switch __gp_m39 := any(kernel.liveProcess(pid)).(type) {
 		case option.None[*process]:
 
 			continue
 		case option.Some[*process]:
-			current := __gp_m20.Value
+			current := __gp_m39.Value
 
 			switch any(current.status).(type) {
 			case Runnable:
@@ -1189,7 +1913,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 			default:
 
 			}
-			switch __gp_m23 := any(step).(type) {
+			switch __gp_m42 := any(step).(type) {
 			case Yield:
 
 				kernel.enqueueRunnable(pid)
@@ -1197,7 +1921,7 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 
 				current.status = Waiting{}
 			case Stop:
-				reason := __gp_m23.Reason
+				reason := __gp_m42.Reason
 
 				kernel.terminate(current, reason)
 			default:
@@ -1212,12 +1936,12 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 
 func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 	current, present := kernel.processes[pid]
-	switch __gp_m24 := any(option.Of(current, present)).(type) {
+	switch __gp_m43 := any(option.Of(current, present)).(type) {
 	case option.None[*process]:
 
 		return option.None[ProcessInfo]{}
 	case option.Some[*process]:
-		found := __gp_m24.Value
+		found := __gp_m43.Value
 
 		links := make([]term.PID, 0, len(found.links))
 		for linked := range found.links {
@@ -1234,9 +1958,9 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 			return aliases[left].Less(aliases[right])
 		})
 		var exitReason option.Option[term.Term] = option.None[term.Term]{}
-		switch __gp_m25 := any(found.exitReason).(type) {
+		switch __gp_m44 := any(found.exitReason).(type) {
 		case option.Some[term.Term]:
-			reason := __gp_m25.Value
+			reason := __gp_m44.Value
 
 			exitReason = option.Some[term.Term]{Value: term.Clone(reason)}
 		case option.None[term.Term]:
@@ -1244,10 +1968,20 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+		pending := make([]RemoteUnlink, 0, len(found.remoteUnlinks))
+		for remote, identifier := range found.remoteUnlinks {
+			pending = append(pending, RemoteUnlink{ID: identifier, Local: found.pid, Remote: remote})
+		}
+		sort.Slice(pending, func(left, right int) bool {
+			return pending[left].Remote.Less(pending[right].Remote)
+		})
 		return option.Some[ProcessInfo]{Value: ProcessInfo{
 			PID: found.pid, Status: found.status, TrapExit: found.trapExit,
 			MailboxLength: found.mailbox.Len(), Links: links, Aliases: aliases,
-			ExitReason: exitReason,
+			ExitReason:           exitReason,
+			RegisteredName:       found.registeredName,
+			GroupLeader:          found.groupLeader,
+			PendingRemoteUnlinks: pending,
 		}}
 	default:
 		panic("goplus: impossible enum value in match")
@@ -1270,11 +2004,11 @@ func (kernel *Kernel) liveProcess(pid term.PID) option.Option[*process] {
 }
 
 func (kernel *Kernel) enqueueRunnable(pid term.PID) {
-	switch __gp_m27 := any(kernel.liveProcess(pid)).(type) {
+	switch __gp_m46 := any(kernel.liveProcess(pid)).(type) {
 	case option.None[*process]:
 
 	case option.Some[*process]:
-		current := __gp_m27.Value
+		current := __gp_m46.Value
 
 		if kernel.queued[pid] {
 			return
@@ -1288,12 +2022,12 @@ func (kernel *Kernel) enqueueRunnable(pid term.PID) {
 }
 
 func (kernel *Kernel) enqueueSignal(to term.PID, signal Signal) Delivery {
-	switch __gp_m28 := any(kernel.liveProcess(to)).(type) {
+	switch __gp_m47 := any(kernel.liveProcess(to)).(type) {
 	case option.None[*process]:
 
 		return NoProcess{}
 	case option.Some[*process]:
-		current := __gp_m28.Value
+		current := __gp_m47.Value
 
 		key := route{from: signalFrom(signal), to: to}
 		kernel.sequences[key]++
@@ -1332,6 +2066,16 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	current.status = Exited{}
 	current.exitReason = option.Some[term.Term]{Value: term.Clone(reason)}
 	kernel.trace(ProcessExited{PID: current.pid, Reason: reason})
+	switch __gp_m50 := any(current.registeredName).(type) {
+	case option.Some[string]:
+		name := __gp_m50.Value
+		delete(kernel.names, name)
+	case option.None[string]:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	current.registeredName = option.None[string]{}
 
 	links := make([]term.PID, 0, len(current.links))
 	for linked := range current.links {
@@ -1341,12 +2085,16 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		return links[left].Less(links[right])
 	})
 	current.links = make(map[term.PID]struct{})
+	current.remoteUnlinks = make(map[term.PID]uint64)
 	for _, linkedPID := range links {
-		switch __gp_m31 := any(kernel.liveProcess(linkedPID)).(type) {
+		switch __gp_m51 := any(kernel.liveProcess(linkedPID)).(type) {
 		case option.None[*process]:
 
+			if linkedPID.Node != kernel.config.Node {
+				kernel.remoteSignals = append(kernel.remoteSignals, RemoteExitSignal{From: current.pid, To: linkedPID, Reason: term.Clone(reason)})
+			}
 		case option.Some[*process]:
-			linked := __gp_m31.Value
+			linked := __gp_m51.Value
 
 			delete(linked.links, current.pid)
 			if linked.trapExit {
@@ -1370,19 +2118,33 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	})
 	for _, reference := range references {
 		watcher := current.monitoredBy[reference]
-		switch __gp_m32 := any(kernel.liveProcess(watcher)).(type) {
+		switch __gp_m52 := any(kernel.liveProcess(watcher)).(type) {
 		case option.None[*process]:
 
+			if watcher.Node != kernel.config.Node {
+				name, named := current.monitorNames[reference]
+				if named {
+					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal{Source: name, To: watcher, Reference: reference, Reason: term.Clone(reason)})
+				} else {
+					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal{Source: current.pid, To: watcher, Reference: reference, Reason: term.Clone(reason)})
+				}
+			}
 		case option.Some[*process]:
-			watcherProcess := __gp_m32.Value
+			watcherProcess := __gp_m52.Value
 
 			delete(watcherProcess.monitoring, reference)
-			kernel.enqueueSignal(watcher, DownSignal{From: current.pid, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: current.pid})
+			name, named := current.monitorNames[reference]
+			if named {
+				kernel.enqueueSignal(watcher, DownNamedSignal{From: current.pid, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: name})
+			} else {
+				kernel.enqueueSignal(watcher, DownSignal{From: current.pid, Sequence: 0, Reason: term.Clone(reason), Reference: reference, Target: current.pid})
+			}
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	}
 	current.monitoredBy = make(map[term.Reference]term.PID)
+	current.monitorNames = make(map[term.Reference]string)
 
 	outgoing := make([]term.Reference, 0, len(current.monitoring))
 	for reference := range current.monitoring {
@@ -1393,9 +2155,9 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	})
 	for _, reference := range outgoing {
 		target := current.monitoring[reference]
-		switch __gp_m33 := any(kernel.liveProcess(target)).(type) {
+		switch __gp_m53 := any(kernel.liveProcess(target)).(type) {
 		case option.Some[*process]:
-			targetProcess := __gp_m33.Value
+			targetProcess := __gp_m53.Value
 
 			delete(targetProcess.monitoredBy, reference)
 		case option.None[*process]:
@@ -1436,9 +2198,9 @@ func isNormal(reason term.Term) bool {
 }
 
 func isAtom(value term.Term, expected string) bool {
-	switch __gp_m35 := any(term.AtomName(value)).(type) {
+	switch __gp_m55 := any(term.AtomName(value)).(type) {
 	case option.Some[string]:
-		name := __gp_m35.Value
+		name := __gp_m55.Value
 
 		return name == expected
 	case option.None[string]:
@@ -1477,24 +2239,24 @@ func (context *Context) ReceiveMessage(
 	accept func(term.Term) bool,
 ) option.Option[MessageEnvelope] {
 	received := context.process.mailbox.Receive(func(signal Signal) bool {
-		switch __gp_m36 := any(signalMessage(signal)).(type) {
+		switch __gp_m56 := any(signalMessage(signal)).(type) {
 		case option.None[MessageEnvelope]:
 
 			return false
 		case option.Some[MessageEnvelope]:
-			envelope := __gp_m36.Value
+			envelope := __gp_m56.Value
 
 			return accept == nil || accept(envelope.Message)
 		default:
 			panic("goplus: impossible enum value in match")
 		}
 	})
-	switch __gp_m37 := any(received).(type) {
+	switch __gp_m57 := any(received).(type) {
 	case option.None[Signal]:
 
 		return option.None[MessageEnvelope]{}
 	case option.Some[Signal]:
-		signal := __gp_m37.Value
+		signal := __gp_m57.Value
 
 		return signalMessage(signal)
 	default:
@@ -1503,24 +2265,24 @@ func (context *Context) ReceiveMessage(
 }
 
 func signalMessage(signal Signal) option.Option[MessageEnvelope] {
-	switch __gp_m38 := any(signal).(type) {
+	switch __gp_m58 := any(signal).(type) {
 	case UserSignal:
-		message := __gp_m38.Message
+		message := __gp_m58.Message
 
 		return option.Some[MessageEnvelope]{Value: MessageEnvelope{Message: message, From: signalFrom(signal)}}
 	case ExitSignal:
-		from := __gp_m38.From
-		reason := __gp_m38.Reason
+		from := __gp_m58.From
+		reason := __gp_m58.Reason
 
 		return option.Some[MessageEnvelope]{Value: MessageEnvelope{
 			Message: term.Tuple(term.MustAtom("EXIT"), term.PIDTerm{Value: from}, reason),
 			From:    from,
 		}}
 	case DownSignal:
-		from := __gp_m38.From
-		reason := __gp_m38.Reason
-		reference := __gp_m38.Reference
-		target := __gp_m38.Target
+		from := __gp_m58.From
+		reason := __gp_m58.Reason
+		reference := __gp_m58.Reference
+		target := __gp_m58.Target
 
 		return option.Some[MessageEnvelope]{Value: MessageEnvelope{
 			Message: term.Tuple(
@@ -1528,6 +2290,22 @@ func signalMessage(signal Signal) option.Option[MessageEnvelope] {
 				term.ReferenceTerm{Value: reference},
 				term.MustAtom("process"),
 				term.PIDTerm{Value: target},
+				reason,
+			),
+			From: from,
+		}}
+	case DownNamedSignal:
+		from := __gp_m58.From
+		reason := __gp_m58.Reason
+		reference := __gp_m58.Reference
+		target := __gp_m58.Target
+
+		return option.Some[MessageEnvelope]{Value: MessageEnvelope{
+			Message: term.Tuple(
+				term.MustAtom("DOWN"),
+				term.ReferenceTerm{Value: reference},
+				term.MustAtom("process"),
+				term.MustAtom(target),
 				reason,
 			),
 			From: from,

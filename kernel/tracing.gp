@@ -112,6 +112,8 @@ func (kernel *Kernel) traceSignal(to term.PID, signal Signal) {
 		kernel.trace(ExitSignalQueued(from, to, sequence, reason))
 	case DownSignal(from, sequence, reason, reference, _):
 		kernel.trace(DownSignalQueued(from, to, sequence, reason, reference))
+	case DownNamedSignal(from, sequence, reason, reference, _):
+		kernel.trace(DownSignalQueued(from, to, sequence, reason, reference))
 	}
 }
 

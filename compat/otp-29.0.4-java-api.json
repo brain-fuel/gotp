@@ -1,0 +1,5970 @@
+{
+  "schema": "gotp.otp-java-api/v1",
+  "upstream_tag": "OTP-29.0.4",
+  "upstream_commit": "1259612946cb36a8bf9614b289090bb32fbcbeb2",
+  "compiler": "javac 21.0.12",
+  "source_digest": "3c059636cd68ae676f60b8604b2ec72008a106dcd41ea7f4d8bf49b48fec8898",
+  "class_digest": "2cee8091c1d10749787884aa96e0f70cafe898fbaf42642942ac11b8d87f74c1",
+  "source_count": 57,
+  "class_count": 65,
+  "symbols": [
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "com/ericsson/otp/erlang/AbstractConnection",
+      "descriptor": "extends=java/lang/Thread;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "com/ericsson/otp/erlang/AbstractNode",
+      "descriptor": "extends=java/lang/Object;implements=com/ericsson/otp/erlang/OtpTransportFactory",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "com/ericsson/otp/erlang/GenericQueue",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpAuthException",
+      "name": "com/ericsson/otp/erlang/OtpAuthException",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpException;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "com/ericsson/otp/erlang/OtpConnection",
+      "descriptor": "extends=com/ericsson/otp/erlang/AbstractConnection;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "descriptor": "extends=com/ericsson/otp/erlang/AbstractConnection;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "com/ericsson/otp/erlang/OtpEpmd",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangBitstr;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangBoolean",
+      "name": "com/ericsson/otp/erlang/OtpErlangBoolean",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangAtom;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangByte",
+      "name": "com/ericsson/otp/erlang/OtpErlangByte",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangChar",
+      "name": "com/ericsson/otp/erlang/OtpErlangChar",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangDecodeException",
+      "name": "com/ericsson/otp/erlang/OtpErlangDecodeException",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangException;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangException",
+      "name": "com/ericsson/otp/erlang/OtpErlangException",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpException;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "com/ericsson/otp/erlang/OtpErlangExit",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangException;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangFloat",
+      "name": "com/ericsson/otp/erlang/OtpErlangFloat",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangDouble;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "com/ericsson/otp/erlang/OtpErlangFun",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangInt",
+      "name": "com/ericsson/otp/erlang/OtpErlangInt",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "com/ericsson/otp/erlang/OtpErlangList",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=java/lang/Iterable",
+      "generic_signature": "Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Iterable\u003cLcom/ericsson/otp/erlang/OtpErlangObject;\u003e;",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangList;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "com/ericsson/otp/erlang/OtpErlangLong",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "com/ericsson/otp/erlang/OtpErlangMap",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "com/ericsson/otp/erlang/OtpErlangObject",
+      "descriptor": "extends=java/lang/Object;implements=java/io/Serializable,java/lang/Cloneable",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public",
+      "final": true
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "com/ericsson/otp/erlang/OtpErlangPid",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=java/lang/Comparable",
+      "generic_signature": "Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Comparable\u003cLjava/lang/Object;\u003e;",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "com/ericsson/otp/erlang/OtpErlangPort",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangRangeException",
+      "name": "com/ericsson/otp/erlang/OtpErlangRangeException",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangException;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "com/ericsson/otp/erlang/OtpErlangRef",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangShort",
+      "name": "com/ericsson/otp/erlang/OtpErlangShort",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "com/ericsson/otp/erlang/OtpErlangString",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangObject;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangUInt",
+      "name": "com/ericsson/otp/erlang/OtpErlangUInt",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpErlangUShort",
+      "name": "com/ericsson/otp/erlang/OtpErlangUShort",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpErlangLong;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpException",
+      "name": "com/ericsson/otp/erlang/OtpException",
+      "descriptor": "extends=java/lang/Exception;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "com/ericsson/otp/erlang/OtpExternal",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "descriptor": "extends=java/lang/Object;implements=com/ericsson/otp/erlang/OtpTransportFactory",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "com/ericsson/otp/erlang/OtpInputStream",
+      "descriptor": "extends=java/io/ByteArrayInputStream;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "com/ericsson/otp/erlang/OtpLocalNode",
+      "descriptor": "extends=com/ericsson/otp/erlang/AbstractNode;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "com/ericsson/otp/erlang/OtpMbox",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "com/ericsson/otp/erlang/OtpMsg",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "com/ericsson/otp/erlang/OtpNode",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpLocalNode;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpNode$Acceptor",
+      "name": "com/ericsson/otp/erlang/OtpNode$Acceptor",
+      "descriptor": "extends=java/lang/Thread;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "name": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "com/ericsson/otp/erlang/OtpOutputStream",
+      "descriptor": "extends=java/io/ByteArrayOutputStream;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpPeer",
+      "name": "com/ericsson/otp/erlang/OtpPeer",
+      "descriptor": "extends=com/ericsson/otp/erlang/AbstractNode;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "com/ericsson/otp/erlang/OtpSelf",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpLocalNode;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpServer",
+      "name": "com/ericsson/otp/erlang/OtpServer",
+      "descriptor": "extends=com/ericsson/otp/erlang/OtpSelf;implements=",
+      "metadata_digest": "cde83937eb617943742c174e871a4916733163ff04decc33f27f8123eab34396",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "name": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "descriptor": "extends=java/lang/Object;implements=com/ericsson/otp/erlang/OtpServerTransport",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "descriptor": "extends=java/lang/Object;implements=com/ericsson/otp/erlang/OtpTransport",
+      "visibility": "public"
+    },
+    {
+      "kind": "class",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "name": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "descriptor": "extends=java/lang/Object;implements=com/ericsson/otp/erlang/OtpTransportFactory",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;Lcom/ericsson/otp/erlang/OtpPeer;)V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;Lcom/ericsson/otp/erlang/OtpTransport;)V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/GenericQueue$Bucket",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/GenericQueue;Ljava/lang/Object;)V",
+      "metadata_digest": "a7d393c0ef281a42213fbe1ea12d5ce5bda692377aeda73395bcece336e9ffd4",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpAuthException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Z)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([BI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBoolean",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangBoolean",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Z)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangByte",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangByte",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangChar",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(C)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangChar",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangDecodeException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(D)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangFloat",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(F)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangFloat",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException",
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Ljava/lang/String;I[BIJJ[Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Ljava/lang/String;JJ[Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangInt",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangInt",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/math/BigInteger;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;II[Lcom/ericsson/otp/erlang/OtpErlangObject;II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;[Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap$OtpMap",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(I)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(ILjava/lang/String;III)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)V",
+      "metadata_digest": "589c8ed12fcb8afca7c047656ca7ff677362051cec3acd5982b03d5e7927002f",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;III)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(ILjava/lang/String;JI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;JI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRangeException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(ILjava/lang/String;[II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)V",
+      "metadata_digest": "83fa0f9f2bfef3c3d72278e6953d1672d90ad232157c7c99b63bbedd39523c29",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;[II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangShort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangShort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(S)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangList;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([Lcom/ericsson/otp/erlang/OtpErlangObject;II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangUInt",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(I)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangUInt",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangUShort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpErlangUShort",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(S)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpException",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([BI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "([BIII)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpMD5",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;I)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;ILcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpNode;)V",
+      "metadata_digest": "f35ea7db6cd4cdfd3d55abbd6bf8ae1fc42ac8064ff1ffb120aee0e4c1bc9fd4",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpPeer",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpPeer",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;I)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;ILcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpTransportFactory;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpServer",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpSelf;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpServer",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpServer",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;I)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(I)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/lang/String;I)V",
+      "exceptions": [
+        "java/net/UnknownHostException",
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/net/InetAddress;I)V",
+      "exceptions": [
+        "java/net/UnknownHostException",
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "\u003cinit\u003e",
+      "descriptor": "(Ljava/net/Socket;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "constructor",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "name": "\u003cinit\u003e",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "ChallengeAck",
+      "descriptor": "I",
+      "metadata_digest": "ef3b9f27db3a25c2a8d5b43508e6f00ac042f12354fc23768c5e5b5cb2970e32",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "ChallengeReply",
+      "descriptor": "I",
+      "metadata_digest": "14f5ae2d2e94b54249655cd8b0d08edbc5ec1c421fa824c4771c198891d04020",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "ChallengeStatus",
+      "descriptor": "I",
+      "metadata_digest": "6538ed1a694766c062d1a20bf79a78cdc5c00899ffe036f3a870a2ab5e690847",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "connected",
+      "descriptor": "Z",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "cookieOk",
+      "descriptor": "Z",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "ctrlThreshold",
+      "descriptor": "I",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "defaultLevel",
+      "descriptor": "I",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "exit2TTTag",
+      "descriptor": "I",
+      "metadata_digest": "807f9347b81af4549f9ba1ee47063546df98259c9b91964128083cb3d1d9d02e",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "exit2Tag",
+      "descriptor": "I",
+      "metadata_digest": "0c9e84f37b0d83121373188bac84481f900ce1ed4e2686852da50627c4a47fde",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "exitTTTag",
+      "descriptor": "I",
+      "metadata_digest": "fdeaf5a6030ea31fd0bb32b67e89139ec13a1505d6099426b4bdb691ff1f6457",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "exitTag",
+      "descriptor": "I",
+      "metadata_digest": "75284b2d07ef4f01c9b66c17ee33698f127ca673628a37db707696ce8a1b3c34",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "groupLeaderTag",
+      "descriptor": "I",
+      "metadata_digest": "f8bd55127f1fadfeb61aca6db0fc97d625ef1ce1bcbb9275c26372de5c11ca25",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "handshakeThreshold",
+      "descriptor": "I",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "headerLen",
+      "descriptor": "I",
+      "metadata_digest": "9b8837c6259625347b4dd2252d3cec0370daccd595eb5d4050d31f9167636df3",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "linkTag",
+      "descriptor": "I",
+      "metadata_digest": "c104efdb973571648da56f8d95b6e4e06c0a546dd71b5416abc1bb860ed031c5",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "localNode",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpLocalNode;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "passThrough",
+      "descriptor": "B",
+      "metadata_digest": "85bf71267d2e94f64d4f6d78fe1466541d1b5162d73be15775fbd55fdf7c7ed3",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "peer",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpPeer;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "random",
+      "descriptor": "Ljava/util/Random;",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "regSendTTTag",
+      "descriptor": "I",
+      "metadata_digest": "5fa240a91def9970b9633302efb9df85c1fd33a26a4e80d4ac935f8b1c21867b",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "regSendTag",
+      "descriptor": "I",
+      "metadata_digest": "4e4d88b3fd3b2379573dfe3efc93589ee18c276178f455df97b8b2e6106ec7a8",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendCookie",
+      "descriptor": "Z",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendTTTag",
+      "descriptor": "I",
+      "metadata_digest": "fd75ac6b5785a7a05078c0b755a94ad10387f0f6e1de266d60bd5ae9e134198b",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendTag",
+      "descriptor": "I",
+      "metadata_digest": "fd6d9ec2a42f4adfd32f92fc139d238560dd7c2cc9204f9544b8d916adca4045",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendThreshold",
+      "descriptor": "I",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "socket",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpTransport;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "traceLevel",
+      "descriptor": "I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "unlinkIdAckTag",
+      "descriptor": "I",
+      "metadata_digest": "4eb931835d77c1e268243873f06113cacd79839df329033d44095ff43bc5ec90",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "unlinkIdTag",
+      "descriptor": "I",
+      "metadata_digest": "22870442a36dd34aae6134844aaccc9fc164e8ee0e4960a7416813b972e62108",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "unlinkTag",
+      "descriptor": "I",
+      "metadata_digest": "c1096cebc8d1b2fc6392a7cc40818a4222966d5a2a61bb664bc385c73f6036f6",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "version",
+      "descriptor": "B",
+      "metadata_digest": "e0b487482d785c74f5f526e64f4fc47c73c8283245c1ed50da9460e13e33c9ad",
+      "visibility": "protected",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "links",
+      "descriptor": "Lcom/ericsson/otp/erlang/Links;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "queue",
+      "descriptor": "Lcom/ericsson/otp/erlang/GenericQueue;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "self",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpSelf;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "links",
+      "descriptor": "Lcom/ericsson/otp/erlang/Links;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "self",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpNode;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "maxAtomLength",
+      "descriptor": "I",
+      "metadata_digest": "136312e6ba5729c53f0ffa6242e81c06d995f4275750146442f7a0bd0a11b0a9",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "bin",
+      "descriptor": "[B",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "pad_bits",
+      "descriptor": "I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "arity",
+      "descriptor": "I",
+      "visibility": "public",
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "function",
+      "descriptor": "Ljava/lang/String;",
+      "visibility": "public",
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "module",
+      "descriptor": "Ljava/lang/String;",
+      "visibility": "public",
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "hashCodeValue",
+      "descriptor": "I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "atomTag",
+      "descriptor": "I",
+      "metadata_digest": "ac958df20238e4e4823aceea903fabbfda3aace1409ced821b8c2f147fff28d8",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "atomUtf8Tag",
+      "descriptor": "I",
+      "metadata_digest": "62d6e38176dba0f1b9b92c6a6887ea605fd73d6180ca1251c6755c6e2af148d0",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "binTag",
+      "descriptor": "I",
+      "metadata_digest": "f44631218e3d50ee33062ad73c4630966e28deafcbad4f9574054a6b6ce7d66f",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "bitBinTag",
+      "descriptor": "I",
+      "metadata_digest": "0f85fddc8f9fcc1343aa32da47ce34316e8d81e6ea2c7267e5cd7e52487c220f",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "compressedTag",
+      "descriptor": "I",
+      "metadata_digest": "6f58f34fedf321ce37416fb77e3cd567470ffd5b3306b1028b3aff865f441e74",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "erlMax",
+      "descriptor": "I",
+      "metadata_digest": "608cb884d829fd17052f07a680d5cdbb3cada8acabb4c447b00a5ff50152f55a",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "erlMin",
+      "descriptor": "I",
+      "metadata_digest": "48c322f7b22e7ba9020987aeebb81b6ec38c6a93403887c2d0d9c8642d836efc",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "externalFunTag",
+      "descriptor": "I",
+      "metadata_digest": "2c74df23ec14bb052acff23e3622587cce9ac9650750f2b929b1f152d1c76088",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "floatTag",
+      "descriptor": "I",
+      "metadata_digest": "aa057d4502fb4ae6f75ba11c797e848cfb080455c688e1d1ef3b3f884d6f7d68",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "funTag",
+      "descriptor": "I",
+      "metadata_digest": "3b6ddc1f82c8e8de25b2684658125f61d86bd74a6326a6caeebc6e587d1cc001",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "intTag",
+      "descriptor": "I",
+      "metadata_digest": "493056e171348e71fb17bcff0003de1255b70a40585074b3f622cf4c6084d6d4",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "largeBigTag",
+      "descriptor": "I",
+      "metadata_digest": "7b81fb3077235dc8d61f4388ee190a18b52b77d6a6f42647c3e847ce9e50ff8f",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "largeTupleTag",
+      "descriptor": "I",
+      "metadata_digest": "4c87ae199c4b2e9aae5cc5f45e4b7c0789dba3e89db7fffc6b942518797639af",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "listTag",
+      "descriptor": "I",
+      "metadata_digest": "3d2bd7430186855e63070cb7f534d6183990e0d3ce9eb6d70b5b2ecc1024396b",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "mapTag",
+      "descriptor": "I",
+      "metadata_digest": "9f7db9cfeedd911db991e5ed8838c3adcd79213160480c7f172527afc2affc23",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "maxAtomLength",
+      "descriptor": "I",
+      "metadata_digest": "9b919833a7f49365fabbe27f772b97eb0c5a3eb62e7de1ad709c82b1424375a8",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newFloatTag",
+      "descriptor": "I",
+      "metadata_digest": "af2246ebd363b5ca56b9d7558d65eeec114eacfd61df9562b6a4e63463baea0e",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newFunTag",
+      "descriptor": "I",
+      "metadata_digest": "b364a151cd6ce0300a56d6483b204ac00ae78b8d5f7b03f7f85949fc384c9f3b",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newPidTag",
+      "descriptor": "I",
+      "metadata_digest": "8e300a6c07a9cc36bc1f51babd380c611acd7102e02349c8f45e0293de405063",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newPortTag",
+      "descriptor": "I",
+      "metadata_digest": "b0254bd87a49af087471f9ffa23bb075b824cd96fd007c168d399cc5a3166cb5",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newRefTag",
+      "descriptor": "I",
+      "metadata_digest": "3d61962734fdecbe12e851f7920d96e8e44a164a78b43d3ccd40dfedb4b20841",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "newerRefTag",
+      "descriptor": "I",
+      "metadata_digest": "d62bee5f3bd5558e6a1f04c8e6d03a053ba509aba9b3fde15642351696ac132c",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "nilTag",
+      "descriptor": "I",
+      "metadata_digest": "8f390476120a1a8c22ab2367764fb04567698226bb1a51c32bb8f7c479d37943",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "pidTag",
+      "descriptor": "I",
+      "metadata_digest": "a34c276d532a53b3ab8e086345b4e9c8bd4421a4f2b4d1f303e08f4e597dc606",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "portTag",
+      "descriptor": "I",
+      "metadata_digest": "14b01d6678c96e9c5dbdea9f700e5d16511b9109a7a5d1d187566bfe9dbac296",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "refTag",
+      "descriptor": "I",
+      "metadata_digest": "b84561a83ffeaee3da69c5229c2e009ed03c6ddf2ede78bfa2dd98919ce7a8e0",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "smallAtomUtf8Tag",
+      "descriptor": "I",
+      "metadata_digest": "d97cef28c1177424ae445862683d2c62b5573368c2bdeb5de7cab256827c823e",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "smallBigTag",
+      "descriptor": "I",
+      "metadata_digest": "e5f0f4794b7c8960f4504b6b3faf0dbee250e60036b490d787ffe4deee7a0e14",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "smallIntTag",
+      "descriptor": "I",
+      "metadata_digest": "2496d86e02582307b2e49fdbca96c56163feb824cb185992a87bf3f86c8d1348",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "smallTupleTag",
+      "descriptor": "I",
+      "metadata_digest": "5fb83d9d7c733426a9413139fa1524ad6e49bb67e66d1606b1845bab0a8d0caf",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "stringTag",
+      "descriptor": "I",
+      "metadata_digest": "d74a724e722511efff26b48338efa495f8a171f2650cdea7bde099e889359f48",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "v4PortTag",
+      "descriptor": "I",
+      "metadata_digest": "919817d3d41a7494d6e2f6151308cea598c043d43afd2400895c8f6676ca78d4",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpExternal",
+      "name": "versionTag",
+      "descriptor": "I",
+      "metadata_digest": "f6cbdd740a2ae76bacaacf338f100f78b4c8e289050417953829abdca4bda5d3",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "DECODE_INT_LISTS_AS_STRINGS",
+      "descriptor": "I",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "epmd",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpTransport;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "port",
+      "descriptor": "I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "exit2Tag",
+      "descriptor": "I",
+      "metadata_digest": "3f1b3d659885c900d79e2c43ae805cc490e1d8c5523db16a3454e833555ece80",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "exitTag",
+      "descriptor": "I",
+      "metadata_digest": "5dd99f0f0af909263ac086a7054a3fa5c4585e56bedc1cd6acda61792c526fcc",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "from",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "linkTag",
+      "descriptor": "I",
+      "metadata_digest": "2c071ea5c6e100feb935556ed3eaf8684dc4e24b52f7fd52f927985de4b30c5b",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "paybuf",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpInputStream;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "payload",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "regSendTag",
+      "descriptor": "I",
+      "metadata_digest": "0973abaf9977e0839939c9fbccf8db09baaa2ad92f5470f9281f30f15aeae5d1",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "sendTag",
+      "descriptor": "I",
+      "metadata_digest": "875d2fe20536d47c68347975bd006c66ed9e50053e619037639dbf65f9d14adc",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "tag",
+      "descriptor": "I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "to",
+      "descriptor": "Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "toName",
+      "descriptor": "Ljava/lang/String;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "unlinkTag",
+      "descriptor": "I",
+      "metadata_digest": "a4acc67334f5b3c835687f4df3c4818bb2b1537e4a83e8b77da645a4279662ba",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "unlink_id",
+      "descriptor": "J",
+      "visibility": "protected"
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "defaultIncrement",
+      "descriptor": "I",
+      "metadata_digest": "d6827987bca7d4922eee514e6b03948c7616ce163fb59f81b8d8284ca4dba241",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "field",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "defaultInitialSize",
+      "descriptor": "I",
+      "metadata_digest": "d6827987bca7d4922eee514e6b03948c7616ce163fb59f81b8d8284ca4dba241",
+      "visibility": "public",
+      "static": true,
+      "final": true
+    },
+    {
+      "kind": "interface",
+      "class": "com/ericsson/otp/erlang/OtpServerTransport",
+      "name": "com/ericsson/otp/erlang/OtpServerTransport",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "interface",
+      "class": "com/ericsson/otp/erlang/OtpTransport",
+      "name": "com/ericsson/otp/erlang/OtpTransport",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "interface",
+      "class": "com/ericsson/otp/erlang/OtpTransportFactory",
+      "name": "com/ericsson/otp/erlang/OtpTransportFactory",
+      "descriptor": "extends=java/lang/Object;implements=",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "close",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "deliver",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMsg;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "deliver",
+      "descriptor": "(Ljava/lang/Exception;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "doAccept",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "doConnect",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "doGenericConnect",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "doPortConnect",
+      "descriptor": "(I)V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "do_send",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "do_send",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "finalize",
+      "descriptor": "()V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "genChallenge",
+      "descriptor": "()I",
+      "visibility": "protected",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "genDigest",
+      "descriptor": "(ILjava/lang/String;)[B",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "getFlags",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "getTraceLevel",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "headerType",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)Ljava/lang/String;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "isConnected",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "read2BytePackage",
+      "descriptor": "()[B",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "readSock",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpTransport;[B)I",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvChallenge",
+      "descriptor": "()I",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvChallengeAck",
+      "descriptor": "(I)V",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvChallengeReply",
+      "descriptor": "(I)I",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvComplement",
+      "descriptor": "(I)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvName",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpPeer;)I",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "recvStatus",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "run",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendBuf",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendBuf",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendChallenge",
+      "descriptor": "(JJI)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendChallengeAck",
+      "descriptor": "([B)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendChallengeReply",
+      "descriptor": "(I[B)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendExit",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendExit2",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendLink",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendName",
+      "descriptor": "(IJI)I",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendStatus",
+      "descriptor": "(Ljava/lang/String;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendUnlink",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;J)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "sendUnlinkAck",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;J)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "setFlags",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractConnection",
+      "name": "setTraceLevel",
+      "descriptor": "(I)I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "alive",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "cookie",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "createServerTransport",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "createServerTransport",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "createTransport",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpPeer;)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "createTransport",
+      "descriptor": "(Ljava/lang/String;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "createTransport",
+      "descriptor": "(Ljava/net/InetAddress;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "host",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "node",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "setCookie",
+      "descriptor": "(Ljava/lang/String;)Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/AbstractNode",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "close",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "flush",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "get",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "get",
+      "descriptor": "(J)Ljava/lang/Object;",
+      "exceptions": [
+        "java/lang/InterruptedException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "getCount",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "put",
+      "descriptor": "(Ljava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue",
+      "name": "tryGet",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue$Bucket",
+      "name": "getContents",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue$Bucket",
+      "name": "getNext",
+      "descriptor": "()Lcom/ericsson/otp/erlang/GenericQueue$Bucket;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/GenericQueue$Bucket",
+      "name": "setNext",
+      "descriptor": "(Lcom/ericsson/otp/erlang/GenericQueue$Bucket;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "contains",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "equals",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangPid;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "getUnlinking",
+      "descriptor": "()J",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "hashCode",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "local",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "remote",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/Link",
+      "name": "setUnlinking",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "deliver",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMsg;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "deliver",
+      "descriptor": "(Ljava/lang/Exception;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "exit",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "link",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "msgCount",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "peer",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpPeer;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receive",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receive",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "java/lang/InterruptedException",
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receiveBuf",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpInputStream;",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receiveBuf",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpInputStream;",
+      "exceptions": [
+        "java/lang/InterruptedException",
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receiveMsg",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpMsg;",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receiveMsg",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpMsg;",
+      "exceptions": [
+        "java/lang/InterruptedException",
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "receiveRPC",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "self",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpSelf;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "send",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "send",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "sendBuf",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "sendBuf",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "sendRPC",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpErlangList;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "sendRPC",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;[Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpConnection",
+      "name": "unlink",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "close",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "deliver",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMsg;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "deliver",
+      "descriptor": "(Ljava/lang/Exception;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpCookedConnection",
+      "name": "finalize",
+      "descriptor": "()V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "lookupNames",
+      "descriptor": "()[Ljava/lang/String;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "lookupNames",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpTransportFactory;)[Ljava/lang/String;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "lookupNames",
+      "descriptor": "(Ljava/net/InetAddress;)[Ljava/lang/String;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "lookupNames",
+      "descriptor": "(Ljava/net/InetAddress;Lcom/ericsson/otp/erlang/OtpTransportFactory;)[Ljava/lang/String;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "lookupPort",
+      "descriptor": "(Lcom/ericsson/otp/erlang/AbstractNode;)I",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "publishPort",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)Z",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "unPublishPort",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)V",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd",
+      "name": "useEpmdPort",
+      "descriptor": "(I)V",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd$EpmdPort",
+      "name": "get",
+      "descriptor": "()I",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpEpmd$EpmdPort",
+      "name": "set",
+      "descriptor": "(I)V",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "atomValue",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "booleanValue",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangAtom",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBinary",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "binaryValue",
+      "descriptor": "()[B",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "getObject",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "pad_bits",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "size",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangBitstr",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "doubleValue",
+      "descriptor": "()D",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "floatValue",
+      "descriptor": "()F",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangDouble",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "pid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExit",
+      "name": "reason",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangExternalFun",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangFun",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "arity",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "bind",
+      "descriptor": "(Ljava/lang/Object;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(TT;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "elementAt",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "elements",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;I)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "getHead",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "getLastTail",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "getNthTail",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "getTail",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "isProper",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "iterator",
+      "descriptor": "()Ljava/util/Iterator;",
+      "generic_signature": "()Ljava/util/Iterator\u003cLcom/ericsson/otp/erlang/OtpErlangObject;\u003e;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "match",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Object;)Z",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(Lcom/ericsson/otp/erlang/OtpErlangObject;TT;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "stringValue",
+      "descriptor": "()Ljava/lang/String;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList",
+      "name": "toString",
+      "descriptor": "(I)Ljava/lang/String;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$Itr",
+      "name": "hasNext",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$Itr",
+      "name": "next",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$Itr",
+      "name": "next",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public",
+      "synthetic": true,
+      "bridge": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$Itr",
+      "name": "remove",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "arity",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "elementAt",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "elements",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "getHead",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "getLastTail",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "getNthTail",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "isProper",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "iterator",
+      "descriptor": "()Ljava/util/Iterator;",
+      "generic_signature": "()Ljava/util/Iterator\u003cLcom/ericsson/otp/erlang/OtpErlangObject;\u003e;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangList$SubList",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "bigIntegerValue",
+      "descriptor": "()Ljava/math/BigInteger;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "bitLength",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "byteValue",
+      "descriptor": "()B",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "charValue",
+      "descriptor": "()C",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "intValue",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "isLong",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "isULong",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "longValue",
+      "descriptor": "()J",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "shortValue",
+      "descriptor": "()S",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "signum",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "uIntValue",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangLong",
+      "name": "uShortValue",
+      "descriptor": "()S",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangRangeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "arity",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "bind",
+      "descriptor": "(Ljava/lang/Object;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(TT;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "entrySet",
+      "descriptor": "()Ljava/util/Set;",
+      "generic_signature": "()Ljava/util/Set\u003cLjava/util/Map$Entry\u003cLcom/ericsson/otp/erlang/OtpErlangObject;Lcom/ericsson/otp/erlang/OtpErlangObject;\u003e;\u003e;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "get",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "keys",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "match",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Object;)Z",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(Lcom/ericsson/otp/erlang/OtpErlangObject;TT;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "put",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Lcom/ericsson/otp/erlang/OtpErlangObject;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "remove",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangMap",
+      "name": "values",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "bind",
+      "descriptor": "(Ljava/lang/Object;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(TT;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "decode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpInputStream;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "hashCode",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "match",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Object;)Z",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(Lcom/ericsson/otp/erlang/OtpErlangObject;TT;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "combine",
+      "descriptor": "(I)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "combine",
+      "descriptor": "(II)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "combine",
+      "descriptor": "(J)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "combine",
+      "descriptor": "([B)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangObject$Hash",
+      "name": "valueOf",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "compareTo",
+      "descriptor": "(Ljava/lang/Object;)I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "creation",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "id",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "node",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "serial",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "tag",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPid",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "creation",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "id",
+      "descriptor": "()J",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "node",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "tag",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangPort",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "creation",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "id",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "ids",
+      "descriptor": "()[I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "isNewRef",
+      "descriptor": "()Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "node",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "tag",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangRef",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "isValidCodePoint",
+      "descriptor": "(I)Z",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "newString",
+      "descriptor": "([B)Ljava/lang/String;",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "stringToCodePoints",
+      "descriptor": "(Ljava/lang/String;)[I",
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "stringValue",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangString",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "arity",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "bind",
+      "descriptor": "(Ljava/lang/Object;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(TT;)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "clone",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "doHashCode",
+      "descriptor": "()I",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "elementAt",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "elements",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "encode",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpOutputStream;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "match",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;Ljava/lang/Object;)Z",
+      "generic_signature": "\u003cT:Ljava/lang/Object;\u003e(Lcom/ericsson/otp/erlang/OtpErlangObject;TT;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpErlangTuple",
+      "name": "toString",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "createServerTransport",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "createServerTransport",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpLocalNode;)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpPeer;)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/lang/String;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpGenericTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/net/InetAddress;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "byte_array_to_long",
+      "descriptor": "([BZ)J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public",
+      "static": true
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "getPos",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "peek",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "peek1",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "peek1skip_version",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read1",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read1skip_version",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read2BE",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read2LE",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read4BE",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read4LE",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read8BE",
+      "descriptor": "()J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "readBE",
+      "descriptor": "(I)J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "readLE",
+      "descriptor": "(I)J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "readN",
+      "descriptor": "([B)I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "readN",
+      "descriptor": "([BII)I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_any",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_atom",
+      "descriptor": "()Ljava/lang/String;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_binary",
+      "descriptor": "()[B",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_bitstr",
+      "descriptor": "([I)[B",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_boolean",
+      "descriptor": "()Z",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_byte",
+      "descriptor": "()B",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_char",
+      "descriptor": "()C",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_compressed",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_double",
+      "descriptor": "()D",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_external_fun",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangExternalFun;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_float",
+      "descriptor": "()F",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_fun",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangFun;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_int",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_integer_byte_array",
+      "descriptor": "()[B",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_list_head",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_long",
+      "descriptor": "()J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_long",
+      "descriptor": "(Z)J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_map_head",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_nil",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_pid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_port",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPort;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_ref",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangRef;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_short",
+      "descriptor": "()S",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_string",
+      "descriptor": "()Ljava/lang/String;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_tuple_head",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_uint",
+      "descriptor": "()I",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_ulong",
+      "descriptor": "()J",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "read_ushort",
+      "descriptor": "()S",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpInputStream",
+      "name": "setPos",
+      "descriptor": "(I)I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "createPid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "createPort",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPort;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "createRef",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangRef;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "getEpmd",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpTransport;",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "port",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpLocalNode",
+      "name": "setEpmd",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpTransport;)V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMD5",
+      "name": "final_bytes",
+      "descriptor": "()[I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMD5",
+      "name": "update",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMD5",
+      "name": "update",
+      "descriptor": "([I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "close",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "equals",
+      "descriptor": "(Ljava/lang/Object;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "exit",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "exit",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "exit",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "exit",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "finalize",
+      "descriptor": "()V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "getName",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "getNames",
+      "descriptor": "()[Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "hashCode",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "link",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangExit"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "linked",
+      "descriptor": "()[Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "ping",
+      "descriptor": "(Ljava/lang/String;J)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receive",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receive",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangExit",
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receiveBuf",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpInputStream;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangExit"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receiveBuf",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpInputStream;",
+      "exceptions": [
+        "java/lang/InterruptedException",
+        "com/ericsson/otp/erlang/OtpErlangExit"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receiveMsg",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpMsg;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangExit"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "receiveMsg",
+      "descriptor": "(J)Lcom/ericsson/otp/erlang/OtpMsg;",
+      "exceptions": [
+        "java/lang/InterruptedException",
+        "com/ericsson/otp/erlang/OtpErlangExit"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "registerName",
+      "descriptor": "(Ljava/lang/String;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "self",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "send",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "send",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "send",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "unlink",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMbox",
+      "name": "whereis",
+      "descriptor": "(Ljava/lang/String;)Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "getMsg",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangObject;",
+      "exceptions": [
+        "com/ericsson/otp/erlang/OtpErlangDecodeException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "getRecipient",
+      "descriptor": "()Ljava/lang/Object;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "getRecipientName",
+      "descriptor": "()Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "getRecipientPid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "getSenderPid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpMsg",
+      "name": "type",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "close",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "closeMbox",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMbox;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "closeMbox",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMbox;Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "createMbox",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "createMbox",
+      "descriptor": "(Ljava/lang/String;)Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "finalize",
+      "descriptor": "()V",
+      "visibility": "protected"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "getNames",
+      "descriptor": "()[Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "ping",
+      "descriptor": "(Ljava/lang/String;J)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "registerName",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpMbox;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "registerStatusHandler",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpNodeStatus;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "setFlags",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode",
+      "name": "whereis",
+      "descriptor": "(Ljava/lang/String;)Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Acceptor",
+      "name": "port",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Acceptor",
+      "name": "quit",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Acceptor",
+      "name": "run",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "clear",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "create",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "create",
+      "descriptor": "(Ljava/lang/String;)Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "get",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "get",
+      "descriptor": "(Ljava/lang/String;)Lcom/ericsson/otp/erlang/OtpMbox;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "names",
+      "descriptor": "()[Ljava/lang/String;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "register",
+      "descriptor": "(Ljava/lang/String;Lcom/ericsson/otp/erlang/OtpMbox;)Z",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNode$Mailboxes",
+      "name": "remove",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpMbox;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "name": "connAttempt",
+      "descriptor": "(Ljava/lang/String;ZLjava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "name": "localStatus",
+      "descriptor": "(Ljava/lang/String;ZLjava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpNodeStatus",
+      "name": "remoteStatus",
+      "descriptor": "(Ljava/lang/String;ZLjava/lang/Object;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "count",
+      "descriptor": "()I",
+      "metadata_digest": "afa07d02b36e56c68aa193f62ecb1df0e01782cc3225dbaaa91c38fdc8b28571",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "ensureCapacity",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "getPos",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "length",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "poke4BE",
+      "descriptor": "(IJ)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "trimToSize",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write",
+      "descriptor": "(B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write",
+      "descriptor": "([BII)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write1",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write2BE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write2LE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write4BE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write4LE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write8BE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write8LE",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "writeLE",
+      "descriptor": "(JI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "writeN",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "writeTo",
+      "descriptor": "(Ljava/io/OutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "writeToAndFlush",
+      "descriptor": "(Ljava/io/OutputStream;)V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_any",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_atom",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_big_integer",
+      "descriptor": "(Ljava/math/BigInteger;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_binary",
+      "descriptor": "([B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_bitstr",
+      "descriptor": "([BI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_boolean",
+      "descriptor": "(Z)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_byte",
+      "descriptor": "(B)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_char",
+      "descriptor": "(C)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_compressed",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_compressed",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangObject;I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_double",
+      "descriptor": "(D)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_external_fun",
+      "descriptor": "(Ljava/lang/String;Ljava/lang/String;I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_float",
+      "descriptor": "(F)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_fun",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;Ljava/lang/String;JI[BJJ[Lcom/ericsson/otp/erlang/OtpErlangObject;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_int",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_list_head",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_long",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_map_head",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_nil",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_pid",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPid;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_pid",
+      "descriptor": "(Ljava/lang/String;III)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_port",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangPort;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_port",
+      "descriptor": "(Ljava/lang/String;JI)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_ref",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpErlangRef;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_ref",
+      "descriptor": "(Ljava/lang/String;II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_ref",
+      "descriptor": "(Ljava/lang/String;[II)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_short",
+      "descriptor": "(S)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_string",
+      "descriptor": "(Ljava/lang/String;)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_tuple_head",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_uint",
+      "descriptor": "(I)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_ulong",
+      "descriptor": "(J)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpOutputStream",
+      "name": "write_ushort",
+      "descriptor": "(S)V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpPeer",
+      "name": "connect",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpSelf;)Lcom/ericsson/otp/erlang/OtpConnection;",
+      "exceptions": [
+        "java/io/IOException",
+        "java/net/UnknownHostException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "metadata_digest": "fff0361ba14086416873390cfc8d0dda0ff6ad194072d3066ce5c2eba4b0b318",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "accept",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpConnection;",
+      "exceptions": [
+        "java/io/IOException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "connect",
+      "descriptor": "(Lcom/ericsson/otp/erlang/OtpPeer;)Lcom/ericsson/otp/erlang/OtpConnection;",
+      "exceptions": [
+        "java/io/IOException",
+        "java/net/UnknownHostException",
+        "com/ericsson/otp/erlang/OtpAuthException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "pid",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpErlangPid;",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "publishPort",
+      "descriptor": "()Z",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSelf",
+      "name": "unPublishPort",
+      "descriptor": "()V",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "name": "accept",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "name": "close",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerSocketTransport",
+      "name": "getLocalPort",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerTransport",
+      "name": "accept",
+      "descriptor": "()Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerTransport",
+      "name": "close",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpServerTransport",
+      "name": "getLocalPort",
+      "descriptor": "()I",
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "close",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "getInputStream",
+      "descriptor": "()Ljava/io/InputStream;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransport",
+      "name": "getOutputStream",
+      "descriptor": "()Ljava/io/OutputStream;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "name": "createServerTransport",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/lang/String;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpSocketTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/net/InetAddress;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransport",
+      "name": "close",
+      "descriptor": "()V",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransport",
+      "name": "getInputStream",
+      "descriptor": "()Ljava/io/InputStream;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransport",
+      "name": "getOutputStream",
+      "descriptor": "()Ljava/io/OutputStream;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransportFactory",
+      "name": "createServerTransport",
+      "descriptor": "(I)Lcom/ericsson/otp/erlang/OtpServerTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/lang/String;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    },
+    {
+      "kind": "method",
+      "class": "com/ericsson/otp/erlang/OtpTransportFactory",
+      "name": "createTransport",
+      "descriptor": "(Ljava/net/InetAddress;I)Lcom/ericsson/otp/erlang/OtpTransport;",
+      "exceptions": [
+        "java/io/IOException"
+      ],
+      "visibility": "public"
+    }
+  ]
+}
