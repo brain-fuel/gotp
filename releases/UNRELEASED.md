@@ -120,3 +120,6 @@ This document is not a release and does not authorize a tag or publication.
 - Replaced parallel return slices with typed return frames and migrated return
   and exception stacks to clearing buffers with reverse, exactly-once code-lease
   release.
+- Migrated kernel mailboxes, the scheduler run queue, and staged remote signals
+  to clearing typed buffers; terminal processes release mailbox storage while
+  scheduler-owned queues retain cleared capacity for reuse.

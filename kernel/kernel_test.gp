@@ -91,6 +91,27 @@ func TestSchedulerRoundRobinFairness(t *testing.T) {
 	}
 }
 
+func TestTerminalProcessReleasesMailboxStorage(t *testing.T) {
+	runtime := New(KernelConfig{})
+	pid := mustSpawn(t, runtime, func(context *Context) StepResult {
+		return Stop(term.MustAtom("normal"))
+	}, Unlinked(false))
+	sender := term.PID{Node: 1, Number: 999, Creation: 1}
+	match runtime.Send(sender, pid, term.Integer(42)) {
+	case Delivered:
+	case NoProcess:
+		t.Fatal("send failed")
+	}
+	if runtime.processes[pid].mailbox.Capacity() == 0 {
+		t.Fatal("mailbox did not allocate storage")
+	}
+	runtime.Run(1)
+	mailbox := runtime.processes[pid].mailbox
+	if mailbox.Len() != 0 || mailbox.Capacity() != 0 {
+		t.Fatalf("terminal mailbox len/cap = %d/%d", mailbox.Len(), mailbox.Capacity())
+	}
+}
+
 func TestMonitorDeliversDownAndWakesWaiter(t *testing.T) {
 	runtime := New(KernelConfig{})
 	var down option.Option[Signal] = option.None[Signal]

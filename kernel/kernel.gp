@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
 	"goforge.dev/gotp/term"
@@ -145,13 +146,13 @@ type Kernel struct {
 	nextPID       uint64
 	nextReference uint32
 	processes     map[term.PID]*process
-	runQueue      []term.PID
+	runQueue      memory.Buffer[term.PID]
 	queued        map[term.PID]bool
 	sequences     map[route]uint64
 	aliases       map[term.Reference]term.PID
 	wakeups       *wakeQueue
 	tracer        *Tracer
-	remoteSignals []RemoteSignal
+	remoteSignals memory.Buffer[RemoteSignal]
 	names         map[string]term.PID
 	nextUnlinkID  uint64
 }
@@ -171,6 +172,8 @@ func New(config KernelConfig) *Kernel {
 		aliases:   make(map[term.Reference]term.PID),
 		wakeups: newWakeQueue(),
 		names: make(map[string]term.PID),
+		runQueue: memory.NewBuffer[term.PID](64),
+		remoteSignals: memory.NewBuffer[RemoteSignal](16),
 	}
 }
 
@@ -472,7 +475,7 @@ func (kernel *Kernel) MonitorRemote(
 	}
 	match kernel.liveProcess(target) {
 	case option.None:
-		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal(
+		kernel.remoteSignals.Append(RemoteDownSignal(
 			target, watcher, reference, term.MustAtom("noproc"),
 		))
 		return result.Ok[KernelMutation, Failure](KernelMutated())
@@ -496,7 +499,7 @@ func (kernel *Kernel) MonitorRemoteName(
 	}
 	match kernel.Whereis(name) {
 	case option.None:
-		kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal(
+		kernel.remoteSignals.Append(RemoteDownNamedSignal(
 			name, watcher, reference, term.MustAtom("noproc"),
 		))
 		return result.Ok[KernelMutation, Failure](KernelMutated())
@@ -551,8 +554,8 @@ func (kernel *Kernel) DemonitorRemoteName(
 }
 
 func (kernel *Kernel) DrainRemoteSignals() []RemoteSignal {
-	drained := make([]RemoteSignal, len(kernel.remoteSignals))
-	for index, signal := range kernel.remoteSignals {
+	drained := make([]RemoteSignal, kernel.remoteSignals.Len())
+	for index := 0; index < kernel.remoteSignals.Len(); index++ { var signal RemoteSignal; match kernel.remoteSignals.At(index) { case option.None: continue; case option.Some(found): signal = found }
 		match signal {
 		case RemoteExitSignal(from, to, reason):
 			drained[index] = RemoteExitSignal(from, to, reason.Clone())
@@ -562,7 +565,7 @@ func (kernel *Kernel) DrainRemoteSignals() []RemoteSignal {
 			drained[index] = RemoteDownNamedSignal(source, to, reference, reason.Clone())
 		}
 	}
-	kernel.remoteSignals = kernel.remoteSignals[:0]
+	kernel.remoteSignals.Reset()
 	return drained
 }
 
@@ -722,10 +725,8 @@ func (kernel *Kernel) Run(maxReductions int) RunReport {
 	}
 	kernel.drainWakeups()
 	reductions := 0
-	for len(kernel.runQueue) > 0 && reductions < maxReductions {
-		pid := kernel.runQueue[0]
-		copy(kernel.runQueue, kernel.runQueue[1:])
-		kernel.runQueue = kernel.runQueue[:len(kernel.runQueue)-1]
+	for kernel.runQueue.Len() > 0 && reductions < maxReductions {
+		var pid term.PID; match kernel.runQueue.Remove(0) { case option.None: continue; case option.Some(found): pid = found }
 		kernel.queued[pid] = false
 
 		match kernel.liveProcess(pid) {
@@ -824,7 +825,7 @@ func (kernel *Kernel) enqueueRunnable(pid term.PID) {
 			return
 		}
 		current.status = Runnable()
-		kernel.runQueue = append(kernel.runQueue, pid)
+		kernel.runQueue.Append(pid)
 		kernel.queued[pid] = true
 	}
 }
@@ -884,7 +885,7 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		match kernel.liveProcess(linkedPID) {
 		case option.None:
 			if linkedPID.Node != kernel.config.Node {
-				kernel.remoteSignals = append(kernel.remoteSignals, RemoteExitSignal(
+				kernel.remoteSignals.Append(RemoteExitSignal(
 					current.pid, linkedPID, reason.Clone(),
 				))
 			}
@@ -916,11 +917,11 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 			if watcher.Node != kernel.config.Node {
 				name, named := current.monitorNames[reference]
 				if named {
-					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownNamedSignal(
+					kernel.remoteSignals.Append(RemoteDownNamedSignal(
 						name, watcher, reference, reason.Clone(),
 					))
 				} else {
-					kernel.remoteSignals = append(kernel.remoteSignals, RemoteDownSignal(
+					kernel.remoteSignals.Append(RemoteDownSignal(
 						current.pid, watcher, reference, reason.Clone(),
 					))
 				}
@@ -962,6 +963,7 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		delete(kernel.aliases, reference)
 	}
 	current.aliases = make(map[term.Reference]struct{})
+	current.mailbox.Release()
 }
 
 func (kernel *Kernel) report(reductions int) RunReport {

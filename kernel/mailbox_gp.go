@@ -4,6 +4,7 @@
 package kernel
 
 import (
+	"goforge.dev/goplus/std/memory"
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/gotp/term"
 )
@@ -252,23 +253,32 @@ func MailboxMutationEqual(a, b MailboxMutation) bool {
 }
 
 type Mailbox struct {
-	queue []Signal
+	queue memory.Buffer[Signal]
 }
 
 func (mailbox *Mailbox) Push(signal Signal) MailboxMutation {
-	mailbox.queue = append(mailbox.queue, signal)
+	mailbox.queue.Append(signal)
 	return SignalQueued{}
 }
 
 func (mailbox *Mailbox) Receive(
 	accept func(Signal) bool,
 ) option.Option[Signal] {
-	for index, signal := range mailbox.queue {
+	for index := 0; index < mailbox.queue.Len(); index++ {
+		var signal Signal
+		switch __gp_m0 := any(mailbox.queue.At(index)).(type) {
+		case option.None[Signal]:
+			continue
+		case option.Some[Signal]:
+			found := __gp_m0.Value
+			signal = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 		if accept != nil && !accept(signal) {
 			continue
 		}
-		copy(mailbox.queue[index:], mailbox.queue[index+1:])
-		mailbox.queue = mailbox.queue[:len(mailbox.queue)-1]
+		mailbox.queue.Remove(index)
 		return option.Some[Signal]{Value: signal}
 	}
 	return option.None[Signal]{}
@@ -276,47 +286,72 @@ func (mailbox *Mailbox) Receive(
 
 func (mailbox *Mailbox) Remove(match func(Signal) bool) int {
 	if match == nil {
-		removed := len(mailbox.queue)
-		mailbox.queue = mailbox.queue[:0]
+		removed := mailbox.queue.Len()
+		mailbox.queue.Reset()
 		return removed
 	}
-	kept := mailbox.queue[:0]
+	write := 0
 	removed := 0
-	for _, signal := range mailbox.queue {
+	for index := 0; index < mailbox.queue.Len(); index++ {
+		var signal Signal
+		switch __gp_m1 := any(mailbox.queue.At(index)).(type) {
+		case option.None[Signal]:
+			continue
+		case option.Some[Signal]:
+			found := __gp_m1.Value
+			signal = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 		if match(signal) {
 			removed++
 			continue
 		}
-		kept = append(kept, signal)
+		mailbox.queue.Set(write, signal)
+		write++
 	}
-	mailbox.queue = kept
+	mailbox.queue.Truncate(write)
 	return removed
 }
 
 func (mailbox *Mailbox) Len() int {
-	return len(mailbox.queue)
+	return mailbox.queue.Len()
 }
 
 func (mailbox *Mailbox) Snapshot() []Signal {
-	return append([]Signal(nil), mailbox.queue...)
+	snapshot := make([]Signal, 0, mailbox.queue.Len())
+	for index := 0; index < mailbox.queue.Len(); index++ {
+		switch __gp_m2 := any(mailbox.queue.At(index)).(type) {
+		case option.None[Signal]:
+		case option.Some[Signal]:
+			signal := __gp_m2.Value
+			snapshot = append(snapshot, signal)
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	return snapshot
 }
 
+func (mailbox *Mailbox) Release()      { mailbox.queue.Release() }
+func (mailbox *Mailbox) Capacity() int { return mailbox.queue.Cap() }
+
 func signalFrom(signal Signal) term.PID {
-	switch __gp_m0 := any(signal).(type) {
+	switch __gp_m3 := any(signal).(type) {
 	case UserSignal:
-		from := __gp_m0.From
+		from := __gp_m3.From
 
 		return from
 	case ExitSignal:
-		from := __gp_m0.From
+		from := __gp_m3.From
 
 		return from
 	case DownSignal:
-		from := __gp_m0.From
+		from := __gp_m3.From
 
 		return from
 	case DownNamedSignal:
-		from := __gp_m0.From
+		from := __gp_m3.From
 
 		return from
 	default:
@@ -325,21 +360,21 @@ func signalFrom(signal Signal) term.PID {
 }
 
 func signalSequence(signal Signal) uint64 {
-	switch __gp_m1 := any(signal).(type) {
+	switch __gp_m4 := any(signal).(type) {
 	case UserSignal:
-		sequence := __gp_m1.Sequence
+		sequence := __gp_m4.Sequence
 
 		return sequence
 	case ExitSignal:
-		sequence := __gp_m1.Sequence
+		sequence := __gp_m4.Sequence
 
 		return sequence
 	case DownSignal:
-		sequence := __gp_m1.Sequence
+		sequence := __gp_m4.Sequence
 
 		return sequence
 	case DownNamedSignal:
-		sequence := __gp_m1.Sequence
+		sequence := __gp_m4.Sequence
 
 		return sequence
 	default:
@@ -348,30 +383,30 @@ func signalSequence(signal Signal) uint64 {
 }
 
 func withSequence(signal Signal, sequence uint64) Signal {
-	switch __gp_m2 := any(signal).(type) {
+	switch __gp_m5 := any(signal).(type) {
 	case UserSignal:
-		from := __gp_m2.From
-		message := __gp_m2.Message
+		from := __gp_m5.From
+		message := __gp_m5.Message
 
 		return UserSignal{From: from, Sequence: sequence, Message: message}
 	case ExitSignal:
-		from := __gp_m2.From
-		reason := __gp_m2.Reason
-		target := __gp_m2.Target
+		from := __gp_m5.From
+		reason := __gp_m5.Reason
+		target := __gp_m5.Target
 
 		return ExitSignal{From: from, Sequence: sequence, Reason: reason, Target: target}
 	case DownSignal:
-		from := __gp_m2.From
-		reason := __gp_m2.Reason
-		reference := __gp_m2.Reference
-		target := __gp_m2.Target
+		from := __gp_m5.From
+		reason := __gp_m5.Reason
+		reference := __gp_m5.Reference
+		target := __gp_m5.Target
 
 		return DownSignal{From: from, Sequence: sequence, Reason: reason, Reference: reference, Target: target}
 	case DownNamedSignal:
-		from := __gp_m2.From
-		reason := __gp_m2.Reason
-		reference := __gp_m2.Reference
-		target := __gp_m2.Target
+		from := __gp_m5.From
+		reason := __gp_m5.Reason
+		reference := __gp_m5.Reference
+		target := __gp_m5.Target
 
 		return DownNamedSignal{From: from, Sequence: sequence, Reason: reason, Reference: reference, Target: target}
 	default:

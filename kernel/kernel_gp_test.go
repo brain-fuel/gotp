@@ -112,17 +112,42 @@ func TestSchedulerRoundRobinFairness(t *testing.T) {
 	}
 }
 
+func TestTerminalProcessReleasesMailboxStorage(t *testing.T) {
+	runtime := New(KernelConfig{})
+	pid := mustSpawn(t, runtime, func(context *Context) StepResult {
+		return Stop{Reason: term.MustAtom("normal")}
+	}, Unlinked{TrapExit: false})
+	sender := term.PID{Node: 1, Number: 999, Creation: 1}
+	switch any(runtime.Send(sender, pid, term.Integer(42))).(type) {
+	case Delivered:
+
+	case NoProcess:
+
+		t.Fatal("send failed")
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	if runtime.processes[pid].mailbox.Capacity() == 0 {
+		t.Fatal("mailbox did not allocate storage")
+	}
+	runtime.Run(1)
+	mailbox := runtime.processes[pid].mailbox
+	if mailbox.Len() != 0 || mailbox.Capacity() != 0 {
+		t.Fatalf("terminal mailbox len/cap = %d/%d", mailbox.Len(), mailbox.Capacity())
+	}
+}
+
 func TestMonitorDeliversDownAndWakesWaiter(t *testing.T) {
 	runtime := New(KernelConfig{})
 	var down option.Option[Signal] = option.None[Signal]{}
 	watcher := mustSpawn(t, runtime, func(context *Context) StepResult {
 		received := context.Receive(isDownSignal)
-		switch __gp_m4 := any(received).(type) {
+		switch __gp_m5 := any(received).(type) {
 		case option.None[Signal]:
 
 			return Wait{}
 		case option.Some[Signal]:
-			signal := __gp_m4.Value
+			signal := __gp_m5.Value
 
 			down = option.Some[Signal]{Value: signal}
 			return Stop{Reason: term.MustAtom("normal")}
@@ -134,31 +159,31 @@ func TestMonitorDeliversDownAndWakesWaiter(t *testing.T) {
 		return Stop{Reason: term.MustAtom("crash")}
 	}, Unlinked{TrapExit: false})
 	var reference term.Reference
-	switch __gp_m5 := any(runtime.Monitor(watcher, target)).(type) {
+	switch __gp_m6 := any(runtime.Monitor(watcher, target)).(type) {
 	case result.Err[term.Reference, Failure]:
-		failure := __gp_m5.Err
+		failure := __gp_m6.Err
 
 		t.Fatal(FailureError(failure))
 	case result.Ok[term.Reference, Failure]:
-		found := __gp_m5.Value
+		found := __gp_m6.Value
 
 		reference = found
 	default:
 		panic("goplus: impossible enum value in match")
 	}
 	runtime.Run(100)
-	switch __gp_m6 := any(down).(type) {
+	switch __gp_m7 := any(down).(type) {
 	case option.None[Signal]:
 
 		t.Fatal("DOWN signal was not delivered")
 	case option.Some[Signal]:
-		signal := __gp_m6.Value
+		signal := __gp_m7.Value
 
-		switch __gp_m7 := any(signal).(type) {
+		switch __gp_m8 := any(signal).(type) {
 		case DownSignal:
-			reason := __gp_m7.Reason
-			foundReference := __gp_m7.Reference
-			foundTarget := __gp_m7.Target
+			reason := __gp_m8.Reason
+			foundReference := __gp_m8.Reference
+			foundTarget := __gp_m8.Target
 
 			if foundTarget != target || foundReference != reference {
 				t.Fatalf("DOWN target/reference mismatch")
@@ -178,12 +203,12 @@ func TestTrapExitConvertsLinkedExitToSignal(t *testing.T) {
 	var received option.Option[Signal] = option.None[Signal]{}
 	trapper := mustSpawn(t, runtime, func(context *Context) StepResult {
 		found := context.Receive(isExitSignal)
-		switch __gp_m8 := any(found).(type) {
+		switch __gp_m9 := any(found).(type) {
 		case option.None[Signal]:
 
 			return Wait{}
 		case option.Some[Signal]:
-			signal := __gp_m8.Value
+			signal := __gp_m9.Value
 
 			received = option.Some[Signal]{Value: signal}
 			return Stop{Reason: term.MustAtom("normal")}
@@ -194,9 +219,9 @@ func TestTrapExitConvertsLinkedExitToSignal(t *testing.T) {
 	target := mustSpawn(t, runtime, func(context *Context) StepResult {
 		return Stop{Reason: term.MustAtom("badarg")}
 	}, Unlinked{TrapExit: false})
-	switch __gp_m9 := any(runtime.Link(trapper, target)).(type) {
+	switch __gp_m10 := any(runtime.Link(trapper, target)).(type) {
 	case result.Err[KernelMutation, Failure]:
-		failure := __gp_m9.Err
+		failure := __gp_m10.Err
 
 		t.Fatal(FailureError(failure))
 	case result.Ok[KernelMutation, Failure]:
@@ -205,17 +230,17 @@ func TestTrapExitConvertsLinkedExitToSignal(t *testing.T) {
 		panic("goplus: impossible enum value in match")
 	}
 	runtime.Run(100)
-	switch __gp_m10 := any(received).(type) {
+	switch __gp_m11 := any(received).(type) {
 	case option.None[Signal]:
 
 		t.Fatal("EXIT signal was not delivered")
 	case option.Some[Signal]:
-		signal := __gp_m10.Value
+		signal := __gp_m11.Value
 
-		switch __gp_m11 := any(signal).(type) {
+		switch __gp_m12 := any(signal).(type) {
 		case ExitSignal:
-			from := __gp_m11.From
-			reason := __gp_m11.Reason
+			from := __gp_m12.From
+			reason := __gp_m12.Reason
 
 			if from != target {
 				t.Fatalf("EXIT source = %v", from)
@@ -238,9 +263,9 @@ func TestAbnormalLinkedExitPropagates(t *testing.T) {
 	target := mustSpawn(t, runtime, func(context *Context) StepResult {
 		return Stop{Reason: term.MustAtom("boom")}
 	}, Unlinked{TrapExit: false})
-	switch __gp_m12 := any(runtime.Link(victim, target)).(type) {
+	switch __gp_m13 := any(runtime.Link(victim, target)).(type) {
 	case result.Err[KernelMutation, Failure]:
-		failure := __gp_m12.Err
+		failure := __gp_m13.Err
 
 		t.Fatal(FailureError(failure))
 	case result.Ok[KernelMutation, Failure]:
@@ -249,12 +274,12 @@ func TestAbnormalLinkedExitPropagates(t *testing.T) {
 		panic("goplus: impossible enum value in match")
 	}
 	runtime.Run(100)
-	switch __gp_m13 := any(runtime.ProcessInfo(victim)).(type) {
+	switch __gp_m14 := any(runtime.ProcessInfo(victim)).(type) {
 	case option.None[ProcessInfo]:
 
 		t.Fatal("victim process record is missing")
 	case option.Some[ProcessInfo]:
-		info := __gp_m13.Value
+		info := __gp_m14.Value
 
 		switch any(info.Status).(type) {
 		case Exited:
@@ -263,9 +288,9 @@ func TestAbnormalLinkedExitPropagates(t *testing.T) {
 
 			t.Fatalf("victim status = %#v", info.Status)
 		}
-		switch __gp_m15 := any(info.ExitReason).(type) {
+		switch __gp_m16 := any(info.ExitReason).(type) {
 		case option.Some[term.Term]:
-			reason := __gp_m15.Value
+			reason := __gp_m16.Value
 
 			assertAtom(t, reason, "boom")
 		case option.None[term.Term]:
@@ -296,12 +321,12 @@ func TestPerRouteSignalSequenceIsMonotonic(t *testing.T) {
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	switch __gp_m17 := any(runtime.ProcessInfo(receiver)).(type) {
+	switch __gp_m18 := any(runtime.ProcessInfo(receiver)).(type) {
 	case option.None[ProcessInfo]:
 
 		t.Fatal("receiver process record is missing")
 	case option.Some[ProcessInfo]:
-		info := __gp_m17.Value
+		info := __gp_m18.Value
 
 		if info.MailboxLength != 100 {
 			t.Fatalf("mailbox length = %d", info.MailboxLength)
@@ -324,13 +349,13 @@ func mustSpawn(
 	policy SpawnPolicy,
 ) term.PID {
 	t.Helper()
-	switch __gp_m18 := any(runtime.Spawn(behavior, policy)).(type) {
+	switch __gp_m19 := any(runtime.Spawn(behavior, policy)).(type) {
 	case result.Ok[term.PID, Failure]:
-		pid := __gp_m18.Value
+		pid := __gp_m19.Value
 
 		return pid
 	case result.Err[term.PID, Failure]:
-		failure := __gp_m18.Err
+		failure := __gp_m19.Err
 
 		t.Fatal(FailureError(failure))
 		return term.PID{}
@@ -341,9 +366,9 @@ func mustSpawn(
 
 func assertAtom(t *testing.T, value term.Term, want string) {
 	t.Helper()
-	switch __gp_m19 := any(value).(type) {
+	switch __gp_m20 := any(value).(type) {
 	case term.AtomTerm:
-		name := __gp_m19.Name
+		name := __gp_m20.Name
 
 		if name != want {
 			t.Fatalf("atom = %q, want %q", name, want)
@@ -355,9 +380,9 @@ func assertAtom(t *testing.T, value term.Term, want string) {
 }
 
 func isEvenUserSignal(signal Signal) bool {
-	switch __gp_m20 := any(signalInteger(signal)).(type) {
+	switch __gp_m21 := any(signalInteger(signal)).(type) {
 	case option.Some[int64]:
-		integer := __gp_m20.Value
+		integer := __gp_m21.Value
 
 		return integer%2 == 0
 	case option.None[int64]:
@@ -369,13 +394,13 @@ func isEvenUserSignal(signal Signal) bool {
 }
 
 func signalInteger(signal Signal) option.Option[int64] {
-	switch __gp_m21 := any(signal).(type) {
+	switch __gp_m22 := any(signal).(type) {
 	case UserSignal:
-		value := __gp_m21.Message
+		value := __gp_m22.Message
 
-		switch __gp_m22 := any(value).(type) {
+		switch __gp_m23 := any(value).(type) {
 		case term.IntegerTerm:
-			integer := __gp_m22.Value
+			integer := __gp_m23.Value
 
 			if integer.IsInt64() {
 				return option.Some[int64]{Value: integer.Int64()}
