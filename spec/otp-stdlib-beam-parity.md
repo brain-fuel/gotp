@@ -111,6 +111,16 @@ status for ordinary and `enter_loop` servers. Process-dictionary enumeration
 and anonymous PID headers are normalized; exhaustive report, option, callback,
 and malformed-term domains remain open.
 
+The remaining-runtime slice directly executes `init_it/6` from valid
+`proc_lib` children, including acknowledgement, cleanup, ancestry, and every
+initial callback result family. It executes delayed hibernation wake-up through
+calls, casts, info, timeout, system control, malformed callback return,
+termination, and linked-parent exit. OTP 29.0.4 does not export the requested
+legacy `wake_hib/6`; its internal wake path uses `loop_hibernate/4`,
+`loop_wakeup/4`, and `erlang:hibernate/0,3`. The same corpus covers
+`abcast/2,3`, `stop/3`, and the remaining system callbacks. A pinned-export
+verifier requires every runtime export to be proved or precisely ledgered.
+
 - Lifecycle corpus: `sha256:107c3a6a92d360f45746c41b547fe0d131b497d595e09b4397630fcab180b641`
 - Callback module: `sha256:ad5045f2062900129aa7eb74cf3d9cb82c0cb79cac7af0d6f13348d5b6dc7956`
 - Lifecycle law: `gotp.erts.otp29-gen-server-lifecycle`

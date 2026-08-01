@@ -147,7 +147,7 @@ func executeExternalCall(
 			panic("goplus: impossible enum value in match")
 		}
 	}
-	if target.Module == "erlang" && target.Function == "apply" && target.Arity == 3 {
+	if target.Module == "erlang" && target.Function == "hibernate" && target.Arity == 3 {
 		var module, function string
 		switch __gp_m6 := any(term.AtomName(arguments[0])).(type) {
 		case option.None[string]:
@@ -171,13 +171,10 @@ func executeExternalCall(
 		case term.ProperListTerm:
 			values := __gp_m8.Elements
 
-			if uint64(len(values)) > uint64(^uint32(0)) {
+			if uint64(len(values)) > uint64(^uint32(0)) || len(values) > machine.x.Len() {
 				return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("system_limit")}}
 			}
-			target = ExternalFunction{Module: module, Function: function, Arity: uint32(len(values))}
-			arguments = make([]term.Term, len(values))
 			for index, value := range values {
-				arguments[index] = term.Clone(value)
 				switch __gp_m9 := any(machine.SetX(index, value)).(type) {
 				case result.Err[MachineMutation, Failure]:
 					failure := __gp_m9.Err
@@ -187,11 +184,12 @@ func executeExternalCall(
 					panic("goplus: impossible enum value in match")
 				}
 			}
+			return machine.executeLinkedCall(ExternalFunction{Module: module, Function: function, Arity: uint32(len(values))}, true, host)
 		default:
 			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
 		}
 	}
-	if target.Module == "erlang" && target.Function == "function_exported" && target.Arity == 3 {
+	if target.Module == "erlang" && target.Function == "apply" && target.Arity == 3 {
 		var module, function string
 		switch __gp_m10 := any(term.AtomName(arguments[0])).(type) {
 		case option.None[string]:
@@ -211,12 +209,56 @@ func executeExternalCall(
 		default:
 			panic("goplus: impossible enum value in match")
 		}
+		switch __gp_m12 := any(arguments[2]).(type) {
+		case term.ProperListTerm:
+			values := __gp_m12.Elements
+
+			if uint64(len(values)) > uint64(^uint32(0)) {
+				return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("system_limit")}}
+			}
+			target = ExternalFunction{Module: module, Function: function, Arity: uint32(len(values))}
+			arguments = make([]term.Term, len(values))
+			for index, value := range values {
+				arguments[index] = term.Clone(value)
+				switch __gp_m13 := any(machine.SetX(index, value)).(type) {
+				case result.Err[MachineMutation, Failure]:
+					failure := __gp_m13.Err
+					return result.Err[instructionOutcome, Failure]{Err: failure}
+				case result.Ok[MachineMutation, Failure]:
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+		default:
+			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
+		}
+	}
+	if target.Module == "erlang" && target.Function == "function_exported" && target.Arity == 3 {
+		var module, function string
+		switch __gp_m14 := any(term.AtomName(arguments[0])).(type) {
+		case option.None[string]:
+			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
+		case option.Some[string]:
+			value := __gp_m14.Value
+			module = value
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m15 := any(term.AtomName(arguments[1])).(type) {
+		case option.None[string]:
+			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
+		case option.Some[string]:
+			value := __gp_m15.Value
+			function = value
+		default:
+			panic("goplus: impossible enum value in match")
+		}
 		var functionArity uint32
-		switch __gp_m12 := any(term.IntegerValue(arguments[2])).(type) {
+		switch __gp_m16 := any(term.IntegerValue(arguments[2])).(type) {
 		case option.None[*big.Int]:
 			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
 		case option.Some[*big.Int]:
-			value := __gp_m12.Value
+			value := __gp_m16.Value
 
 			if value.Sign() < 0 || !value.IsUint64() || value.Uint64() > uint64(^uint32(0)) {
 				return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
@@ -245,11 +287,11 @@ func executeExternalCall(
 	}
 	if target.Module == "erlang" && target.Function == "module_loaded" && target.Arity == 1 {
 		var module string
-		switch __gp_m14 := any(term.AtomName(arguments[0])).(type) {
+		switch __gp_m18 := any(term.AtomName(arguments[0])).(type) {
 		case option.None[string]:
 			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
 		case option.Some[string]:
-			value := __gp_m14.Value
+			value := __gp_m18.Value
 			module = value
 		default:
 			panic("goplus: impossible enum value in match")
@@ -278,21 +320,21 @@ func executeExternalCall(
 		panic("goplus: impossible enum value in match")
 	}
 	var called ExternalCallOutcome = host.externalCall(target, arguments)
-	switch __gp_m16 := any(called).(type) {
+	switch __gp_m20 := any(called).(type) {
 	case ExternalCallUnbound:
 
 		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallRaised:
-		class := __gp_m16.Class
-		reason := __gp_m16.Reason
+		class := __gp_m20.Class
+		reason := __gp_m20.Reason
 
 		return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.Clone(class), Reason: term.Clone(reason)}}
 	case ExternalCallRejected:
-		detail := __gp_m16.Detail
+		detail := __gp_m20.Detail
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("external call %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)}}
 	case ExternalCallReturned:
-		value := __gp_m16.Value
+		value := __gp_m20.Value
 
 		return finishExternalCall(machine, value, tail)
 	default:
@@ -301,9 +343,9 @@ func executeExternalCall(
 }
 
 func finishExternalCall(machine *Machine, value term.Term, tail bool) result.Result[instructionOutcome, Failure] {
-	switch __gp_m17 := any(machine.SetX(0, value)).(type) {
+	switch __gp_m21 := any(machine.SetX(0, value)).(type) {
 	case result.Err[MachineMutation, Failure]:
-		failure := __gp_m17.Err
+		failure := __gp_m21.Err
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[MachineMutation, Failure]:
 	default:
@@ -328,11 +370,11 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("%s has %d operands", instruction.Opcode.Name, len(instruction.Operands))}}
 	}
 	var arity uint64
-	switch __gp_m18 := any(beam.Uint64(instruction.Operands[0])).(type) {
+	switch __gp_m22 := any(beam.Uint64(instruction.Operands[0])).(type) {
 	case option.None[uint64]:
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "apply arity is not uint64"}}
 	case option.Some[uint64]:
-		value := __gp_m18.Value
+		value := __gp_m22.Value
 		arity = value
 	default:
 		panic("goplus: impossible enum value in match")
@@ -341,17 +383,17 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 		return result.Err[instructionOutcome, Failure]{Err: RegisterOutOfRange{Register: "x", Index: int(arity) + 1}}
 	}
 	var module, function string
-	switch __gp_m19 := any(machine.X(int(arity))).(type) {
+	switch __gp_m23 := any(machine.X(int(arity))).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m19.Err
+		failure := __gp_m23.Err
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m19.Value
-		switch __gp_m20 := any(term.AtomName(value)).(type) {
+		value := __gp_m23.Value
+		switch __gp_m24 := any(term.AtomName(value)).(type) {
 		case option.None[string]:
 			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
 		case option.Some[string]:
-			name := __gp_m20.Value
+			name := __gp_m24.Value
 			module = name
 		default:
 			panic("goplus: impossible enum value in match")
@@ -359,17 +401,17 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m21 := any(machine.X(int(arity) + 1)).(type) {
+	switch __gp_m25 := any(machine.X(int(arity) + 1)).(type) {
 	case result.Err[term.Term, Failure]:
-		failure := __gp_m21.Err
+		failure := __gp_m25.Err
 		return result.Err[instructionOutcome, Failure]{Err: failure}
 	case result.Ok[term.Term, Failure]:
-		value := __gp_m21.Value
-		switch __gp_m22 := any(term.AtomName(value)).(type) {
+		value := __gp_m25.Value
+		switch __gp_m26 := any(term.AtomName(value)).(type) {
 		case option.None[string]:
 			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom("badarg")}}
 		case option.Some[string]:
-			name := __gp_m22.Value
+			name := __gp_m26.Value
 			function = name
 		default:
 			panic("goplus: impossible enum value in match")
@@ -378,9 +420,9 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 		panic("goplus: impossible enum value in match")
 	}
 	if tail {
-		switch __gp_m23 := any(machine.deallocate(instruction, 1)).(type) {
+		switch __gp_m27 := any(machine.deallocate(instruction, 1)).(type) {
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m23.Err
+			failure := __gp_m27.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[MachineMutation, Failure]:
 		default:
@@ -389,12 +431,12 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 	}
 	arguments := make([]term.Term, int(arity))
 	for index := range arguments {
-		switch __gp_m24 := any(machine.X(index)).(type) {
+		switch __gp_m28 := any(machine.X(index)).(type) {
 		case result.Err[term.Term, Failure]:
-			failure := __gp_m24.Err
+			failure := __gp_m28.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[term.Term, Failure]:
-			value := __gp_m24.Value
+			value := __gp_m28.Value
 			arguments[index] = term.Clone(value)
 		default:
 			panic("goplus: impossible enum value in match")
@@ -411,21 +453,21 @@ func executeApply(machine *Machine, instruction beam.Instruction, host HostCapab
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m26 := any(host.externalCall(target, arguments)).(type) {
+	switch __gp_m30 := any(host.externalCall(target, arguments)).(type) {
 	case ExternalCallUnbound:
 		return machine.executeLinkedCall(target, tail, host)
 	case ExternalCallRaised:
-		class := __gp_m26.Class
-		reason := __gp_m26.Reason
+		class := __gp_m30.Class
+		reason := __gp_m30.Reason
 		return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.Clone(class), Reason: term.Clone(reason)}}
 	case ExternalCallRejected:
-		detail := __gp_m26.Detail
+		detail := __gp_m30.Detail
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf("apply %s:%s/%d rejected: %s", target.Module, target.Function, target.Arity, detail)}}
 	case ExternalCallReturned:
-		value := __gp_m26.Value
-		switch __gp_m27 := any(machine.SetX(0, value)).(type) {
+		value := __gp_m30.Value
+		switch __gp_m31 := any(machine.SetX(0, value)).(type) {
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m27.Err
+			failure := __gp_m31.Err
 			return result.Err[instructionOutcome, Failure]{Err: failure}
 		case result.Ok[MachineMutation, Failure]:
 		default:
@@ -458,15 +500,15 @@ func (machine *Machine) executeLinkedCall(
 		if host.linkedCode == nil {
 			return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "linked code effect is nil"}}
 		}
-		switch __gp_m29 := any(host.linkedCode(target)).(type) {
+		switch __gp_m33 := any(host.linkedCode(target)).(type) {
 		case LinkedCodeUnchanged:
 
 		case LinkedCodeRejected:
-			detail := __gp_m29.Detail
+			detail := __gp_m33.Detail
 			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "linked code rejected " + target.Module + ": " + detail}}
 		case LinkedCodeResolved:
-			config := __gp_m29.Image
-			leave := __gp_m29.Leave
+			config := __gp_m33.Image
+			leave := __gp_m33.Leave
 
 			if leave == nil {
 				return result.Err[instructionOutcome, Failure]{Err: InvalidConfiguration{Detail: "linked code leave effect is nil"}}
@@ -477,12 +519,12 @@ func (machine *Machine) executeLinkedCall(
 			if config.Name != target.Module {
 				return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: "resolved linked module identity differs from target"}}
 			}
-			switch __gp_m30 := any(newMachineImage(config)).(type) {
+			switch __gp_m34 := any(newMachineImage(config)).(type) {
 			case result.Err[*machineImage, Failure]:
-				failure := __gp_m30.Err
+				failure := __gp_m34.Err
 				return result.Err[instructionOutcome, Failure]{Err: failure}
 			case result.Ok[*machineImage, Failure]:
-				image := __gp_m30.Value
+				image := __gp_m34.Value
 				machine.modules[target.Module] = image
 				resolvedLeave = leave
 			default:
@@ -494,7 +536,7 @@ func (machine *Machine) executeLinkedCall(
 	default:
 		panic("goplus: impossible enum value in match")
 	}
-	switch __gp_m31 := any(machine.linkedFunction(target)).(type) {
+	switch __gp_m35 := any(machine.linkedFunction(target)).(type) {
 	case option.None[linkedCallTarget]:
 
 		return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
@@ -504,7 +546,7 @@ func (machine *Machine) executeLinkedCall(
 			target.Arity,
 		)}}
 	case option.Some[linkedCallTarget]:
-		destination := __gp_m31.Value
+		destination := __gp_m35.Value
 
 		if !tail {
 			machine.pushReturn(machine.pc + 1)

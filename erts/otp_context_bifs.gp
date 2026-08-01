@@ -21,6 +21,7 @@ func (process *VMProcess) contextualCall(
 	if target.Module == "erlang" && target.Function == "self" && target.Arity == 0 { return vm.ExternalCallReturned(term.PIDValue(context.Self())) }
 	if target.Module == "erlang" && target.Function == "make_ref" && target.Arity == 0 { return vm.ExternalCallReturned(term.ReferenceValue(context.MakeReference())) }
 	if target.Module == "erlang" && target.Function == "garbage_collect" && target.Arity == 0 { return vm.ExternalCallReturned(term.MustAtom("true")) }
+	if target.Module == "erlang" && target.Function == "hibernate" && target.Arity == 0 { return vm.ExternalCallReturned(term.MustAtom("true")) }
 	if target.Module == "erlang" && target.Function == "monotonic_time" && (target.Arity == 0 || target.Arity == 1) { return process.otpMonotonicTime(arguments) }
 	if target.Module == "erlang" && target.Function == "node" && target.Arity == 0 { return vm.ExternalCallReturned(term.MustAtom(context.NodeName())) }
 	if target.Module == "erlang" && target.Function == "node" && target.Arity == 1 {

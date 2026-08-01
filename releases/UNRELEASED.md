@@ -26,6 +26,13 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Closed the pinned OTP 29.0.4 `gen_server.beam` runtime export inventory with
+  direct `init_it/6`, `abcast/2,3`, `stop/3`, and system-callback evidence.
+  Added delayed hibernation wake differential cases and a stateful equivalence
+  law across calls, casts, info, timeout, system control, malformed callbacks,
+  termination, and parent exits. Added an export-ledger verifier and documented
+  that OTP 29.0.4 no longer exports legacy `wake_hib/6`.
+
 - Proved `gen_server:format_log/1,2` and `format_status/2`, including modern and
   legacy status callbacks, through an isolated OTP 29.0.4 corpus. Rendered
   termination, crash, no-handler, Unicode, depth, character-limit, and line-mode

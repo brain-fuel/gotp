@@ -112,6 +112,18 @@ func executeExternalCall(
 			arguments[index] = term.Clone(value)
 		}
 	}
+	if target.Module == "erlang" && target.Function == "hibernate" && target.Arity == 3 {
+		var module, function string
+		match term.AtomName(arguments[0]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): module = value }
+		match term.AtomName(arguments[1]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): function = value }
+		match arguments[2] {
+		case term.ProperListTerm(values):
+			if uint64(len(values)) > uint64(^uint32(0)) || len(values) > machine.x.Len() { return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("system_limit"))) }
+			for index, value := range values { match machine.SetX(index, value) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(_): } }
+			return machine.executeLinkedCall(ExternalFunction{Module: module, Function: function, Arity: uint32(len(values))}, true, host)
+		case _: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg")))
+		}
+	}
 	if target.Module == "erlang" && target.Function == "apply" && target.Arity == 3 {
 		var module, function string
 		match term.AtomName(arguments[0]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): module = value }
