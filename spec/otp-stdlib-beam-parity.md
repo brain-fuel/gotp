@@ -91,6 +91,16 @@ paths. Evidence includes monitor-backed aliases, zero-timeout late-reply
 suppression, callback-crash reasons, linked-parent termination, local named
 registration and duplicate starts, and suspended system code change.
 
+The same pinned module executes `enter_loop/3,4,5` from correctly initialized
+`proc_lib` processes. The isolated corpus covers anonymous, local, global, and
+via names; timeout, hibernate, and continue actions; calls, casts, unsolicited
+messages, system suspend/change/resume, termination, and linked-parent exits.
+It also preserves exact failures for non-`proc_lib` callers, unregistered or
+wrongly registered names, and invalid initial actions. A stateful law compares
+randomized post-entry traces with an ordinarily started `gen_server`. These
+rows remain partial because the complete Erlang term domain and all malformed
+callback/action combinations have not been exhausted.
+
 - Lifecycle corpus: `sha256:107c3a6a92d360f45746c41b547fe0d131b497d595e09b4397630fcab180b641`
 - Callback module: `sha256:ad5045f2062900129aa7eb74cf3d9cb82c0cb79cac7af0d6f13348d5b6dc7956`
 - Lifecycle law: `gotp.erts.otp29-gen-server-lifecycle`

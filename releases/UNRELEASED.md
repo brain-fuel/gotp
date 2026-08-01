@@ -26,6 +26,12 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Proved `gen_server:enter_loop/3,4,5` through an isolated OTP 29.0.4 corpus
+  covering proc-lib ancestry, local/global/via registration, initial timeout,
+  hibernate and continue actions, lifecycle and system messages, code change,
+  exact invalid initialization reasons, and linked-parent exits. Added a
+  stateful law comparing randomized post-entry traces with ordinary servers.
+
 - Added a pinned deterministic OTP source inventory covering 36 applications
   and 1,268 Erlang modules, plus 981 native, Java, generator, and public-header
   production units, with explicit compatibility rows and coverage laws.

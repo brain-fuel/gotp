@@ -19,6 +19,7 @@ func (process *VMProcess) contextualCall(
 ) vm.ExternalCallOutcome {
 	if target.Module == "erlang" && target.Function == "self" && target.Arity == 0 { return vm.ExternalCallReturned(term.PIDValue(context.Self())) }
 	if target.Module == "erlang" && target.Function == "make_ref" && target.Arity == 0 { return vm.ExternalCallReturned(term.ReferenceValue(context.MakeReference())) }
+	if target.Module == "erlang" && target.Function == "garbage_collect" && target.Arity == 0 { return vm.ExternalCallReturned(term.MustAtom("true")) }
 	if target.Module == "erlang" && target.Function == "monotonic_time" && (target.Arity == 0 || target.Arity == 1) { return process.otpMonotonicTime(arguments) }
 	if target.Module == "erlang" && target.Function == "node" && target.Arity == 0 { return vm.ExternalCallReturned(term.MustAtom(context.NodeName())) }
 	if target.Module == "erlang" && target.Function == "node" && target.Arity == 1 {
@@ -49,6 +50,10 @@ func (process *VMProcess) contextualCall(
 	if target.Module == "persistent_term" && target.Function == "get" && target.Arity == 2 { match context.PersistentGet(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.Clone(arguments[1])); case option.Some(value): return vm.ExternalCallReturned(value) } }
 	if target.Module == "persistent_term" && target.Function == "put" && target.Arity == 2 { context.PersistentPut(arguments[0], arguments[1]); return vm.ExternalCallReturned(term.MustAtom("ok")) }
 	if target.Module == "persistent_term" && target.Function == "erase" && target.Arity == 1 { erased := context.PersistentErase(arguments[0]); if erased { return vm.ExternalCallReturned(term.MustAtom("true")) }; return vm.ExternalCallReturned(term.MustAtom("false")) }
+	if target.Module == "global" && target.Function == "register_name" && target.Arity == 2 { match term.TermPIDValue(arguments[1]) { case option.None: return otpBadarg(); case option.Some(pid): if context.RegisterGlobal(arguments[0], pid) { return vm.ExternalCallReturned(term.MustAtom("yes")) }; return vm.ExternalCallReturned(term.MustAtom("no")) } }
+	if target.Module == "global" && target.Function == "unregister_name" && target.Arity == 1 { context.UnregisterGlobal(arguments[0]); return vm.ExternalCallReturned(term.MustAtom("ok")) }
+	if target.Module == "global" && target.Function == "whereis_name" && target.Arity == 1 { match context.WhereisGlobal(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.MustAtom("undefined")); case option.Some(pid): return vm.ExternalCallReturned(term.PIDValue(pid)) } }
+	if target.Module == "global" && target.Function == "send" && target.Arity == 2 { match context.WhereisGlobal(arguments[0]) { case option.None: return vm.ExternalCallRaised(term.MustAtom("exit"), term.Tuple(term.MustAtom("badarg"), term.Tuple(arguments[0].Clone(), arguments[1].Clone()))); case option.Some(pid): context.Send(pid, arguments[1]); return vm.ExternalCallReturned(term.PIDValue(pid)) } }
 	if target.Module == "erlang" && target.Function == "alias" && target.Arity == 0 {
 		match context.Alias() {
 		case result.Err(failure):

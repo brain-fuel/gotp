@@ -188,6 +188,7 @@ type Kernel struct {
 	names         map[string]term.PID
 	nextUnlinkID  uint64
 	persistent []dictionaryEntry
+	globalNames []dictionaryEntry
 	messageTimers map[term.Reference]*MessageTimer
 }
 
@@ -339,6 +340,33 @@ func (kernel *Kernel) SendRegistered(from term.PID, name string, message term.Te
 	case option.None: return NoProcess()
 	case option.Some(to): return kernel.Send(from, to, message)
 	}
+}
+
+func (kernel *Kernel) RegisterGlobal(name term.Term, pid term.PID) bool {
+	match kernel.liveProcess(pid) { case option.None: return false; case option.Some(_): }
+	for _, entry := range kernel.globalNames { if entry.key.Equal(name) { return false } }
+	kernel.globalNames = append(kernel.globalNames, dictionaryEntry{key: name.Clone(), value: term.PIDValue(pid)})
+	return true
+}
+
+func (kernel *Kernel) UnregisterGlobal(name term.Term) bool {
+	for index, entry := range kernel.globalNames { if entry.key.Equal(name) { kernel.globalNames = append(kernel.globalNames[:index], kernel.globalNames[index+1:]...); return true } }
+	return false
+}
+
+func (kernel *Kernel) WhereisGlobal(name term.Term) option.Option[term.PID] {
+	for index, entry := range kernel.globalNames {
+		if !entry.key.Equal(name) { continue }
+		match term.TermPIDValue(entry.value) {
+		case option.None: kernel.globalNames = append(kernel.globalNames[:index], kernel.globalNames[index+1:]...); return option.None[term.PID]()
+		case option.Some(pid): match kernel.liveProcess(pid) { case option.None: kernel.globalNames = append(kernel.globalNames[:index], kernel.globalNames[index+1:]...); return option.None[term.PID](); case option.Some(_): return option.Some(pid) }
+		}
+	}
+	return option.None[term.PID]()
+}
+
+func (kernel *Kernel) SendGlobal(from term.PID, name term.Term, message term.Term) Delivery {
+	match kernel.WhereisGlobal(name) { case option.None: return NoProcess(); case option.Some(pid): return kernel.Send(from, pid, message) }
 }
 
 func (kernel *Kernel) SetGroupLeader(
@@ -1031,6 +1059,9 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 	case option.None:
 	}
 	current.registeredName = option.None[string]
+	global := kernel.globalNames[:0]
+	for _, entry := range kernel.globalNames { match term.TermPIDValue(entry.value) { case option.Some(pid): if pid == current.pid { continue }; case option.None: }; global = append(global, entry) }
+	kernel.globalNames = global
 
 	links := make([]term.PID, 0, len(current.links))
 	for linked := range current.links {
@@ -1186,6 +1217,10 @@ func (context *Context) Send(to term.PID, message term.Term) Delivery {
 func (context *Context) SendRegistered(name string, message term.Term) Delivery {
 	return context.kernel.SendRegistered(context.process.pid, name, message)
 }
+func (context *Context) RegisterGlobal(name term.Term, pid term.PID) bool { return context.kernel.RegisterGlobal(name, pid) }
+func (context *Context) UnregisterGlobal(name term.Term) bool { return context.kernel.UnregisterGlobal(name) }
+func (context *Context) WhereisGlobal(name term.Term) option.Option[term.PID] { return context.kernel.WhereisGlobal(name) }
+func (context *Context) SendGlobal(name term.Term, message term.Term) Delivery { return context.kernel.SendGlobal(context.process.pid, name, message) }
 func (context *Context) SendRemoteRegistered(node string, name string, message term.Term) Delivery { return context.kernel.SendRemoteRegistered(context.process.pid, node, name, message) }
 
 func (context *Context) Register(name string, pid term.PID) result.Result[KernelMutation, Failure] {
@@ -1206,7 +1241,7 @@ func (context *Context) ProcessInfo(pid term.PID, item string) option.Option[ter
 	match current.status { case Exited: return option.None[term.Term](); case _: }
 	switch item {
 	case "registered_name":
-		match current.registeredName { case option.None: return option.Some[term.Term](term.Tuple(term.MustAtom("registered_name"), term.List())); case option.Some(name): return option.Some[term.Term](term.Tuple(term.MustAtom("registered_name"), term.MustAtom(name))) }
+		match current.registeredName { case option.None: return option.Some[term.Term](term.List()); case option.Some(name): return option.Some[term.Term](term.Tuple(term.MustAtom("registered_name"), term.MustAtom(name))) }
 	case "trap_exit":
 		value := "false"; if current.trapExit { value = "true" }
 		return option.Some[term.Term](term.Tuple(term.MustAtom("trap_exit"), term.MustAtom(value)))
