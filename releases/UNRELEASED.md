@@ -187,3 +187,9 @@ This document is not a release and does not authorize a tag or publication.
   abandoning timeouts, late-response suppression, exact crash errors, local
   names, out-of-order replies, and explicit response checks. Added a stateful
   property law over randomized live-request reply permutations.
+- Proved `gen_server:multi_call/2,3,4` against a deterministic OTP peer-node
+  corpus. Added a reusable virtual cluster that routes remote PID, registered
+  name, alias, tagged-monitor, and monitor-exit signals across real kernels,
+  with node identity/enumeration and cancelable message timers. Stateful laws
+  randomize connectivity, registration, duplicate targets, reply order,
+  bad-node classification, and mailbox cleanup.

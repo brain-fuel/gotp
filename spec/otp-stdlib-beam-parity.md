@@ -110,12 +110,26 @@ checks, and multiple outstanding requests delivered out of issue order.
 - Differential law: `gotp.erts.otp29-gen-server-async-requests`
 - Stateful order law: `gotp.erts.gen-server-request-collection-order`
 
-This is not lifecycle parity for the entire module. Multi-call, distributed,
-enter-loop, asynchronous request/response, formatting, state replacement, and
-the exhaustive declared input domains remain open.
+The distributed multi-call slice executes `multi_call/2,3,4` on a deterministic
+three-kernel virtual cluster and compares against an OTP oracle using two real
+peer nodes. It covers healthy local and distributed servers, mixed missing
+registrations, unavailable nodes, callback crashes, zero-timeout late-response
+suppression, duplicate and empty node lists, reply ordering, bad-node
+classification, and mailbox cleanup.
+
+- Multi-call corpus: `sha256:408298f0caee48d5f449e757017a5902eff380fe0509e31e9f1ac3466d56a444`
+- Callback module: `sha256:e0a16ac918c1667dc70c6d41772b95cd3b69742dfa10e3cb608fc36d8f1e071b`
+- Differential law: `gotp.erts.otp29-gen-server-multi-call`
+- Stateful classification/order law: `gotp.erts.gen-server-multi-call-classification-order`
+- Virtual-cluster unit: `gotp.erts.virtual-cluster`
+
+This is not lifecycle parity for the entire module. Enter-loop, formatting,
+state replacement, administrative termination, and the exhaustive declared
+input domains remain open.
 
 ## Gen-server decision
 
 See ADRs `0052-pinned-gen-server-lifecycle` and
 `0053-gen-server-adverse-lifecycle-matrix`, and
-`0054-gen-server-asynchronous-request-lifecycle`.
+`0054-gen-server-asynchronous-request-lifecycle`, and
+`0055-gen-server-distributed-multi-call`.

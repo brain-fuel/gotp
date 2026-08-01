@@ -42,9 +42,21 @@ type ContextMonitorOutcome enum {
 type ContextSpawnResult struct { PID term.PID; Detail string; Accepted bool }
 type ContextMonitorResult struct { Reference term.Reference; Detail string; Accepted bool }
 
+type RemoteTransport interface {
+	NodeName(Node uint32) option.Option[string]
+	ConnectedNodes(Node uint32) []string
+	SendPID(From term.PID, To term.PID, Message term.Term) Delivery
+	SendName(From term.PID, Node string, Name string, Message term.Term) Delivery
+	SendAlias(From term.PID, Reference term.Reference, Message term.Term) Delivery
+	MonitorName(Watcher term.PID, Node string, Name string, Reference term.Reference) bool
+	DemonitorName(Watcher term.PID, Node string, Name string, Reference term.Reference)
+}
+
 type KernelConfig struct {
 	Node     uint32
 	Creation uint32
+	NodeName string
+	Remote RemoteTransport
 }
 
 type RunReport struct {
@@ -151,9 +163,13 @@ type process struct {
 	registeredName option.Option[string]
 	groupLeader term.PID
 	monitorNames map[term.Reference]string
+	monitorTags map[term.Reference]term.Term
+	remoteMonitors map[term.Reference]remoteMonitor
 	remoteUnlinks map[term.PID]uint64
 	dictionary []dictionaryEntry
 }
+
+type remoteMonitor struct { node string; name string; tag term.Term }
 
 type dictionaryEntry struct { key term.Term; value term.Term }
 
@@ -172,6 +188,7 @@ type Kernel struct {
 	names         map[string]term.PID
 	nextUnlinkID  uint64
 	persistent []dictionaryEntry
+	messageTimers map[term.Reference]*MessageTimer
 }
 
 func New(config KernelConfig) *Kernel {
@@ -181,6 +198,7 @@ func New(config KernelConfig) *Kernel {
 	if config.Creation == 0 {
 		config.Creation = 1
 	}
+	if config.NodeName == "" { config.NodeName = "nonode@nohost" }
 	return &Kernel{
 		config:    config,
 		processes: make(map[term.PID]*process),
@@ -191,6 +209,7 @@ func New(config KernelConfig) *Kernel {
 		names: make(map[string]term.PID),
 		runQueue: memory.NewBuffer[term.PID](64),
 		remoteSignals: memory.NewBuffer[RemoteSignal](16),
+		messageTimers: make(map[term.Reference]*MessageTimer),
 	}
 }
 
@@ -229,6 +248,8 @@ func (kernel *Kernel) Spawn(
 		registeredName: option.None[string],
 		groupLeader: pid,
 		monitorNames: make(map[term.Reference]string),
+		monitorTags: make(map[term.Reference]term.Term),
+		remoteMonitors: make(map[term.Reference]remoteMonitor),
 		remoteUnlinks: make(map[term.PID]uint64),
 	}
 	kernel.processes[pid] = current
@@ -251,7 +272,17 @@ func (kernel *Kernel) Send(
 	to term.PID,
 	message term.Term,
 ) Delivery {
+	if to.Node != kernel.config.Node {
+		if kernel.config.Remote == nil { return NoProcess() }
+		return kernel.config.Remote.SendPID(from, to, message.Clone())
+	}
 	return kernel.enqueueSignal(to, UserSignal(from, 0, message.Clone()))
+}
+
+func (kernel *Kernel) SendRemoteRegistered(from term.PID, node string, name string, message term.Term) Delivery {
+	if node == kernel.config.NodeName { return kernel.SendRegistered(from, name, message) }
+	if kernel.config.Remote == nil { return NoProcess() }
+	return kernel.config.Remote.SendName(from, node, name, message.Clone())
 }
 
 // assayxport:unit gotp.kernel.registered-processes
@@ -452,6 +483,14 @@ func (kernel *Kernel) Monitor(
 	}
 }
 
+func (kernel *Kernel) MonitorTagged(watcher term.PID, target term.PID, tag term.Term) result.Result[term.Reference, Failure] {
+	reference := kernel.newReference()
+	match kernel.monitorReferenceTagged(watcher, target, reference, tag) {
+	case result.Err(failure): return result.Err[term.Reference, Failure](failure)
+	case result.Ok(_): return result.Ok[term.Reference, Failure](reference)
+	}
+}
+
 func (kernel *Kernel) MonitorAlias(
 	watcher term.PID,
 	target term.PID,
@@ -476,6 +515,15 @@ func (kernel *Kernel) MonitorReference(
 	target term.PID,
 	reference term.Reference,
 ) result.Result[KernelMutation, Failure] {
+	return kernel.monitorReferenceTagged(watcher, target, reference, term.MustAtom("DOWN"))
+}
+
+func (kernel *Kernel) monitorReferenceTagged(
+	watcher term.PID,
+	target term.PID,
+	reference term.Reference,
+	tag term.Term,
+) result.Result[KernelMutation, Failure] {
 	if !reference.Valid() {
 		return result.Err[KernelMutation, Failure](InvalidMonitor("reference is invalid"))
 	}
@@ -488,16 +536,58 @@ func (kernel *Kernel) MonitorReference(
 		}
 		match kernel.liveProcess(target) {
 		case option.None:
-			kernel.enqueueSignal(watcher, DownSignal(
-				target, 0, term.MustAtom("noproc"), reference, target,
-			))
+			kernel.enqueueTaggedDown(watcher, target, reference, term.PIDValue(target), term.MustAtom("noproc"), tag)
 		case option.Some(targetProcess):
 			watcherProcess.monitoring[reference] = target
+			watcherProcess.monitorTags[reference] = tag.Clone()
 			targetProcess.monitoredBy[reference] = watcher
 		}
 		kernel.trace(ProcessMonitored(watcher, target, reference))
 		return result.Ok[KernelMutation, Failure](KernelMutated())
 	}
+}
+
+func (kernel *Kernel) MonitorTaggedName(watcher term.PID, node string, name string, tag term.Term) result.Result[term.Reference, Failure] {
+	reference := kernel.newReference()
+	match kernel.liveProcess(watcher) {
+	case option.None: return result.Err[term.Reference, Failure](MissingProcess("watcher", watcher))
+	case option.Some(current):
+		if node == kernel.config.NodeName {
+			match kernel.Whereis(name) {
+			case option.None:
+				kernel.enqueueTaggedDown(watcher, term.PID{}, reference, term.Tuple(term.MustAtom(name), term.MustAtom(node)), term.MustAtom("noproc"), tag)
+			case option.Some(target):
+				current.monitoring[reference] = target
+				current.monitorTags[reference] = tag.Clone()
+				match kernel.liveProcess(target) { case option.None: case option.Some(found): found.monitoredBy[reference] = watcher; found.monitorNames[reference] = name }
+			}
+			return result.Ok[term.Reference, Failure](reference)
+		}
+		current.remoteMonitors[reference] = remoteMonitor{node: node, name: name, tag: tag.Clone()}
+		if kernel.config.Remote == nil || !kernel.config.Remote.MonitorName(watcher, node, name, reference) {
+			delete(current.remoteMonitors, reference)
+			kernel.enqueueTaggedDown(watcher, term.PID{}, reference, term.Tuple(term.MustAtom(name), term.MustAtom(node)), term.MustAtom("noconnection"), tag)
+		}
+		return result.Ok[term.Reference, Failure](reference)
+	}
+}
+
+func (kernel *Kernel) DeliverRemoteDown(source term.PID, watcher term.PID, reference term.Reference, object term.Term, reason term.Term) Delivery {
+	match kernel.liveProcess(watcher) {
+	case option.None: return NoProcess()
+	case option.Some(current):
+		monitor, present := current.remoteMonitors[reference]
+		if !present { return NoProcess() }
+		delete(current.remoteMonitors, reference)
+		return kernel.enqueueTaggedDown(watcher, source, reference, object, reason, monitor.tag)
+	}
+}
+
+func (kernel *Kernel) enqueueTaggedDown(watcher term.PID, source term.PID, reference term.Reference, object term.Term, reason term.Term, tag term.Term) Delivery {
+	if term.Equal(tag, term.MustAtom("DOWN")) {
+		match object { case term.PIDTerm(target): return kernel.enqueueSignal(watcher, DownSignal(source, 0, reason.Clone(), reference, target)); case _: }
+	}
+	return kernel.enqueueSignal(watcher, UserSignal(source, 0, term.Tuple(tag.Clone(), term.ReferenceValue(reference), term.MustAtom("process"), object.Clone(), reason.Clone())))
 }
 
 func (kernel *Kernel) MonitorRemote(
@@ -613,9 +703,15 @@ func (kernel *Kernel) Demonitor(
 	case option.None:
 		return MonitorAbsent()
 	case option.Some(watcherProcess):
+		remote, remoteExists := watcherProcess.remoteMonitors[reference]
+		if remoteExists {
+			delete(watcherProcess.remoteMonitors, reference)
+			if kernel.config.Remote != nil { kernel.config.Remote.DemonitorName(watcher, remote.node, remote.name, reference) }
+		}
 		target, exists := watcherProcess.monitoring[reference]
 		if exists {
 			delete(watcherProcess.monitoring, reference)
+			delete(watcherProcess.monitorTags, reference)
 			if _, aliased := watcherProcess.aliases[reference]; aliased {
 				delete(watcherProcess.aliases, reference)
 				delete(kernel.aliases, reference)
@@ -634,12 +730,14 @@ func (kernel *Kernel) Demonitor(
 					return found == reference
 				case DownNamedSignal(_, _, _, found, _):
 					return found == reference
+				case UserSignal(_, _, message):
+					match message { case term.TupleTerm(parts): return len(parts) >= 2 && term.Equal(parts[1], term.ReferenceValue(reference)); case _: return false }
 				case _:
 					return false
 				}
 			})
 		}
-		if exists {
+		if exists || remoteExists {
 			return MonitorRemoved()
 		}
 		return MonitorAbsent()
@@ -692,6 +790,10 @@ func (kernel *Kernel) SendAlias(
 	reference term.Reference,
 	message term.Term,
 ) Delivery {
+	if reference.Node != kernel.config.Node {
+		if kernel.config.Remote == nil { return NoProcess() }
+		return kernel.config.Remote.SendAlias(from, reference, message.Clone())
+	}
 	owner, present := kernel.aliases[reference]
 	match option.Of(owner, present) {
 	case option.None:
@@ -986,15 +1088,12 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 			}
 		case option.Some(watcherProcess):
 			delete(watcherProcess.monitoring, reference)
+			tag := term.Term(term.MustAtom("DOWN")); if found, present := watcherProcess.monitorTags[reference]; present { tag = found.Clone(); delete(watcherProcess.monitorTags, reference) }
 			name, named := current.monitorNames[reference]
 			if named {
-				kernel.enqueueSignal(watcher, DownNamedSignal(
-					current.pid, 0, reason.Clone(), reference, name,
-				))
+				kernel.enqueueTaggedDown(watcher, current.pid, reference, term.Tuple(term.MustAtom(name), term.MustAtom(kernel.config.NodeName)), reason, tag)
 			} else {
-				kernel.enqueueSignal(watcher, DownSignal(
-					current.pid, 0, reason.Clone(), reference, current.pid,
-				))
+				kernel.enqueueTaggedDown(watcher, current.pid, reference, term.PIDValue(current.pid), reason, tag)
 			}
 		}
 	}
@@ -1017,6 +1116,8 @@ func (kernel *Kernel) terminate(current *process, reason term.Term) {
 		}
 	}
 	current.monitoring = make(map[term.Reference]term.PID)
+	current.monitorTags = make(map[term.Reference]term.Term)
+	current.remoteMonitors = make(map[term.Reference]remoteMonitor)
 	for reference := range current.aliases {
 		delete(kernel.aliases, reference)
 	}
@@ -1067,7 +1168,16 @@ func (context *Context) Self() term.PID {
 }
 
 func (context *Context) NodeID() uint32 { return context.kernel.config.Node }
-func (context *Context) NodeName() string { return "nonode@nohost" }
+func (context *Context) NodeName() string { return context.kernel.config.NodeName }
+func (context *Context) NodeNameFor(node uint32) option.Option[string] {
+	if node == context.kernel.config.Node { return option.Some(context.kernel.config.NodeName) }
+	if context.kernel.config.Remote == nil { return option.None[string]() }
+	return context.kernel.config.Remote.NodeName(node)
+}
+func (context *Context) ConnectedNodes() []string {
+	if context.kernel.config.Remote == nil { return []string{} }
+	return context.kernel.config.Remote.ConnectedNodes(context.kernel.config.Node)
+}
 
 func (context *Context) Send(to term.PID, message term.Term) Delivery {
 	return context.kernel.Send(context.process.pid, to, message)
@@ -1076,6 +1186,7 @@ func (context *Context) Send(to term.PID, message term.Term) Delivery {
 func (context *Context) SendRegistered(name string, message term.Term) Delivery {
 	return context.kernel.SendRegistered(context.process.pid, name, message)
 }
+func (context *Context) SendRemoteRegistered(node string, name string, message term.Term) Delivery { return context.kernel.SendRemoteRegistered(context.process.pid, node, name, message) }
 
 func (context *Context) Register(name string, pid term.PID) result.Result[KernelMutation, Failure] {
 	return context.kernel.Register(name, pid)
@@ -1238,6 +1349,8 @@ func (context *Context) Monitor(
 ) result.Result[term.Reference, Failure] {
 	return context.kernel.Monitor(context.process.pid, other)
 }
+func (context *Context) MonitorTagged(other term.PID, tag term.Term) result.Result[term.Reference, Failure] { return context.kernel.MonitorTagged(context.process.pid, other, tag) }
+func (context *Context) MonitorTaggedName(node string, name string, tag term.Term) result.Result[term.Reference, Failure] { return context.kernel.MonitorTaggedName(context.process.pid, node, name, tag) }
 
 func (context *Context) MonitorOutcome(other term.PID) ContextMonitorOutcome {
 	match context.Monitor(other) { case result.Err(failure): return ContextMonitorRejected(failure.Error()); case result.Ok(reference): return ContextMonitored(reference) }

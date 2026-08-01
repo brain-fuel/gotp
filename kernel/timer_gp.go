@@ -14,8 +14,15 @@ import (
 )
 
 type wakeQueue struct {
-	mutex sync.Mutex
-	pids  []term.PID
+	mutex    sync.Mutex
+	pids     []term.PID
+	messages []scheduledMessage
+}
+
+type scheduledMessage struct {
+	from    term.PID
+	target  term.Term
+	message term.Term
 }
 
 //goplus:enum WakeTimerStatus
@@ -122,6 +129,12 @@ type WakeTimer struct {
 	stop   clock.Stop
 }
 
+type MessageTimer struct {
+	mutex  sync.Mutex
+	status WakeTimerStatus
+	stop   clock.Stop
+}
+
 func newWakeQueue() *wakeQueue {
 	return &wakeQueue{}
 }
@@ -138,6 +151,20 @@ func (queue *wakeQueue) take() []term.PID {
 	pids := append([]term.PID(nil), queue.pids...)
 	queue.pids = queue.pids[:0]
 	return pids
+}
+
+func (queue *wakeQueue) pushMessage(message scheduledMessage) {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	queue.messages = append(queue.messages, scheduledMessage{from: message.from, target: term.Clone(message.target), message: term.Clone(message.message)})
+}
+
+func (queue *wakeQueue) takeMessages() []scheduledMessage {
+	queue.mutex.Lock()
+	defer queue.mutex.Unlock()
+	messages := append([]scheduledMessage(nil), queue.messages...)
+	queue.messages = queue.messages[:0]
+	return messages
 }
 
 // assayxport:unit gotp.kernel.timer-wakeup
@@ -203,6 +230,49 @@ func (context *Context) WakeTimerAfter(
 	return context.kernel.WakeTimerAfter(source, context.process.pid, delay)
 }
 
+func (kernel *Kernel) StartMessageTimer(source clock.Clock, owner term.PID, target term.Term, message term.Term, delay time.Duration) result.Result[term.Reference, Failure] {
+	if source == nil {
+		return result.Err[term.Reference, Failure]{Err: InvalidTimer{Detail: "clock capability is nil"}}
+	}
+	if delay < 0 {
+		return result.Err[term.Reference, Failure]{Err: InvalidTimer{Detail: "delay is negative"}}
+	}
+	switch any(kernel.liveProcess(owner)).(type) {
+	case option.None[*process]:
+		return result.Err[term.Reference, Failure]{Err: MissingProcess{Role: "timer owner", PID: owner}}
+	case option.Some[*process]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	reference := kernel.newReference()
+	timer := &MessageTimer{status: WakeTimerPending{}}
+	stop := source.AfterFunc(delay, func() {
+		timer.fire(kernel.wakeups, scheduledMessage{from: owner, target: term.Clone(target), message: term.Tuple(term.MustAtom("timeout"), term.ReferenceValue(reference), term.Clone(message))})
+	})
+	if stop == nil {
+		return result.Err[term.Reference, Failure]{Err: InvalidTimer{Detail: "clock returned nil stop handle"}}
+	}
+	timer.stop = stop
+	kernel.messageTimers[reference] = timer
+	return result.Ok[term.Reference, Failure]{Value: reference}
+}
+
+func (kernel *Kernel) CancelMessageTimer(reference term.Reference) bool {
+	timer, present := kernel.messageTimers[reference]
+	if !present {
+		return false
+	}
+	delete(kernel.messageTimers, reference)
+	return timer.Stop()
+}
+
+func (context *Context) StartMessageTimer(source clock.Clock, target term.Term, message term.Term, delay time.Duration) result.Result[term.Reference, Failure] {
+	return context.kernel.StartMessageTimer(source, context.process.pid, target, message, delay)
+}
+func (context *Context) CancelMessageTimer(reference term.Reference) bool {
+	return context.kernel.CancelMessageTimer(reference)
+}
+
 func (timer *WakeTimer) Status() WakeTimerStatus {
 	timer.mutex.Lock()
 	defer timer.mutex.Unlock()
@@ -264,11 +334,78 @@ func (timer *WakeTimer) fire(queue *wakeQueue, pid term.PID) {
 	}
 }
 
+func (timer *MessageTimer) Stop() bool {
+	timer.mutex.Lock()
+	defer timer.mutex.Unlock()
+	switch any(timer.status).(type) {
+	case WakeTimerPending:
+
+		timer.status = WakeTimerCancelled{}
+		if timer.stop != nil {
+			timer.stop.Stop()
+		}
+		return true
+	case WakeTimerFired, WakeTimerCancelled:
+		return false
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
+func (timer *MessageTimer) fire(queue *wakeQueue, message scheduledMessage) {
+	timer.mutex.Lock()
+	switch any(timer.status).(type) {
+	case WakeTimerPending:
+		timer.status = WakeTimerFired{}
+		timer.mutex.Unlock()
+		queue.pushMessage(message)
+	case WakeTimerFired, WakeTimerCancelled:
+		timer.mutex.Unlock()
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func (kernel *Kernel) drainWakeups() {
 	if kernel.wakeups == nil {
 		kernel.wakeups = newWakeQueue()
 	}
 	for _, pid := range kernel.wakeups.take() {
 		kernel.enqueueRunnable(pid)
+	}
+	for _, scheduled := range kernel.wakeups.takeMessages() {
+		switch __gp_m8 := any(scheduled.target).(type) {
+		case term.PIDTerm:
+			pid := __gp_m8.Value
+			kernel.Send(scheduled.from, pid, scheduled.message)
+		case term.ReferenceTerm:
+			reference := __gp_m8.Value
+			kernel.SendAlias(scheduled.from, reference, scheduled.message)
+		case term.AtomTerm:
+			name := __gp_m8.Name
+			kernel.SendRegistered(scheduled.from, name, scheduled.message)
+		case term.TupleTerm:
+			parts := __gp_m8.Elements
+
+			if len(parts) == 2 {
+				switch __gp_m9 := any(term.AtomName(parts[0])).(type) {
+				case option.None[string]:
+				case option.Some[string]:
+					name := __gp_m9.Value
+					switch __gp_m10 := any(term.AtomName(parts[1])).(type) {
+					case option.None[string]:
+					case option.Some[string]:
+						node := __gp_m10.Value
+						kernel.SendRemoteRegistered(scheduled.from, node, name, scheduled.message)
+					default:
+						panic("goplus: impossible enum value in match")
+					}
+				default:
+					panic("goplus: impossible enum value in match")
+				}
+			}
+		default:
+
+		}
 	}
 }
