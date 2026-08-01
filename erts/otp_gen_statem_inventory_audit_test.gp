@@ -29,11 +29,7 @@ func TestGenStatemCompleteInventoryAudit(t *testing.T) {
         if len(parts) < 4 { t.Fatalf("malformed declaration identity %s", item.ID) }
         kind := parts[2]
         counts[kind]++
-        if kind == "type" {
-            if item.Status != "missing" { t.Fatalf("static type was promoted without type evidence: %s", item.Capability) }
-            continue
-        }
-        if item.Status != "partial" { t.Fatalf("executable declaration %s = %s", item.Capability, item.Status) }
+        if item.Status != "partial" { t.Fatalf("gen_statem declaration %s = %s", item.Capability, item.Status) }
         if len(item.Evidence) == 0 { t.Fatalf("partial declaration lacks evidence: %s", item.Capability) }
     }
     expected := map[string]int{"function": 39, "callback": 8, "optional-callback": 6, "type": 25}

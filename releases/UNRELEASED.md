@@ -26,6 +26,14 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Added `otp/genstatem`, a sealed Go+ model and total codec layer for all 25
+  exported OTP 29.0.4 `gen_statem` type declarations. Added canonical
+  round-trip laws, invalid-wire rejection, genuine Go+ compile-fail fixtures,
+  a 23-case official OTP acceptance corpus, and integration with lifecycle,
+  asynchronous request, and formatting fixtures. Promoted only the 25 static
+  type rows, leaving their assurance partial where embedded Erlang domains
+  remain unbounded.
+
 - Proved OTP 29.0.4 `gen_statem:format_log/1,2`, `format_status/2`, and modern
   and legacy status callbacks through isolated corpora for both callback modes.
   Covered crash and termination diagnostics, queued/postponed events, state,

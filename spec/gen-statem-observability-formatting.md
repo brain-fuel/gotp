@@ -23,8 +23,8 @@ These declarations remain partial because exhaustive logger report, option,
 system-state, callback-return, and malformed-term domains remain open. The
 exported `format_status/0` type is not promoted by runtime behavior evidence.
 
-The complete post-slice inventory audit fixes the evidence boundary at 39
-partial executable functions, 8 partial required callbacks, 6 partial optional
-callbacks, and 25 missing exported types. Every partial row must retain at
-least one behavioral artifact; every type row requires separate static type
-compatibility evidence before promotion.
+The post-slice inventory audit originally fixed the evidence boundary at 39
+partial executable functions, 14 partial callback declarations, and 25 missing
+exported types. The independent static-type specification now supplies the
+evidence that promotes those type rows without conflating runtime execution
+with static compatibility.
