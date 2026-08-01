@@ -26,6 +26,16 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Proved OTP 29.0.4 `gen_statem:format_log/1,2`, `format_status/2`, and modern
+  and legacy status callbacks through isolated corpora for both callback modes.
+  Covered crash and termination diagnostics, queued/postponed events, state,
+  data, time-outs, Unicode, depth and character limits, normal and suspended
+  status, sensitive-data redaction, malformed public inputs, and malformed
+  callback returns. Added a generated determinism and callback-mode equivalence
+  law and promoted only the seven directly evidenced declaration rows. Added a
+  complete inventory law fixing the resulting boundary at 39 partial functions,
+  14 partial callback declarations, and 25 missing exported types.
+
 - Proved all fourteen OTP 29.0.4 `gen_statem` asynchronous request exports
   through byte-identical isolated corpora for `state_functions` and
   `handle_event_function`. Covered direct and labeled collection requests,

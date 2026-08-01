@@ -21,3 +21,5 @@ formatting, exported types, and full input-domain parity remain outside this
 core-lifecycle slice. Their rows require separate evidence. Asynchronous
 requests are specified independently by
 `spec:gotp.otp.gen-statem-async-requests`.
+Observability and formatting are specified independently by
+`spec:gotp.otp.gen-statem-observability-formatting`.
