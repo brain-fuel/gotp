@@ -201,13 +201,7 @@ func (machine *Machine) branchBIFailure(
 		label := __gp_m8.Value
 
 		if label == 0 {
-			return result.Err[instructionOutcome, Failure]{Err: InvalidProgram{Detail: fmt.Sprintf(
-				"BIF %s:%s/%d failed: %s",
-				target.Module,
-				target.Function,
-				target.Arity,
-				detail,
-			)}}
+			return result.Err[instructionOutcome, Failure]{Err: RaisedException{Class: term.MustAtom("error"), Reason: term.MustAtom(detail)}}
 		}
 	default:
 		panic("goplus: impossible enum value in match")

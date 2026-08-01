@@ -56,6 +56,8 @@ type MachineMutation enum {
 
 type returnFrame struct { pc int; image *machineImage; codeLeave func() }
 
+type binaryMatchContext struct { bytes []byte; bitPosition int }
+
 type Machine struct {
 	program   []beam.Instruction
 	labels    map[uint64]int
@@ -73,6 +75,8 @@ type Machine struct {
 	handlers  memory.Buffer[exceptionHandler]
 	processMemory *ProcessMemory
 	nextHandler uint64
+	binaryMatches map[uint64]binaryMatchContext
+	nextBinaryMatch uint64
 	pc        int
 	steps     int
 	stepLimit int
@@ -171,6 +175,8 @@ func NewMachine(
 		y: memory.NewBuffer[option.Option[term.Term]](64),
 		returns: memory.NewBuffer[returnFrame](32),
 		handlers: memory.NewBuffer[exceptionHandler](8),
+		binaryMatches: make(map[uint64]binaryMatchContext),
+		nextBinaryMatch: 1,
 		processMemory: processMemory,
 		atoms: root.atoms,
 		literals: root.literals,

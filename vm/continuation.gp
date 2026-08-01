@@ -285,6 +285,8 @@ func executeInstruction(
 		return executeCallFun(machine, instruction, host)
 	case "is_function", "is_function2":
 		return executeFunctionTest(machine, instruction)
+	case "bs_start_match3", "bs_start_match4", "bs_get_position", "bs_set_position", "bs_get_tail", "bs_get_utf8", "bs_skip_utf8", "is_any_native_record":
+		return executeBinaryMatchInstruction(machine, instruction)
 	case "catch", "try":
 		return executeExceptionSetup(machine, instruction)
 	case "build_stacktrace":

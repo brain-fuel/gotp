@@ -26,6 +26,12 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Proved `gen_server:format_log/1,2` and `format_status/2`, including modern and
+  legacy status callbacks, through an isolated OTP 29.0.4 corpus. Rendered
+  termination, crash, no-handler, Unicode, depth, character-limit, and line-mode
+  output is byte-exact; live normal and suspended status is differential, with
+  deterministic-format and ordinary-versus-entered status laws.
+
 - Proved `gen_server:enter_loop/3,4,5` through an isolated OTP 29.0.4 corpus
   covering proc-lib ancestry, local/global/via registration, initial timeout,
   hibernate and continue actions, lifecycle and system messages, code change,

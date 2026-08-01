@@ -151,13 +151,7 @@ func (machine *Machine) branchBIFailure(
 		return result.Err[instructionOutcome, Failure](InvalidProgram("BIF failure target is not a label"))
 	case option.Some(label):
 		if label == 0 {
-			return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf(
-				"BIF %s:%s/%d failed: %s",
-				target.Module,
-				target.Function,
-				target.Arity,
-				detail,
-			)))
+			return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom(detail)))
 		}
 	}
 	match machine.instructionLabel(instruction, failIndex) {

@@ -101,6 +101,16 @@ randomized post-entry traces with an ordinarily started `gen_server`. These
 rows remain partial because the complete Erlang term domain and all malformed
 callback/action combinations have not been exhausted.
 
+The diagnostic slice executes `format_log/1,2` and `format_status/2` through
+OTP's pinned formatter closure. Its isolated corpus compares rendered bytes for
+legacy, multi-line, single-line, depth-limited, character-limited, Unicode,
+termination, crash, and missing-handler reports. Live status covers normal and
+suspended servers plus modern `format_status/1` and legacy `format_status/2`
+callbacks. Stateful laws prove deterministic output and equivalent formatted
+status for ordinary and `enter_loop` servers. Process-dictionary enumeration
+and anonymous PID headers are normalized; exhaustive report, option, callback,
+and malformed-term domains remain open.
+
 - Lifecycle corpus: `sha256:107c3a6a92d360f45746c41b547fe0d131b497d595e09b4397630fcab180b641`
 - Callback module: `sha256:ad5045f2062900129aa7eb74cf3d9cb82c0cb79cac7af0d6f13348d5b6dc7956`
 - Lifecycle law: `gotp.erts.otp29-gen-server-lifecycle`

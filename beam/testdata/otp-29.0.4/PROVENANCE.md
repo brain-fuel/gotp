@@ -34,3 +34,8 @@ the corresponding directory:
 - `logger.beam`: `193d4f3d8efa6ad89446c4f91b583a78b86cc6ecb1629afed408fdf1da8218c0`
 - `error_logger.beam`: `51d528b1bf4f78a257267a6e6d877e3faa3dd76a91d46221607344f7aace28c4`
 - `logger_config.beam`: `5ab4b78512175d37fa87fc7bffd0e647b467cfab02bab0b8c96d4971da1569a8`
+- `epp.beam`: `b3075d3aac859ba82fdfc003932682c4f1d9759501cbffd501499240c99e821e`
+- `erl_features.beam`: `1b1b926e3cf20342eb81034c2092905493b258bfc289c9744e45fb0523048f5e`
+- `erl_scan.beam`: `a285cd4a75497e8654a98a5d04d896c4fb34ac3377a9400c43997f572f506fdb`
+- `io_lib_format.beam`: `d8f8f0e29cc0f6d99443aa6ccd59365754cb06a13671e5364836981b0e01e9fd`
+- `io_lib_pretty.beam`: `2654e295438ce5ff45adb981e43b556ff51f767eb770b3c519f346f0e5e49236`

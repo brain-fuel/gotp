@@ -115,6 +115,11 @@ type returnFrame struct {
 	codeLeave func()
 }
 
+type binaryMatchContext struct {
+	bytes       []byte
+	bitPosition int
+}
+
 type Machine struct {
 	program          []beam.Instruction
 	labels           map[uint64]int
@@ -132,6 +137,8 @@ type Machine struct {
 	handlers         memory.Buffer[exceptionHandler]
 	processMemory    *ProcessMemory
 	nextHandler      uint64
+	binaryMatches    map[uint64]binaryMatchContext
+	nextBinaryMatch  uint64
 	pc               int
 	steps            int
 	stepLimit        int
@@ -248,21 +255,23 @@ func NewMachine(
 		panic("goplus: impossible enum value in match")
 	}
 	return result.Ok[*Machine, Failure]{Value: &Machine{
-		program:       root.program,
-		labels:        root.labels,
-		x:             registers,
-		y:             memory.NewBuffer[option.Option[term.Term]](64),
-		returns:       memory.NewBuffer[returnFrame](32),
-		handlers:      memory.NewBuffer[exceptionHandler](8),
-		processMemory: processMemory,
-		atoms:         root.atoms,
-		literals:      root.literals,
-		imports:       root.imports,
-		functions:     root.functions,
-		current:       root,
-		root:          root,
-		modules:       modules,
-		stepLimit:     config.StepLimit,
+		program:         root.program,
+		labels:          root.labels,
+		x:               registers,
+		y:               memory.NewBuffer[option.Option[term.Term]](64),
+		returns:         memory.NewBuffer[returnFrame](32),
+		handlers:        memory.NewBuffer[exceptionHandler](8),
+		binaryMatches:   make(map[uint64]binaryMatchContext),
+		nextBinaryMatch: 1,
+		processMemory:   processMemory,
+		atoms:           root.atoms,
+		literals:        root.literals,
+		imports:         root.imports,
+		functions:       root.functions,
+		current:         root,
+		root:            root,
+		modules:         modules,
+		stepLimit:       config.StepLimit,
 	}}
 }
 

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"goforge.dev/goplus/std/option"
 	"goforge.dev/goplus/std/result"
@@ -36,6 +37,41 @@ func otpBadarg() vm.ExternalCallOutcome {
 
 func otpBadarith() vm.ExternalCallOutcome {
 	return vm.ExternalCallRejected("badarith")
+}
+
+func otpBoolean(value term.Term) option.Option[bool] {
+	match term.AtomName(value) {
+	case option.Some(name):
+		switch name { case "true": return option.Some(true); case "false": return option.Some(false); default: return option.None[bool]() }
+	case option.None: return option.None[bool]()
+	}
+}
+
+func otpBooleanBinary(arguments []term.Term, operation string) vm.ExternalCallOutcome {
+	var left, right bool
+	match otpBoolean(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): left = value }
+	match otpBoolean(arguments[1]) { case option.None: return otpBadarg(); case option.Some(value): right = value }
+	value := false
+	switch operation { case "and": value = left && right; case "or": value = left || right; case "xor": value = left != right }
+	if value { return vm.ExternalCallReturned(term.MustAtom("true")) }
+	return vm.ExternalCallReturned(term.MustAtom("false"))
+}
+
+func otpBooleanNot(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpBoolean(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): if !value { return vm.ExternalCallReturned(term.MustAtom("true")) }; return vm.ExternalCallReturned(term.MustAtom("false")) }
+}
+
+func otpBitwiseBinary(arguments []term.Term, operation string) vm.ExternalCallOutcome {
+	var left, right *big.Int
+	match term.IntegerValue(arguments[0]) { case option.None: return otpBadarith(); case option.Some(value): left = value }
+	match term.IntegerValue(arguments[1]) { case option.None: return otpBadarith(); case option.Some(value): right = value }
+	value := new(big.Int)
+	switch operation { case "band": value.And(left, right); case "bor": value.Or(left, right); case "bxor": value.Xor(left, right) }
+	return vm.ExternalCallReturned(term.MustBigInteger(value))
+}
+
+func otpBitwiseNot(arguments []term.Term) vm.ExternalCallOutcome {
+	match term.IntegerValue(arguments[0]) { case option.None: return otpBadarith(); case option.Some(value): return vm.ExternalCallReturned(term.MustBigInteger(new(big.Int).Not(value))) }
 }
 
 // assayxport:unit gotp.erts.otp-exception-bifs
@@ -207,6 +243,118 @@ func otpTupleElements(value term.Term) option.Option[[]term.Term] {
 		return term.Elements(value)
 	case term.InvalidKind, term.IntegerKind, term.FloatKind, term.AtomKind, term.BinaryKind, term.ListKind, term.MapKind, term.PIDKind, term.ReferenceKind, term.FunKind, term.PortKind:
 		return option.None[[]term.Term]()
+	}
+}
+
+func otpTupleToList(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpTupleElements(arguments[0]) { case option.None: return otpBadarg(); case option.Some(elements): return vm.ExternalCallReturned(term.List(elements...)) }
+}
+
+func otpListToTuple(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpProperElements(arguments[0]) { case option.None: return otpBadarg(); case option.Some(elements): return vm.ExternalCallReturned(term.Tuple(elements...)) }
+}
+
+func otpIODataSize(value term.Term) option.Option[int64] {
+	match term.BinaryValue(value) {
+	case option.Some(bytes): return option.Some(int64(len(bytes)))
+	case option.None:
+	}
+	var kind term.Kind = term.TermKind(value)
+	match kind {
+	case term.ListKind:
+		var elements []term.Term
+		match term.Elements(value) { case option.None: return option.None[int64](); case option.Some(found): elements = found }
+		total := int64(0)
+		for _, element := range elements {
+			match term.Int64(element) {
+			case option.Some(octet):
+				if octet < 0 || octet > 255 { return option.None[int64]() }
+				if total == math.MaxInt64 { return option.None[int64]() }
+				total++
+			case option.None:
+				match otpIODataSize(element) {
+				case option.None: return option.None[int64]()
+				case option.Some(size):
+					if size > math.MaxInt64-total { return option.None[int64]() }
+					total += size
+				}
+			}
+		}
+		match term.ImproperTail(value) {
+		case option.None:
+		case option.Some(tail):
+			match term.BinaryValue(tail) {
+			case option.None: return option.None[int64]()
+			case option.Some(bytes):
+				if int64(len(bytes)) > math.MaxInt64-total { return option.None[int64]() }
+				total += int64(len(bytes))
+			}
+		}
+		return option.Some(total)
+	case term.InvalidKind, term.IntegerKind, term.FloatKind, term.AtomKind, term.BinaryKind, term.TupleKind, term.MapKind, term.PIDKind, term.ReferenceKind, term.FunKind, term.PortKind:
+		return option.None[int64]()
+	}
+}
+
+func otpIOListSize(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpIODataSize(arguments[0]) {
+	case option.None: return otpBadarg()
+	case option.Some(size): return vm.ExternalCallReturned(term.Integer(size))
+	}
+}
+
+func otpAppendUnicodeCharacters(destination []byte, value term.Term) option.Option[[]byte] {
+	match term.BinaryValue(value) {
+	case option.Some(bytes):
+		if !utf8.Valid(bytes) { return option.None[[]byte]() }
+		return option.Some(append(destination, bytes...))
+	case option.None:
+	}
+	match term.Int64(value) {
+	case option.Some(codepoint):
+		if codepoint < 0 || codepoint > utf8.MaxRune || (codepoint >= 0xD800 && codepoint <= 0xDFFF) { return option.None[[]byte]() }
+		return option.Some(utf8.AppendRune(destination, rune(codepoint)))
+	case option.None:
+	}
+	var kind term.Kind = term.TermKind(value)
+	match kind {
+	case term.ListKind:
+		var current []byte = destination
+		match term.Elements(value) {
+		case option.None: return option.None[[]byte]()
+		case option.Some(elements):
+			for _, element := range elements {
+				match otpAppendUnicodeCharacters(current, element) { case option.None: return option.None[[]byte](); case option.Some(next): current = next }
+			}
+		}
+		match term.ImproperTail(value) {
+		case option.None: return option.Some(current)
+		case option.Some(tail): return otpAppendUnicodeCharacters(current, tail)
+		}
+	case term.InvalidKind, term.IntegerKind, term.FloatKind, term.AtomKind, term.BinaryKind, term.TupleKind, term.MapKind, term.PIDKind, term.ReferenceKind, term.FunKind, term.PortKind:
+		return option.None[[]byte]()
+	}
+}
+
+func otpUnicodeCharactersToBinary(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpAppendUnicodeCharacters([]byte{}, arguments[0]) {
+	case option.None: return otpBadarg()
+	case option.Some(bytes): return vm.ExternalCallReturned(term.Binary(bytes))
+	}
+}
+
+func otpUnicodeCharactersToList(arguments []term.Term) vm.ExternalCallOutcome {
+	match otpAppendUnicodeCharacters([]byte{}, arguments[0]) {
+	case option.None: return otpBadarg()
+	case option.Some(bytes):
+		characters := []term.Term{}
+		for len(bytes) > 0 {
+			codepoint, width := utf8.DecodeRune(bytes)
+			if codepoint == utf8.RuneError && width == 1 { return otpBadarg() }
+			characters = append(characters, term.Integer(int64(codepoint)))
+			bytes = bytes[width:]
+		}
+		return vm.ExternalCallReturned(term.List(characters...))
 	}
 }
 
@@ -717,6 +865,10 @@ func otpIsList(arguments []term.Term) vm.ExternalCallOutcome {
 	match arguments[0] { case term.ProperListTerm(_), term.ImproperListTerm(_, _): return vm.ExternalCallReturned(term.MustAtom("true")); case _: return vm.ExternalCallReturned(term.MustAtom("false")) }
 }
 
+func otpIsBinary(arguments []term.Term) vm.ExternalCallOutcome {
+	match term.BinaryValue(arguments[0]) { case option.Some(_): return vm.ExternalCallReturned(term.MustAtom("true")); case option.None: return vm.ExternalCallReturned(term.MustAtom("false")) }
+}
+
 func otpMakeFun(arguments []term.Term) vm.ExternalCallOutcome {
 	var module, function string
 	match term.AtomName(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): module = value }
@@ -733,6 +885,14 @@ func otpMakeFun(arguments []term.Term) vm.ExternalCallOutcome {
 func otpPureBindings() []CallBinding {
 	return []CallBinding{
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "<", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpLess()) }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "and", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBooleanBinary(arguments, "and") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "or", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBooleanBinary(arguments, "or") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "xor", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBooleanBinary(arguments, "xor") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "not", Arity: 1}, Implementation: otpBooleanNot},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "band", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBitwiseBinary(arguments, "band") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bor", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBitwiseBinary(arguments, "bor") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bxor", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpBitwiseBinary(arguments, "bxor") }},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "bnot", Arity: 1}, Implementation: otpBitwiseNot},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "=<", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpLessEqual()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: ">", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpGreater()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: ">=", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpOrderedComparison(arguments, otpGreaterEqual()) }},
@@ -740,13 +900,20 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "--", Arity: 2}, Implementation: otpListSubtract},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "-", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpArithmetic(arguments, otpSubtract()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "iolist_size", Arity: 1}, Implementation: otpIOListSize},
+		{Target: vm.ExternalFunction{Module: "unicode", Function: "characters_to_binary", Arity: 1}, Implementation: otpUnicodeCharactersToBinary},
+		{Target: vm.ExternalFunction{Module: "unicode", Function: "characters_to_list", Arity: 1}, Implementation: otpUnicodeCharactersToList},
+		{Target: vm.ExternalFunction{Module: "io", Function: "printable_range", Arity: 0}, Implementation: func(_ []term.Term) vm.ExternalCallOutcome { return vm.ExternalCallReturned(term.MustAtom("latin1")) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "==", Arity: 2}, Implementation: otpLooseEqual},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_list", Arity: 1}, Implementation: otpIsList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_binary", Arity: 1}, Implementation: otpIsBinary},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "make_fun", Arity: 3}, Implementation: otpMakeFun},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_size", Arity: 1}, Implementation: otpMapSize},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "map_get", Arity: 2}, Implementation: otpMapGet},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "is_map_key", Arity: 2}, Implementation: otpMapIsKey},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "tuple_size", Arity: 1}, Implementation: otpTupleSize},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "tuple_to_list", Arity: 1}, Implementation: otpTupleToList},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "list_to_tuple", Arity: 1}, Implementation: otpListToTuple},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "rem", Arity: 2}, Implementation: otpIntegerRemainder},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsr", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, true) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsl", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, false) }},

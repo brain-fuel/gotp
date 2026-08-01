@@ -1,6 +1,7 @@
 package erts
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -26,6 +27,16 @@ func (process *VMProcess) contextualCall(
 		match term.TermPIDValue(arguments[0]) { case option.Some(pid): match context.NodeNameFor(pid.Node) { case option.None: return otpBadarg(); case option.Some(name): return vm.ExternalCallReturned(term.MustAtom(name)) }; case option.None: }
 		match term.TermReferenceValue(arguments[0]) { case option.Some(reference): match context.NodeNameFor(reference.Node) { case option.None: return otpBadarg(); case option.Some(name): return vm.ExternalCallReturned(term.MustAtom(name)) }; case option.None: return otpBadarg() }
 	}
+	if target.Module == "erlang" && target.Function == "pid_to_list" && target.Arity == 1 {
+		match term.TermPIDValue(arguments[0]) {
+		case option.None: return otpBadarg()
+		case option.Some(pid):
+			text := fmt.Sprintf("<0.%d.%d>", pid.Number, pid.Serial)
+			characters := make([]term.Term, len(text))
+			for index := range text { characters[index] = term.Integer(int64(text[index])) }
+			return vm.ExternalCallReturned(term.List(characters...))
+		}
+	}
 	if target.Module == "erlang" && target.Function == "nodes" && target.Arity == 0 { values := []term.Term{}; for _, node := range context.ConnectedNodes() { values = append(values, term.MustAtom(node)) }; return vm.ExternalCallReturned(term.List(values...)) }
 	if target.Module == "erlang" && target.Function == "send" && (target.Arity == 2 || target.Arity == 3) { return otpContextSend(context, arguments, target.Arity == 3) }
 	if target.Module == "erlang" && target.Function == "spawn_opt" && target.Arity == 4 { return process.otpContextSpawn(context, arguments) }
@@ -50,6 +61,11 @@ func (process *VMProcess) contextualCall(
 	if target.Module == "persistent_term" && target.Function == "get" && target.Arity == 2 { match context.PersistentGet(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.Clone(arguments[1])); case option.Some(value): return vm.ExternalCallReturned(value) } }
 	if target.Module == "persistent_term" && target.Function == "put" && target.Arity == 2 { context.PersistentPut(arguments[0], arguments[1]); return vm.ExternalCallReturned(term.MustAtom("ok")) }
 	if target.Module == "persistent_term" && target.Function == "erase" && target.Arity == 1 { erased := context.PersistentErase(arguments[0]); if erased { return vm.ExternalCallReturned(term.MustAtom("true")) }; return vm.ExternalCallReturned(term.MustAtom("false")) }
+	if target.Module == "application" && target.Function == "get_env" && target.Arity == 2 { return vm.ExternalCallReturned(term.MustAtom("undefined")) }
+	if target.Module == "application" && target.Function == "get_env" && target.Arity == 3 { return vm.ExternalCallReturned(term.Clone(arguments[2])) }
+	if target.Module == "os" && target.Function == "getenv" && target.Arity == 1 { return vm.ExternalCallReturned(term.MustAtom("false")) }
+	if target.Module == "init" && target.Function == "get_arguments" && target.Arity == 0 { return vm.ExternalCallReturned(term.List()) }
+	if target.Module == "init" && target.Function == "get_argument" && target.Arity == 1 { return vm.ExternalCallReturned(term.MustAtom("error")) }
 	if target.Module == "global" && target.Function == "register_name" && target.Arity == 2 { match term.TermPIDValue(arguments[1]) { case option.None: return otpBadarg(); case option.Some(pid): if context.RegisterGlobal(arguments[0], pid) { return vm.ExternalCallReturned(term.MustAtom("yes")) }; return vm.ExternalCallReturned(term.MustAtom("no")) } }
 	if target.Module == "global" && target.Function == "unregister_name" && target.Arity == 1 { context.UnregisterGlobal(arguments[0]); return vm.ExternalCallReturned(term.MustAtom("ok")) }
 	if target.Module == "global" && target.Function == "whereis_name" && target.Arity == 1 { match context.WhereisGlobal(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.MustAtom("undefined")); case option.Some(pid): return vm.ExternalCallReturned(term.PIDValue(pid)) } }

@@ -144,6 +144,15 @@ func executeExternalCall(
 		if exported { value = term.MustAtom("true") }
 		return finishExternalCall(machine, value, tail)
 	}
+	if target.Module == "erlang" && target.Function == "module_loaded" && target.Arity == 1 {
+		var module string
+		match term.AtomName(arguments[0]) { case option.None: return result.Err[instructionOutcome, Failure](RaisedException(term.MustAtom("error"), term.MustAtom("badarg"))); case option.Some(value): module = value }
+		_, loaded := machine.modules[module]
+		if !loaded && host.externalFunctionLookup != nil { loaded = host.externalFunctionLookup(ExternalFunction{Module: module, Function: "module_info", Arity: 0}) }
+		value := term.MustAtom("false")
+		if loaded { value = term.MustAtom("true") }
+		return finishExternalCall(machine, value, tail)
+	}
 	var capability ExternalCallCapability = host.ExternalCalls
 	match capability {
 	case ExternalCallsUnavailable:
