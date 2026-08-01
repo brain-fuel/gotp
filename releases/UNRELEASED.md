@@ -174,3 +174,11 @@ This document is not a release and does not authorize a tag or publication.
   receive-marker host effects, monitor-backed aliases, callable closure arity,
   monotonic time, loaded-function introspection, and exact exit-reason
   propagation required by that path. Broader lifecycle parity remains open.
+- Expanded that corpus into an OTP-oracle adverse-lifecycle matrix covering
+  linked and monitored starts, local named duplicate starts, call timeout with
+  late-reply alias suppression, exact callback-crash and linked-parent exit
+  reasons, continue and info callbacks, and suspended system code change.
+- Added generic OTP 29 `update_record/5`, kernel-scoped `persistent_term`,
+  process-dictionary enumeration, and MFA `spawn_monitor/3` semantics required
+  by the unmodified pinned OTP modules. The record update has randomized
+  replacement and source-immutability evidence.

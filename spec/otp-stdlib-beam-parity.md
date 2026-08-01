@@ -82,22 +82,27 @@ well as the public behavior.
 The pinned `gen_server.beam` currently executes request-ID collection and
 introspection exports. ETF reference terms use an explicit static node resolver.
 
-The pinned lifecycle callback additionally executes `start/3`, `call/2`,
-`cast/2`, `reply/2`, and `stop/1` through the ordinary scheduler. It exercises
-`init/1`, `handle_call/3`, `handle_cast/2`, and `terminate/2`, including
-monitor-backed aliases, selective receive markers, explicit delayed reply, a
-system terminate request, and exact `normal` process exit propagation.
+The pinned lifecycle callback additionally executes `start/3,4`,
+`start_link/3,4`, `start_monitor/3,4`, `call/2,3`, `cast/2`, `reply/2`,
+`stop/1`, and `system_code_change/4` through the ordinary scheduler. It
+exercises `init/1`, `handle_call/3`, `handle_cast/2`, `handle_continue/2`,
+`handle_info/2`, `code_change/3`, and `terminate/2` across normal and adverse
+paths. Evidence includes monitor-backed aliases, zero-timeout late-reply
+suppression, callback-crash reasons, linked-parent termination, local named
+registration and duplicate starts, and suspended system code change.
 
-- Lifecycle corpus: `sha256:b1087a0833bea440f030f97a3732e81aed9c6aec32a3a0d33db8343971d137a0`
-- Callback module: `sha256:7e7ca0b5b92b17b872470ab53e8e047e1249dfa805d48c10b7bda0361bdf2ea5`
+- Lifecycle corpus: `sha256:107c3a6a92d360f45746c41b547fe0d131b497d595e09b4397630fcab180b641`
+- Callback module: `sha256:ad5045f2062900129aa7eb74cf3d9cb82c0cb79cac7af0d6f13348d5b6dc7956`
 - Lifecycle law: `gotp.erts.otp29-gen-server-lifecycle`
+- Record-update law: `gotp.vm.update-record-laws`
 - Monitor-alias law: `gotp.kernel.monitor-alias-lifecycle`
 - Receive-marker law: `gotp.erts.receive-marker-cursor`
 
-This is not lifecycle parity for the entire module. Timeout, named, linked,
-start-monitor, continuation, code-change, multi-call, distributed, and failure
-paths remain open, as do exhaustive declared-input-domain laws.
+This is not lifecycle parity for the entire module. Multi-call, distributed,
+enter-loop, asynchronous request/response, formatting, state replacement, and
+the exhaustive declared input domains remain open.
 
 ## Gen-server decision
 
-See ADR `0052-pinned-gen-server-lifecycle`.
+See ADRs `0052-pinned-gen-server-lifecycle` and
+`0053-gen-server-adverse-lifecycle-matrix`.

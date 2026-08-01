@@ -23,10 +23,6 @@ func TestPinnedOTPGenServerLifecycle(t *testing.T) {
 	if cause != nil {
 		t.Fatal(cause)
 	}
-	fields := strings.Split(strings.TrimSpace(string(payload)), "|")
-	if len(fields) != 3 || fields[0] != "case" {
-		t.Fatal("malformed lifecycle corpus")
-	}
 	var read beam.ReadFileCapability = beam.OperatingSystemFiles{}
 	var callback *LoadedModule
 	switch __gp_m0 := any(LoadModuleFile(read, "testdata/otp-29.0.4/gen_server_callbacks.beam", ModuleLoaderConfig{})).(type) {
@@ -40,48 +36,55 @@ func TestPinnedOTPGenServerLifecycle(t *testing.T) {
 		panic("goplus: impossible enum value in match")
 	}
 	modules := pinnedGenServerModuleSet(t, callback)
-	var process *VMProcess
-	switch __gp_m1 := any(modules.Invoke("gen_server_callbacks", fields[1], nil, clock.Real{}, otpRegistryForInvocation(t))).(type) {
-	case result.Err[*VMProcess, ModuleLoadFailure]:
-		failure := __gp_m1.Err
-		t.Fatal(failure)
-	case result.Ok[*VMProcess, ModuleLoadFailure]:
-		found := __gp_m1.Value
-		process = found
-	default:
-		panic("goplus: impossible enum value in match")
+	for _, line := range strings.Split(strings.TrimSpace(string(payload)), "\n") {
+		fields := strings.Split(line, "|")
+		if len(fields) != 3 || fields[0] != "case" {
+			t.Fatal("malformed lifecycle corpus")
+		}
+		var process *VMProcess
+		switch __gp_m1 := any(modules.Invoke("gen_server_callbacks", fields[1], nil, clock.Real{}, otpRegistryForInvocation(t))).(type) {
+		case result.Err[*VMProcess, ModuleLoadFailure]:
+			failure := __gp_m1.Err
+			t.Fatal(failure)
+		case result.Ok[*VMProcess, ModuleLoadFailure]:
+			found := __gp_m1.Value
+			process = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		runtime := kernel.New(kernel.KernelConfig{})
+		runtime.PersistentPut(term.Tuple(term.MustAtom("logger_config"), term.MustAtom("$primary_config$")), term.Integer(0))
+		var tracer *kernel.Tracer
+		switch __gp_m2 := any(runtime.EnableTracing(512)).(type) {
+		case result.Err[*kernel.Tracer, kernel.TraceFailure]:
+			failure := __gp_m2.Err
+			t.Fatal(failure)
+		case result.Ok[*kernel.Tracer, kernel.TraceFailure]:
+			found := __gp_m2.Value
+			tracer = found
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		switch __gp_m3 := any(runtime.Spawn(process.Behavior(), kernel.Unlinked{TrapExit: false})).(type) {
+		case result.Err[term.PID, kernel.Failure]:
+			failure := __gp_m3.Err
+			t.Fatal(failure)
+		case result.Ok[term.PID, kernel.Failure]:
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+		runtime.Run(1_000_000)
+		switch any(process.State()).(type) {
+		case VMProcessCompleted:
+		default:
+			t.Logf("%s runtime trace: %#v", fields[1], tracer.Snapshot())
+		}
+		assertGenServerCorpusOutcome(t, fields[1], 0, process.State(), decodeGenServerCorpusTerm(t, fields[2]))
 	}
-	runtime := kernel.New(kernel.KernelConfig{})
-	var tracer *kernel.Tracer
-	switch __gp_m2 := any(runtime.EnableTracing(256)).(type) {
-	case result.Err[*kernel.Tracer, kernel.TraceFailure]:
-		failure := __gp_m2.Err
-		t.Fatal(failure)
-	case result.Ok[*kernel.Tracer, kernel.TraceFailure]:
-		found := __gp_m2.Value
-		tracer = found
-	default:
-		panic("goplus: impossible enum value in match")
-	}
-	switch __gp_m3 := any(runtime.Spawn(process.Behavior(), kernel.Unlinked{TrapExit: false})).(type) {
-	case result.Err[term.PID, kernel.Failure]:
-		failure := __gp_m3.Err
-		t.Fatal(failure)
-	case result.Ok[term.PID, kernel.Failure]:
-	default:
-		panic("goplus: impossible enum value in match")
-	}
-	runtime.Run(100_000)
-	switch any(process.State()).(type) {
-	case VMProcessCompleted:
-	default:
-		t.Logf("runtime trace: %#v", tracer.Snapshot())
-	}
-	assertGenServerCorpusOutcome(t, fields[1], 0, process.State(), decodeGenServerCorpusTerm(t, fields[2]))
 }
 
 func pinnedGenServerModuleSet(t *testing.T, callback *LoadedModule) *ModuleSet {
-	dependencies := []string{"sets", "gen", "proc_lib", "sys", "global", "code", "io", "io_lib", "logger", "error_logger"}
+	dependencies := []string{"sets", "gen", "proc_lib", "sys", "global", "code", "io", "io_lib", "logger", "logger_config", "error_logger"}
 	loaded := []*LoadedModule{pinnedGenServerModule(t), pinnedListsModule(t), pinnedMapsModule(t), callback}
 	for _, dependency := range dependencies {
 		loaded = append(loaded, pinnedStdlibDependency(t, dependency))

@@ -72,6 +72,8 @@ func executeCoreTermInstruction(
 		return putMap(machine, instruction, true)
 	case "put_tuple2":
 		return putTuple(machine, instruction)
+	case "update_record":
+		return updateRecord(machine, instruction)
 	case "select_val":
 		return selectValue(machine, instruction)
 	case "select_tuple_arity":
@@ -555,6 +557,78 @@ func putTuple(machine *Machine, instruction beam.Instruction) result.Result[inst
 	case result.Ok(HeapMutated):
 	}
 	match machine.assign(instruction.Operands[0], value) {
+	case result.Err(failure):
+		return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(MachineMutated):
+		machine.pc++
+		return result.Ok[instructionOutcome, Failure](InstructionContinues())
+	}
+}
+
+func updateRecord(machine *Machine, instruction beam.Instruction) result.Result[instructionOutcome, Failure] {
+	if len(instruction.Operands) != 5 {
+		return malformedCoreInstruction(instruction)
+	}
+	var size uint64
+	match beam.Uint64(instruction.Operands[1]) {
+	case option.None:
+		return result.Err[instructionOutcome, Failure](InvalidProgram("update_record size is not uint64"))
+	case option.Some(value):
+		size = value
+	}
+	var updates []beam.Operand
+	match beam.ListItems(instruction.Operands[4]) {
+	case option.None:
+		return result.Err[instructionOutcome, Failure](InvalidProgram("update_record updates are not a list operand"))
+	case option.Some(items):
+		updates = items
+	}
+	if len(updates)%2 != 0 {
+		return result.Err[instructionOutcome, Failure](InvalidProgram("update_record updates are not field-value pairs"))
+	}
+	var source []term.Term
+	match machine.resolve(instruction.Operands[2]) {
+	case result.Err(failure):
+		return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(value):
+		match value {
+		case term.TupleTerm(elements):
+			if uint64(len(elements)) != size {
+				return result.Err[instructionOutcome, Failure](InvalidProgram("update_record source arity differs from size"))
+			}
+			source = elements
+		case _:
+			return result.Err[instructionOutcome, Failure](InvalidProgram("update_record source is not a tuple"))
+		}
+	}
+	type fieldUpdate struct { index int; value term.Term }
+	resolved := make([]fieldUpdate, 0, len(updates)/2)
+	for pair := 0; pair < len(updates); pair += 2 {
+		var position uint64
+		match beam.Uint64(updates[pair]) {
+		case option.None:
+			return result.Err[instructionOutcome, Failure](InvalidProgram("update_record field position is not uint64"))
+		case option.Some(value):
+			position = value
+		}
+		if position == 0 || position > size {
+			return result.Err[instructionOutcome, Failure](InvalidProgram("update_record field position is out of range"))
+		}
+		match machine.resolve(updates[pair+1]) {
+		case result.Err(failure):
+			return result.Err[instructionOutcome, Failure](failure)
+		case result.Ok(value):
+			resolved = append(resolved, fieldUpdate{index: int(position - 1), value: value})
+		}
+	}
+	elements := append([]term.Term(nil), source...)
+	for _, update := range resolved { elements[update.index] = update.value }
+	value := term.Tuple(elements...)
+	match machine.trackHeapTerm(value, len(elements)+1) {
+	case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+	case result.Ok(HeapMutated):
+	}
+	match machine.assign(instruction.Operands[3], value) {
 	case result.Err(failure):
 		return result.Err[instructionOutcome, Failure](failure)
 	case result.Ok(MachineMutated):

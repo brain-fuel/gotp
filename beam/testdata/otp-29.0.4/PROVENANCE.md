@@ -33,3 +33,4 @@ the corresponding directory:
 - `io_lib.beam`: `7782325f7180c2f3ca7e177532371bc268c4b07599931a4c81cf1f5d1fab7c4c`
 - `logger.beam`: `193d4f3d8efa6ad89446c4f91b583a78b86cc6ecb1629afed408fdf1da8218c0`
 - `error_logger.beam`: `51d528b1bf4f78a257267a6e6d877e3faa3dd76a91d46221607344f7aace28c4`
+- `logger_config.beam`: `5ab4b78512175d37fa87fc7bffd0e647b467cfab02bab0b8c96d4971da1569a8`

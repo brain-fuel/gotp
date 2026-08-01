@@ -4,6 +4,7 @@
 package vm
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"testing/quick"
@@ -108,6 +109,158 @@ func TestPutThenGetListLaw(t *testing.T) {
 	}
 }
 
+// ExampleMachine_updateRecord documents OTP's one-based record-field update semantics.
+func ExampleMachine_updateRecord() {
+	program := []beam.Instruction{
+		coreInstruction("label", beam.LabelOperand{Index: big.NewInt(1)}),
+		coreInstruction("update_record",
+			beam.AtomOperand{Index: big.NewInt(1)},
+			beam.UnsignedOperand{Value: big.NewInt(3)},
+			beam.XRegisterOperand{Index: big.NewInt(0)},
+			beam.XRegisterOperand{Index: big.NewInt(1)},
+			beam.ListOperand{Items: []beam.Operand{
+				beam.UnsignedOperand{Value: big.NewInt(3)}, beam.XRegisterOperand{Index: big.NewInt(2)},
+			}},
+		),
+		coreInstruction("return"),
+	}
+	var machine *Machine
+	switch __gp_m7 := any(NewMachine(program, MachineConfig{XRegisters: 3, StepLimit: 10, Atoms: map[uint64]string{1: "copy"}})).(type) {
+	case result.Err[*Machine, Failure]:
+		failure := __gp_m7.Err
+		panic(failure)
+	case result.Ok[*Machine, Failure]:
+		created := __gp_m7.Value
+		machine = created
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m8 := any(machine.SetX(0, term.Tuple(term.MustAtom("state"), term.Integer(1), term.Integer(2)))).(type) {
+	case result.Err[MachineMutation, Failure]:
+		failure := __gp_m8.Err
+		panic(failure)
+	case result.Ok[MachineMutation, Failure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m9 := any(machine.SetX(2, term.Integer(9))).(type) {
+	case result.Err[MachineMutation, Failure]:
+		failure := __gp_m9.Err
+		panic(failure)
+	case result.Ok[MachineMutation, Failure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	switch __gp_m10 := any(machine.Run(1)).(type) {
+	case result.Err[RunResult, Failure]:
+		failure := __gp_m10.Err
+		panic(failure)
+	case result.Ok[RunResult, Failure]:
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	expected := term.Tuple(term.MustAtom("state"), term.Integer(1), term.Integer(9))
+	switch __gp_m11 := any(machine.X(1)).(type) {
+	case result.Err[term.Term, Failure]:
+		failure := __gp_m11.Err
+		panic(failure)
+	case result.Ok[term.Term, Failure]:
+		found := __gp_m11.Value
+		fmt.Println(term.Equal(found, expected))
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+	// Output: true
+}
+
+// assayxport:law gotp.vm.update-record-laws
+func TestUpdateRecordReplacementAndSourceImmutabilityLaw(t *testing.T) {
+	law := func(first, second, replacementA, replacementB int16) bool {
+		program := []beam.Instruction{
+			coreInstruction("label", beam.LabelOperand{Index: big.NewInt(1)}),
+			coreInstruction("update_record",
+				beam.AtomOperand{Index: big.NewInt(1)},
+				beam.UnsignedOperand{Value: big.NewInt(4)},
+				beam.XRegisterOperand{Index: big.NewInt(0)},
+				beam.XRegisterOperand{Index: big.NewInt(1)},
+				beam.ListOperand{Items: []beam.Operand{
+					beam.UnsignedOperand{Value: big.NewInt(2)}, beam.XRegisterOperand{Index: big.NewInt(2)},
+					beam.UnsignedOperand{Value: big.NewInt(4)}, beam.XRegisterOperand{Index: big.NewInt(3)},
+				}},
+			),
+			coreInstruction("return"),
+		}
+		switch __gp_m12 := any(NewMachine(program, MachineConfig{XRegisters: 4, StepLimit: 10, Atoms: map[uint64]string{1: "copy"}})).(type) {
+		case result.Err[*Machine, Failure]:
+			return false
+		case result.Ok[*Machine, Failure]:
+			machine := __gp_m12.Value
+
+			source := term.Tuple(term.MustAtom("state"), term.Integer(int64(first)), term.Integer(int64(second)), term.Integer(0))
+			switch any(machine.SetX(0, source)).(type) {
+			case result.Err[MachineMutation, Failure]:
+				return false
+			case result.Ok[MachineMutation, Failure]:
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			switch any(machine.SetX(2, term.Integer(int64(replacementA)))).(type) {
+			case result.Err[MachineMutation, Failure]:
+				return false
+			case result.Ok[MachineMutation, Failure]:
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			switch any(machine.SetX(3, term.Integer(int64(replacementB)))).(type) {
+			case result.Err[MachineMutation, Failure]:
+				return false
+			case result.Ok[MachineMutation, Failure]:
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			switch any(machine.Run(1)).(type) {
+			case result.Err[RunResult, Failure]:
+				return false
+			case result.Ok[RunResult, Failure]:
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			switch __gp_m17 := any(machine.X(0)).(type) {
+			case result.Err[term.Term, Failure]:
+				return false
+			case result.Ok[term.Term, Failure]:
+				found := __gp_m17.Value
+				if !term.Equal(found, source) {
+					return false
+				}
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+			expected := term.Tuple(term.MustAtom("state"), term.Integer(int64(replacementA)), term.Integer(int64(second)), term.Integer(int64(replacementB)))
+			switch __gp_m18 := any(machine.X(1)).(type) {
+			case result.Err[term.Term, Failure]:
+				return false
+			case result.Ok[term.Term, Failure]:
+				found := __gp_m18.Value
+				return term.Equal(found, expected)
+			default:
+				panic("goplus: impossible enum value in match")
+			}
+		default:
+			panic("goplus: impossible enum value in match")
+		}
+	}
+	switch __gp_m19 := any(result.Of(true, quick.Check(law, &quick.Config{MaxCount: 500}))).(type) {
+	case result.Err[bool, error]:
+		cause := __gp_m19.Err
+		t.Fatal(cause)
+	case result.Ok[bool, error]:
+
+	default:
+		panic("goplus: impossible enum value in match")
+	}
+}
+
 func TestTupleArityAndValueSelection(t *testing.T) {
 	program := []beam.Instruction{
 		coreInstruction("label", beam.LabelOperand{Index: big.NewInt(1)}),
@@ -123,21 +276,21 @@ func TestTupleArityAndValueSelection(t *testing.T) {
 		coreInstruction("move", beam.AtomOperand{Index: big.NewInt(2)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
 		coreInstruction("return"),
 	}
-	switch __gp_m7 := any(NewMachine(program, MachineConfig{
+	switch __gp_m20 := any(NewMachine(program, MachineConfig{
 		XRegisters: 2,
 		StepLimit:  20,
 		Atoms:      map[uint64]string{1: "ok", 2: "error"},
 	})).(type) {
 	case result.Err[*Machine, Failure]:
-		failure := __gp_m7.Err
+		failure := __gp_m20.Err
 
 		t.Fatal(failure)
 	case result.Ok[*Machine, Failure]:
-		machine := __gp_m7.Value
+		machine := __gp_m20.Value
 
-		switch __gp_m8 := any(machine.SetX(0, term.Tuple(term.MustAtom("tag"), term.Integer(42)))).(type) {
+		switch __gp_m21 := any(machine.SetX(0, term.Tuple(term.MustAtom("tag"), term.Integer(42)))).(type) {
 		case result.Err[MachineMutation, Failure]:
-			failure := __gp_m8.Err
+			failure := __gp_m21.Err
 
 			t.Fatal(failure)
 		case result.Ok[MachineMutation, Failure]:
@@ -145,13 +298,13 @@ func TestTupleArityAndValueSelection(t *testing.T) {
 		default:
 			panic("goplus: impossible enum value in match")
 		}
-		switch __gp_m9 := any(machine.Run(1)).(type) {
+		switch __gp_m22 := any(machine.Run(1)).(type) {
 		case result.Err[RunResult, Failure]:
-			failure := __gp_m9.Err
+			failure := __gp_m22.Err
 
 			t.Fatal(failure)
 		case result.Ok[RunResult, Failure]:
-			run := __gp_m9.Value
+			run := __gp_m22.Value
 
 			if !term.Equal(run.Value, term.MustAtom("ok")) {
 				t.Fatalf("selection result = %v", run.Value)

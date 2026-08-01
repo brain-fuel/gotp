@@ -171,6 +171,7 @@ type Kernel struct {
 	remoteSignals memory.Buffer[RemoteSignal]
 	names         map[string]term.PID
 	nextUnlinkID  uint64
+	persistent []dictionaryEntry
 }
 
 func New(config KernelConfig) *Kernel {
@@ -842,6 +843,25 @@ func (kernel *Kernel) ProcessInfo(pid term.PID) option.Option[ProcessInfo] {
 	}
 }
 
+func (kernel *Kernel) PersistentGet(key term.Term) option.Option[term.Term] {
+	for _, entry := range kernel.persistent { if entry.key.Equal(key) { return option.Some(term.Clone(entry.value)) } }
+	return option.None[term.Term]()
+}
+
+func (kernel *Kernel) PersistentPut(key term.Term, value term.Term) {
+	for index := range kernel.persistent {
+		if kernel.persistent[index].key.Equal(key) { kernel.persistent[index].value = term.Clone(value); return }
+	}
+	kernel.persistent = append(kernel.persistent, dictionaryEntry{key: term.Clone(key), value: term.Clone(value)})
+}
+
+func (kernel *Kernel) PersistentErase(key term.Term) bool {
+	for index := range kernel.persistent {
+		if kernel.persistent[index].key.Equal(key) { kernel.persistent = append(kernel.persistent[:index], kernel.persistent[index+1:]...); return true }
+	}
+	return false
+}
+
 func (kernel *Kernel) liveProcess(pid term.PID) option.Option[*process] {
 	current, present := kernel.processes[pid]
 	if !present {
@@ -1179,6 +1199,16 @@ func (context *Context) DictionaryGet(key term.Term) option.Option[term.Term] {
 	for _, entry := range context.process.dictionary { if entry.key.Equal(key) { return option.Some(term.Clone(entry.value)) } }
 	return option.None[term.Term]()
 }
+
+func (context *Context) DictionaryEntries() []term.Term {
+	entries := make([]term.Term, len(context.process.dictionary))
+	for index, entry := range context.process.dictionary { entries[index] = term.Tuple(term.Clone(entry.key), term.Clone(entry.value)) }
+	return entries
+}
+
+func (context *Context) PersistentGet(key term.Term) option.Option[term.Term] { return context.kernel.PersistentGet(key) }
+func (context *Context) PersistentPut(key term.Term, value term.Term) { context.kernel.PersistentPut(key, value) }
+func (context *Context) PersistentErase(key term.Term) bool { return context.kernel.PersistentErase(key) }
 
 func (context *Context) DictionaryPut(key term.Term, value term.Term) option.Option[term.Term] {
 	for index := range context.process.dictionary {

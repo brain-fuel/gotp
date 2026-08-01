@@ -680,7 +680,7 @@ func executeInstruction(
 		"is_atom", "is_binary", "is_bitstr", "is_boolean", "is_eq", "is_eq_exact", "is_float",
 		"is_integer", "is_list", "is_map", "is_ne", "is_ne_exact", "is_nil", "is_nonempty_list",
 		"is_number", "is_pid", "is_port", "is_reference", "is_tagged_tuple", "is_tuple", "line",
-		"put_list", "put_map_assoc", "put_map_exact", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim":
+		"put_list", "put_map_assoc", "put_map_exact", "put_tuple2", "select_tuple_arity", "select_val", "swap", "test_arity", "test_heap", "trim", "update_record":
 		return executeCoreTermInstruction(machine, instruction)
 	case "deallocate":
 		switch __gp_m13 := any(machine.deallocate(instruction, 0)).(type) {

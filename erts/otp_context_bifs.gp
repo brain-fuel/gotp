@@ -26,6 +26,7 @@ func (process *VMProcess) contextualCall(
 	}
 	if target.Module == "erlang" && target.Function == "send" && (target.Arity == 2 || target.Arity == 3) { return otpContextSend(context, arguments, target.Arity == 3) }
 	if target.Module == "erlang" && target.Function == "spawn_opt" && target.Arity == 4 { return process.otpContextSpawn(context, arguments) }
+	if target.Module == "erlang" && target.Function == "spawn_monitor" && target.Arity == 3 { return process.otpContextSpawnMonitor(context, arguments) }
 	if target.Module == "erlang" && target.Function == "monitor" && (target.Arity == 2 || target.Arity == 3) { return otpContextMonitor(context, arguments) }
 	if target.Module == "erlang" && target.Function == "demonitor" && (target.Arity == 1 || target.Arity == 2) { return otpContextDemonitor(context, arguments) }
 	if target.Module == "erlang" && target.Function == "link" && target.Arity == 1 { match term.TermPIDValue(arguments[0]) { case option.None: return otpBadarg(); case option.Some(pid): match context.Link(pid) { case result.Err(failure): return vm.ExternalCallRejected(failure.Error()); case result.Ok(_): return vm.ExternalCallReturned(term.MustAtom("true")) } } }
@@ -40,7 +41,12 @@ func (process *VMProcess) contextualCall(
 	}
 	if target.Module == "erlang" && target.Function == "put" && target.Arity == 2 { match context.DictionaryPut(arguments[0], arguments[1]) { case option.None: return vm.ExternalCallReturned(term.MustAtom("undefined")); case option.Some(value): return vm.ExternalCallReturned(value) } }
 	if target.Module == "erlang" && target.Function == "get" && target.Arity == 1 { match context.DictionaryGet(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.MustAtom("undefined")); case option.Some(value): return vm.ExternalCallReturned(value) } }
+	if target.Module == "erlang" && target.Function == "get" && target.Arity == 0 { return vm.ExternalCallReturned(term.List(context.DictionaryEntries()...)) }
 	if target.Module == "erlang" && target.Function == "erase" && target.Arity == 1 { match context.DictionaryErase(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.MustAtom("undefined")); case option.Some(value): return vm.ExternalCallReturned(value) } }
+	if target.Module == "persistent_term" && target.Function == "get" && target.Arity == 1 { match context.PersistentGet(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): return vm.ExternalCallReturned(value) } }
+	if target.Module == "persistent_term" && target.Function == "get" && target.Arity == 2 { match context.PersistentGet(arguments[0]) { case option.None: return vm.ExternalCallReturned(term.Clone(arguments[1])); case option.Some(value): return vm.ExternalCallReturned(value) } }
+	if target.Module == "persistent_term" && target.Function == "put" && target.Arity == 2 { context.PersistentPut(arguments[0], arguments[1]); return vm.ExternalCallReturned(term.MustAtom("ok")) }
+	if target.Module == "persistent_term" && target.Function == "erase" && target.Arity == 1 { erased := context.PersistentErase(arguments[0]); if erased { return vm.ExternalCallReturned(term.MustAtom("true")) }; return vm.ExternalCallReturned(term.MustAtom("false")) }
 	if target.Module == "erlang" && target.Function == "alias" && target.Arity == 0 {
 		match context.Alias() {
 		case result.Err(failure):
@@ -91,6 +97,16 @@ func (process *VMProcess) otpContextSpawn(context *kernel.Context, arguments []t
 	link, monitor := false, false
 	for _, value := range options { match term.AtomName(value) { case option.Some(name): switch name { case "link": link = true; case "monitor": monitor = true }; case option.None: } }
 	return process.spawnMFA(context, module, function, callArguments, link, monitor)
+}
+
+func (process *VMProcess) otpContextSpawnMonitor(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
+	if process.spawnMFA == nil { return vm.ExternalCallRejected("MFA spawning is unavailable") }
+	var module, function string
+	match term.AtomName(arguments[0]) { case option.None: return otpBadarg(); case option.Some(value): module = value }
+	match term.AtomName(arguments[1]) { case option.None: return otpBadarg(); case option.Some(value): function = value }
+	var callArguments []term.Term
+	match arguments[2] { case term.ProperListTerm(values): callArguments = values; case _: return otpBadarg() }
+	return process.spawnMFA(context, module, function, callArguments, false, true)
 }
 
 func otpContextMonitor(context *kernel.Context, arguments []term.Term) vm.ExternalCallOutcome {
