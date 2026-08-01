@@ -1,0 +1,11 @@
+case|success_send_wait|g2gCdwJva2gCdwVyZXBseXcHc3VjY2Vzcw==
+case|success_send_receive|g2gCdwJva2gCdwVyZXBseXcIcmVjZWl2ZWQ=
+case|send4_wait_collection|g2gCdwJva2gCYQFhAA==
+case|receive_collection|g2gCdwJva2gCYQFhAA==
+case|wait_timeout_retry|g2gCdwJva2gCdwVyZXBseXcEbGF0ZQ==
+case|receive_abandon_late|g2gCdwJva3cFY2xlYW4=
+case|crashed_server|g2gCdwJva3cRZXhhY3RfYXN5bmNfY3Jhc2g=
+case|named_server|g2gCdwJva2gCdwVyZXBseXcFbmFtZWQ=
+case|out_of_order|g2gCdwJva2gDYQJhAWEA
+case|check_direct|g2gCdwJva2gCdwVyZXBseXcHY2hlY2tlZA==
+case|check_collection|g2gCdwJva2EA

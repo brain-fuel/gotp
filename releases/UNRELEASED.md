@@ -182,3 +182,8 @@ This document is not a release and does not authorize a tag or publication.
   process-dictionary enumeration, and MFA `spawn_monitor/3` semantics required
   by the unmodified pinned OTP modules. The record update has randomized
   replacement and source-immutability evidence.
+- Proved all eight asynchronous `gen_server` request exports through isolated
+  OTP 29.0.4 oracle cases: direct and collection success, retryable and
+  abandoning timeouts, late-response suppression, exact crash errors, local
+  names, out-of-order replies, and explicit response checks. Added a stateful
+  property law over randomized live-request reply permutations.

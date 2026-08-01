@@ -98,6 +98,18 @@ registration and duplicate starts, and suspended system code change.
 - Monitor-alias law: `gotp.kernel.monitor-alias-lifecycle`
 - Receive-marker law: `gotp.erts.receive-marker-cursor`
 
+The asynchronous request slice executes `send_request/2,4`,
+`wait_response/2,3`, `receive_response/2,3`, and `check_response/2,3` against
+OTP-oracle outcomes. It covers direct and request-collection responses,
+retryable wait timeout, abandoned receive timeout with late-response
+suppression, exact crashed-server errors, local names, unrelated-message
+checks, and multiple outstanding requests delivered out of issue order.
+
+- Asynchronous corpus: `sha256:62014e459c5f61dd37c65dbd92d8db0d5a62f5a91e08d01f1cb4da19b81b6e38`
+- Callback module: `sha256:24d5c8c2676b17331481e07f1334dd35de17131680e3dc3de69913f1fcb491db`
+- Differential law: `gotp.erts.otp29-gen-server-async-requests`
+- Stateful order law: `gotp.erts.gen-server-request-collection-order`
+
 This is not lifecycle parity for the entire module. Multi-call, distributed,
 enter-loop, asynchronous request/response, formatting, state replacement, and
 the exhaustive declared input domains remain open.
@@ -105,4 +117,5 @@ the exhaustive declared input domains remain open.
 ## Gen-server decision
 
 See ADRs `0052-pinned-gen-server-lifecycle` and
-`0053-gen-server-adverse-lifecycle-matrix`.
+`0053-gen-server-adverse-lifecycle-matrix`, and
+`0054-gen-server-asynchronous-request-lifecycle`.
