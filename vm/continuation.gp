@@ -294,7 +294,7 @@ func executeInstruction(
 		machine.pc = next
 	case "catch_end", "try_end", "try_case":
 		return executeExceptionCleanup(machine, instruction)
-	case "raise", "case_end", "badmatch", "if_end", "badrecord", "try_case_end":
+	case "raw_raise", "raise", "case_end", "badmatch", "if_end", "badrecord", "try_case_end":
 		return executeExceptionRaise(machine, instruction)
 	case "allocate", "allocate_zero":
 		match machine.allocate(instruction, 0) {

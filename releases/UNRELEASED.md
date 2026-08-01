@@ -26,6 +26,16 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Pinned the unmodified OTP 29.0.4 `gen_statem.beam` and added isolated,
+  deterministic callback corpora for `state_functions` and
+  `handle_event_function`. Added a machine-derived export-ledger verifier and
+  a stateful callback-mode trace-equivalence law. Covered all construction and
+  `enter_loop` arities, calls/casts/stops, state entry, internal/info/time-out
+  events, next-event, postpone, hibernate, both repeat forms, direct and
+  batched replies, callback-module change/push/pop, registration, proc-lib
+  ancestry, linked-parent exits, system control, termination, and adverse
+  callback returns. Promoted only the directly evidenced lifecycle rows.
+
 - Closed the pinned OTP 29.0.4 `gen_server.beam` runtime export inventory with
   direct `init_it/6`, `abcast/2,3`, `stop/3`, and system-callback evidence.
   Added delayed hibernation wake differential cases and a stateful equivalence

@@ -411,6 +411,25 @@ func otpLength(arguments []term.Term) vm.ExternalCallOutcome {
 	}
 }
 
+func otpListHead(arguments []term.Term) vm.ExternalCallOutcome {
+	match arguments[0] {
+	case term.ProperListTerm(elements): if len(elements) == 0 { return otpBadarg() }; return vm.ExternalCallReturned(term.Clone(elements[0]))
+	case term.ImproperListTerm(elements, _): if len(elements) == 0 { return otpBadarg() }; return vm.ExternalCallReturned(term.Clone(elements[0]))
+	case _: return otpBadarg()
+	}
+}
+
+func otpListTail(arguments []term.Term) vm.ExternalCallOutcome {
+	match arguments[0] {
+	case term.ProperListTerm(elements): if len(elements) == 0 { return otpBadarg() }; return vm.ExternalCallReturned(term.List(elements[1:]...))
+	case term.ImproperListTerm(elements, tail):
+		if len(elements) == 0 { return otpBadarg() }
+		if len(elements) == 1 { return vm.ExternalCallReturned(term.Clone(tail)) }
+		return vm.ExternalCallReturned(term.ImproperList(elements[1:], tail))
+	case _: return otpBadarg()
+	}
+}
+
 func otpMember(arguments []term.Term) vm.ExternalCallOutcome {
 	match otpProperElements(arguments[1]) {
 	case option.None:
@@ -673,6 +692,30 @@ func otpMapIterator(entries []term.MapEntry, mapValue term.Term) term.Term {
 	return next
 }
 
+func otpMapCompilerIterator(arguments []term.Term) vm.ExternalCallOutcome {
+	match arguments[0] {
+	case term.MapTerm(_): return otpMapNext([]term.Term{term.Integer(0), arguments[0], term.MustAtom("iterator")})
+	case term.ImproperListTerm(path, tail):
+		if len(path) != 1 { return vm.ExternalCallReturned(term.List()) }
+		return otpMapNext([]term.Term{path[0], tail, term.MustAtom("iterator")})
+	case term.AtomTerm(value):
+		if value == "none" { return vm.ExternalCallReturned(arguments[0]) }
+		return vm.ExternalCallReturned(term.List())
+	case term.TupleTerm(_):
+		if otpValidMapIterator(arguments[0]) { return vm.ExternalCallReturned(arguments[0]) }
+		return vm.ExternalCallReturned(term.List())
+	case _: return vm.ExternalCallReturned(term.List())
+	}
+}
+
+func otpValidMapIterator(iterator term.Term) bool {
+	match iterator {
+	case term.AtomTerm(value): return value == "none"
+	case term.TupleTerm(parts): return len(parts) == 3 && otpValidMapIterator(parts[2])
+	case _: return false
+	}
+}
+
 func otpMapAssociationList(entries []term.MapEntry, accumulator term.Term) term.Term {
 	values := make([]term.Term, len(entries))
 	for index, entry := range entries { values[index] = term.Tuple(term.Clone(entry.Key), term.Clone(entry.Value)) }
@@ -900,6 +943,8 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "--", Arity: 2}, Implementation: otpListSubtract},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "-", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpArithmetic(arguments, otpSubtract()) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "length", Arity: 1}, Implementation: otpLength},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "hd", Arity: 1}, Implementation: otpListHead},
+		{Target: vm.ExternalFunction{Module: "erlang", Function: "tl", Arity: 1}, Implementation: otpListTail},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "iolist_size", Arity: 1}, Implementation: otpIOListSize},
 		{Target: vm.ExternalFunction{Module: "unicode", Function: "characters_to_binary", Arity: 1}, Implementation: otpUnicodeCharactersToBinary},
 		{Target: vm.ExternalFunction{Module: "unicode", Function: "characters_to_list", Arity: 1}, Implementation: otpUnicodeCharactersToList},
@@ -918,6 +963,7 @@ func otpPureBindings() []CallBinding {
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsr", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, true) }},
 		{Target: vm.ExternalFunction{Module: "erlang", Function: "bsl", Arity: 2}, Implementation: func(arguments []term.Term) vm.ExternalCallOutcome { return otpIntegerShift(arguments, false) }},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "map_next", Arity: 3}, Implementation: otpMapNext},
+		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "mc_iterator", Arity: 1}, Implementation: otpMapCompilerIterator},
 		{Target: vm.ExternalFunction{Module: "erts_internal", Function: "cmp_term", Arity: 2}, Implementation: otpCompareTerm},
 		{Target: vm.ExternalFunction{Module: "maps", Function: "get", Arity: 2}, Implementation: otpMapGet},
 		{Target: vm.ExternalFunction{Module: "maps", Function: "find", Arity: 2}, Implementation: otpMapFind},

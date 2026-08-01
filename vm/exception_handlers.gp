@@ -205,6 +205,22 @@ func executeExceptionRaise(machine *Machine, instruction beam.Instruction) resul
 	class := term.MustAtom("error")
 	var reason term.Term
 	switch instruction.Opcode.Name {
+	case "raw_raise":
+		if len(instruction.Operands) != 0 { return result.Err[instructionOutcome, Failure](InvalidProgram("raw_raise must have no operands")) }
+		match machine.X(0) {
+		case result.Err(failure): return result.Err[instructionOutcome, Failure](failure)
+		case result.Ok(value):
+			match term.AtomName(value) {
+			case option.Some(name):
+				if name != "error" && name != "exit" && name != "throw" {
+					match machine.SetX(0, term.MustAtom("badarg")) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(_): machine.pc++; return result.Ok[instructionOutcome, Failure](InstructionContinues()) }
+				}
+				class = value
+			case option.None:
+				match machine.SetX(0, term.MustAtom("badarg")) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(_): machine.pc++; return result.Ok[instructionOutcome, Failure](InstructionContinues()) }
+			}
+		}
+		match machine.X(1) { case result.Err(failure): return result.Err[instructionOutcome, Failure](failure); case result.Ok(value): reason = value }
 	case "raise":
 		if len(instruction.Operands) != 2 {
 			return result.Err[instructionOutcome, Failure](InvalidProgram(fmt.Sprintf("raise has %d operands", len(instruction.Operands))))

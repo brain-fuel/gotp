@@ -113,3 +113,18 @@ func TestInactiveInnerHandlerUnwindsToOuterHandler(t *testing.T) {
 		t.Fatalf("nested reason = %v, want %v", got, want)
 	}
 }
+
+// assayxport:law gotp.vm.raw-raise-invalid-class
+func TestRawRaiseInvalidClassContinuesWithBadarg(t *testing.T) {
+	program := []beam.Instruction{
+		exceptionInstruction("label", beam.LabelOperand{Index: big.NewInt(1)}),
+		exceptionInstruction("move", beam.AtomOperand{Index: big.NewInt(1)}, beam.XRegisterOperand{Index: big.NewInt(0)}),
+		exceptionInstruction("move", beam.AtomOperand{Index: big.NewInt(2)}, beam.XRegisterOperand{Index: big.NewInt(1)}),
+		exceptionInstruction("move", beam.AtomOperand{Index: big.NewInt(2)}, beam.XRegisterOperand{Index: big.NewInt(2)}),
+		exceptionInstruction("raw_raise"),
+		exceptionInstruction("return"),
+	}
+	if got := exceptionProgramResult(t, program, map[uint64]string{1: "invalid", 2: "reason"}); !term.Equal(got, term.MustAtom("badarg")) {
+		t.Fatalf("raw_raise invalid class = %v", got)
+	}
+}
