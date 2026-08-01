@@ -26,6 +26,15 @@
 This document is not a release and does not authorize a tag or publication.
 # Unreleased
 
+- Proved all fourteen OTP 29.0.4 `gen_statem` asynchronous request exports
+  through byte-identical isolated corpora for `state_functions` and
+  `handle_event_function`. Covered direct and labeled collection requests,
+  wait/receive/check variants, collection creation/addition/introspection,
+  deletion and retention, timeout retry and abandonment, late-reply
+  suppression, crashes, dead servers, local names, out-of-order replies, and
+  mailbox cleanliness. Added a stateful law over generated live-request release
+  permutations and promoted only these fourteen declaration rows.
+
 - Pinned the unmodified OTP 29.0.4 `gen_statem.beam` and added isolated,
   deterministic callback corpora for `state_functions` and
   `handle_event_function`. Added a machine-derived export-ledger verifier and

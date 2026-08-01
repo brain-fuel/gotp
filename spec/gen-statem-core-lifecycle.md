@@ -18,4 +18,6 @@ processing the remaining action list after a callback-module action.
 The export verifier derives its surface from the loaded BEAM export table and
 requires every non-metadata export to have an inventory row. Request-ID APIs,
 formatting, exported types, and full input-domain parity remain outside this
-core-lifecycle slice. Their rows require separate evidence.
+core-lifecycle slice. Their rows require separate evidence. Asynchronous
+requests are specified independently by
+`spec:gotp.otp.gen-statem-async-requests`.
